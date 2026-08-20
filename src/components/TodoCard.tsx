@@ -115,7 +115,7 @@ export default function TodoCard({ todo, category, showDate, hideCategory, query
               toggleTodo(todo.id);
               onCheck?.(todo.id);
             }}
-            className="flex w-11 shrink-0 items-center justify-center"
+            className="flex w-11 shrink-0 items-start justify-center pt-3"
             style={{ minHeight: 44 }}
             aria-label={todo.isCompleted ? '标记未完成' : '标记完成'}
           >
