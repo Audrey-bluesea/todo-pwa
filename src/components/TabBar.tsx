@@ -65,14 +65,14 @@ export default function TabBar() {
         className="tabbar relative z-[30] flex shrink-0 flex-col border-t border-primary-100 bg-appbg pb-2 pointer-events-auto"
         style={{ boxShadow: '0 -2px 12px rgba(107, 170, 122, 0.08)' }}
       >
-        <div className="flex h-10 w-full items-center justify-around">
+        <div className="flex h-12 w-full items-center justify-around">
           {items.map(({ key, label, Icon }) => {
             const active = tab === key;
             return (
               <button
                 key={key}
                 onClick={() => setTab(key)}
-                className="flex items-center justify-center press"
+                className="flex items-center justify-center py-2 press"
                 style={{ minHeight: 44, minWidth: 60 }}
                 aria-label={label}
                 aria-current={active ? 'page' : undefined}
