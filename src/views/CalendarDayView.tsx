@@ -139,7 +139,7 @@ function DayPane({ date }: { date: Date }) {
     // 对 flex item 滚动容器计算 scrollHeight 的 bug。
     <div className="grid min-h-0 h-full w-full max-w-full grid-rows-[auto_auto_1fr] overflow-x-hidden">
       {/* 本周日期行 */}
-      <div className="shrink-0 border-b border-primary-100 px-2 pb-1 pt-1.5">
+      <div className="day-week-header shrink-0 border-b border-primary-100 px-2 pb-1 pt-1.5">
         <div className="grid grid-cols-7">
           {WEEK_CN.map((w) => (
             <div key={w} className="text-center text-[10.5px] font-medium text-neutral-400">
@@ -184,7 +184,7 @@ function DayPane({ date }: { date: Date }) {
       </div>
 
       {/* 全天任务区 */}
-      <div className="shrink-0 border-b border-primary-100 px-3 py-2">
+      <div className="all-day-section shrink-0 border-b border-primary-100 px-3 py-2">
         <div className="mb-1 flex items-center gap-2">
           <span className="text-[11px] font-medium tracking-wide text-neutral-400">全天</span>
           <div className="flex-1" />
@@ -314,7 +314,7 @@ function DayPane({ date }: { date: Date }) {
                 <button
                   key={t.id}
                   onClick={() => openEditor({ todoId: t.id })}
-                  className={`absolute overflow-hidden rounded-[4px] px-2 py-1 shadow-card-soft text-left ${
+                  className={`day-event absolute overflow-hidden rounded-[4px] px-2 py-1 shadow-card-soft text-left ${
                     evtH < 32 ? 'items-center' : 'items-start'
                   } flex bg-white`}
                   style={{
@@ -421,7 +421,7 @@ function DayPane({ date }: { date: Date }) {
                 <button
                   key={e.id}
                   onClick={() => setEditingTimeEntry(e.id)}
-                  className={`absolute flex overflow-hidden rounded-[4px] px-2 py-1 text-left shadow-card-soft ${
+                  className={`day-event absolute flex overflow-hidden rounded-[4px] px-2 py-1 text-left shadow-card-soft ${
                     evtH < 32 ? 'items-center' : 'items-start'
                   }`}
                   style={{

@@ -309,59 +309,121 @@
 
   /* ============ ☁️ sky-blue · 天蓝沙暖 ============ */
   [data-theme='sky-blue'] {
-    /* primary：柔和天蓝（低饱和） */
-    --c-primary-50: 235 247 253;
-    --c-primary-100: 218 238 250;
-    --c-primary-200: 195 224 243;
-    --c-primary-300: 165 205 230;
-    --c-primary-400: 135 185 215;
-    --c-primary-500: 100 155 190; /* 锚点·柔和天蓝 */
-    --c-primary-600: 80 130 165;
-    --c-primary-700: 62 105 138;
-    --c-primary-800: 46 80 110;
-    --c-primary-900: 32 58 78;
+    /* primary：柔和天蓝（刻意低饱和，不在渐变背景上跳） */
+    --c-primary-50:  238 247 252;
+    --c-primary-100: 222 238 248;
+    --c-primary-200: 200 225 240;
+    --c-primary-300: 172 208 228;
+    --c-primary-400: 142 188 213;
+    --c-primary-500: 110 160 195; /* 锚点·柔和天蓝 */
+    --c-primary-600: 88 135 170;
+    --c-primary-700: 68 110 145;
+    --c-primary-800: 50 85 118;
+    --c-primary-900: 36 62 88;
     /* neutral：暖砂灰阶 */
-    --c-neutral-50: 250 247 244;
-    --c-neutral-100: 242 237 232;
-    --c-neutral-200: 228 220 212;
-    --c-neutral-300: 208 198 188;
-    --c-neutral-400: 180 168 158;
-    --c-neutral-500: 145 133 124;
-    --c-neutral-600: 110 98 90;
-    --c-neutral-700: 82 72 66;
-    --c-neutral-800: 58 50 46;
+    --c-neutral-50:  252 249 246;
+    --c-neutral-100: 244 239 234;
+    --c-neutral-200: 230 222 214;
+    --c-neutral-300: 210 200 190;
+    --c-neutral-400: 182 170 160;
+    --c-neutral-500: 148 136 126;
+    --c-neutral-600: 114 102 94;
+    --c-neutral-700: 86 76 70;
+    --c-neutral-800: 62 54 50;
     /* 语义令牌 */
-    --c-accent: 218 145 130; /* 柔和珊瑚（逾期强调） */
-    --c-success: 120 175 165; /* 柔和海藻青（已完成） */
-    --c-star: 120 175 165; /* 点缀色 */
-    --c-ink: 55 70 80; /* 正文·深蓝灰 */
-    --c-border: 218 238 250; /* 极淡天蓝边 */
-    --c-muted: 150 165 175; /* 辅助灰蓝 */
-    --c-appbg: 182 226 249; /* 顶部天蓝，与背景图统一 */
+    --c-accent: 215 150 130; /* 柔和珊瑚（逾期强调） */
+    --c-success: 125 180 168; /* 柔和海藻青（已完成） */
+    --c-star: 125 180 168;
+    --c-ink: 58 72 82; /* 正文 */
+    --c-border: 255 255 255; /* sky-blue 下实际表现为半透明白边 */
+    --c-muted: 155 168 178;
+    --c-appbg: 184 226 245; /* 顶部天蓝 */
     --shadow-card: 0 4px 12px rgba(62, 105, 138, 0.10);
-    --shadow-card-soft: 0 2px 8px rgba(100, 155, 190, 0.12);
-    --shadow-fab: 0 8px 20px rgba(100, 155, 190, 0.38);
-    --shadow-sheet: 0 -8px 32px rgba(62, 105, 138, 0.14);
-    --shadow-drawer: 8px 0 32px rgba(62, 105, 138, 0.12);
+    --shadow-card-soft: 0 2px 8px rgba(100, 155, 190, 0.10);
+    --shadow-fab: 0 8px 20px rgba(100, 155, 190, 0.32);
+    --shadow-sheet: 0 -8px 32px rgba(62, 105, 138, 0.12);
+    --shadow-drawer: 8px 0 32px rgba(62, 105, 138, 0.10);
   }
 
-  /* ============ ☁️ sky-blue：渐变天空背景 ============ */
+  /* ============ ☁️ sky-blue：背景只铺在 body，上层全部透明/毛玻璃 ============
+   * 之前把 .bg-appbg / header 也强制 cover 同一张图，导致每个元素按自己大小裁剪，
+   * 看起来像「墙纸被裁成几块拼贴」。现在只留 body 一层背景，上面全部透明，
+   * TabBar、header、日历 sticky 条用 backdrop-filter 毛玻璃，卡片用半透明白。 */
   [data-theme='sky-blue'] body {
     background-color: rgb(var(--c-appbg));
     background-image: url('/sky-blue-bg.png');
     background-size: cover;
-    background-position: center;
+    background-position: center bottom;
     background-repeat: no-repeat;
     background-attachment: fixed;
   }
   [data-theme='sky-blue'] .bg-appbg,
   [data-theme='sky-blue'] header {
     background-color: transparent !important;
-    background-image: url('/sky-blue-bg.png') !important;
-    background-size: cover !important;
-    background-position: center !important;
-    background-repeat: no-repeat !important;
-    background-attachment: fixed !important;
+    background-image: none !important;
+  }
+
+  /* 底部 TabBar：透明毛玻璃，与背景连成一片，去掉突兀的蓝顶边 */
+  [data-theme='sky-blue'] .tabbar {
+    background: rgba(255, 255, 255, 0.28) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    backdrop-filter: blur(20px) saturate(180%);
+    border-top: 1px solid rgba(255, 255, 255, 0.38) !important;
+    box-shadow: none !important;
+  }
+
+  /* 任务卡片 / 看板卡片：毛玻璃，不挡住背景 */
+  [data-theme='sky-blue'] .todo-card > div,
+  [data-theme='sky-blue'] .board-card {
+    background: rgba(255, 255, 255, 0.78) !important;
+    -webkit-backdrop-filter: blur(12px) saturate(150%);
+    backdrop-filter: blur(12px) saturate(150%);
+    box-shadow: 0 2px 10px rgba(62, 105, 138, 0.08) !important;
+  }
+
+  /* 列表分组标签、时间芯片：半透明白底，不用实色 primary-100/200 */
+  [data-theme='sky-blue'] .bucket-label,
+  [data-theme='sky-blue'] .rounded-full.bg-primary-100,
+  [data-theme='sky-blue'] .rounded-full.bg-primary-200,
+  [data-theme='sky-blue'] .rounded-full.bg-neutral-100 {
+    background: rgba(255, 255, 255, 0.62) !important;
+    border: 1px solid rgba(255, 255, 255, 0.45);
+  }
+
+  /* 日历 sticky 日期条、日视图 header、全天任务区：毛玻璃 */
+  [data-theme='sky-blue'] .day-header,
+  [data-theme='sky-blue'] .day-week-header,
+  [data-theme='sky-blue'] .all-day-section {
+    background: rgba(255, 255, 255, 0.32) !important;
+    -webkit-backdrop-filter: blur(14px) saturate(160%);
+    backdrop-filter: blur(14px) saturate(160%);
+    border-color: rgba(255, 255, 255, 0.35) !important;
+  }
+
+  /* 所有 border-primary-100/200 变淡为白边，避免突兀蓝线 */
+  [data-theme='sky-blue'] .border-primary-100,
+  [data-theme='sky-blue'] .border-primary-200 {
+    border-color: rgba(255, 255, 255, 0.38) !important;
+  }
+
+  /* 日视图时间轴事件块：毛玻璃 */
+  [data-theme='sky-blue'] .day-event {
+    background: rgba(255, 255, 255, 0.78) !important;
+    -webkit-backdrop-filter: blur(10px) saturate(150%);
+    backdrop-filter: blur(10px) saturate(150%);
+    box-shadow: 0 2px 8px rgba(62, 105, 138, 0.08) !important;
+  }
+
+  /* 全天任务区里的跨天条：半透明 */
+  [data-theme='sky-blue'] .all-day-section button[style*="borderLeft"] {
+    background: rgba(255, 255, 255, 0.62) !important;
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+  }
+
+  /* 全天任务标签、跨天条颜色柔化 */
+  [data-theme='sky-blue'] .bg-primary-200 {
+    background-color: rgba(255, 255, 255, 0.58) !important;
   }
 
 /* iOS standalone PWA 高度铁律：html/body/#root 统一 100% + svh/dvh 双保险。
