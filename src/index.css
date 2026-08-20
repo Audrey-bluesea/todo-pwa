@@ -225,42 +225,12 @@
     --c-ink: 22 44 76; /* 正文/标题（深 Azure） */
     --c-border: 198 215 232; /* 浅蓝边 */
     --c-muted: 148 174 200; /* 辅助灰（偏蓝） */
-    --c-appbg: 158 198 238; /* 渐变图顶部天蓝（与状态栏/安全区统一） */
+    --c-appbg: 230 242 250; /* 全局背景·淡冰蓝 */
     --shadow-card: 0 4px 12px rgba(60, 110, 160, 0.12);
     --shadow-card-soft: 0 2px 8px rgba(60, 110, 160, 0.14);
     --shadow-fab: 0 8px 20px rgba(60, 110, 160, 0.42);
     --shadow-sheet: 0 -8px 32px rgba(60, 110, 160, 0.18);
     --shadow-drawer: 8px 0 32px rgba(60, 110, 160, 0.16);
-  }
-
-  /* ============ ❄️ 冬季·初雪：渐变天空背景（由 #2 取色生成） ============ */
-  /* 只让 body 一层背景图；所有上层面板统一半透明白色毛玻璃，
-   * 避免 header/tabbar/sticky 各自裁背景图形成“拼接墙纸”。 */
-  [data-theme='winter'] body {
-    background-color: rgb(var(--c-appbg));
-    background-image: url('/winter-bg.png');
-    background-size: cover;
-    background-position: center bottom;
-    background-repeat: no-repeat;
-    background-attachment: fixed;
-  }
-  [data-theme='winter'] .bg-appbg,
-  [data-theme='winter'] header,
-  [data-theme='winter'] .tabbar {
-    background-color: rgba(255, 255, 255, 0.58) !important;
-    background-image: none !important;
-    -webkit-backdrop-filter: blur(14px) saturate(150%);
-    backdrop-filter: blur(14px) saturate(150%);
-  }
-  [data-theme='winter'] .tabbar {
-    border-top-color: rgba(255, 255, 255, 0.32) !important;
-    box-shadow: none !important;
-  }
-  /* 初雪下分隔线变淡，不要形成突兀白线 */
-  [data-theme='winter'] .border-primary-100,
-  [data-theme='winter'] .border-primary-200,
-  [data-theme='winter'] .border-primary-300 {
-    border-color: rgba(255, 255, 255, 0.30) !important;
   }
 
   /* ============ 🌸 春信· Blossom ============ */
@@ -290,42 +260,12 @@
     --c-ink: 24 58 58; /* 正文/标题（深海青） */
     --c-border: 195 220 218; /* 浅青边 */
     --c-muted: 162 198 196; /* 辅助灰（偏青） */
-    --c-appbg: 185 220 222; /* 渐变图顶部薄荷（与状态栏/安全区统一） */
+    --c-appbg: 230 245 243; /* 全局背景·淡薄荷 */
     --shadow-card: 0 4px 12px rgba(60, 130, 128, 0.12);
     --shadow-card-soft: 0 2px 8px rgba(60, 130, 128, 0.14);
     --shadow-fab: 0 8px 20px rgba(60, 130, 128, 0.42);
     --shadow-sheet: 0 -8px 32px rgba(60, 130, 128, 0.18);
     --shadow-drawer: 8px 0 32px rgba(60, 130, 128, 0.16);
-  }
-
-  /* ============ 🌸 春信· Blossom：薄荷渐变背景 ============ */
-  /* 只让 body 一层背景图；所有上层面板统一半透明白色毛玻璃，
-   * 避免 header/tabbar/sticky 各自裁背景图形成“拼接墙纸”。 */
-  [data-theme='blossom'] body {
-    background-color: rgb(var(--c-appbg));
-    background-image: url('/blossom-bg.png');
-    background-size: cover;
-    background-position: center bottom;
-    background-repeat: no-repeat;
-    background-attachment: fixed;
-  }
-  [data-theme='blossom'] .bg-appbg,
-  [data-theme='blossom'] header,
-  [data-theme='blossom'] .tabbar {
-    background-color: rgba(255, 255, 255, 0.58) !important;
-    background-image: none !important;
-    -webkit-backdrop-filter: blur(14px) saturate(150%);
-    backdrop-filter: blur(14px) saturate(150%);
-  }
-  [data-theme='blossom'] .tabbar {
-    border-top-color: rgba(255, 255, 255, 0.32) !important;
-    box-shadow: none !important;
-  }
-  /* 春信下分隔线变淡，不要形成突兀白线 */
-  [data-theme='blossom'] .border-primary-100,
-  [data-theme='blossom'] .border-primary-200,
-  [data-theme='blossom'] .border-primary-300 {
-    border-color: rgba(255, 255, 255, 0.30) !important;
   }
 
 
