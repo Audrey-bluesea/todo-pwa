@@ -176,7 +176,7 @@ function DayPane({ date }: { date: Date }) {
                 >
                   {solarToLunar(d).label}
                 </span>
-                <span className="h-[3px] w-[3px] rounded-full" style={{ backgroundColor: has ? '#85C09A' : 'transparent' }} />
+                <span className="h-[3px] w-[3px] rounded-full" style={{ backgroundColor: has ? 'rgb(var(--c-success))' : 'transparent' }} />
               </button>
             );
           })}

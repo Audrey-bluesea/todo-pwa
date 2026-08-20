@@ -234,8 +234,8 @@
   }
 
   /* ============ ❄️ 冬季·初雪：渐变天空背景（由 #2 取色生成） ============ */
-  /* 让 body / 根容器 / 顶部 header / sticky 栏透出同一张竖向渐变（顶更蓝→底泛白）。
-   * header 对齐顶部、TabBar 对齐底部，避免中间实色线与底部色块。 */
+  /* 只让 body 一层背景图；所有上层面板统一半透明白色毛玻璃，
+   * 避免 header/tabbar/sticky 各自裁背景图形成“拼接墙纸”。 */
   [data-theme='winter'] body {
     background-color: rgb(var(--c-appbg));
     background-image: url('/winter-bg.png');
@@ -245,24 +245,22 @@
     background-attachment: fixed;
   }
   [data-theme='winter'] .bg-appbg,
-  [data-theme='winter'] header {
-    background-color: transparent !important;
-    background-image: url('/winter-bg.png') !important;
-    background-size: cover !important;
-    background-position: center !important;
-    background-repeat: no-repeat !important;
-    background-attachment: fixed !important;
-  }
-  [data-theme='winter'] header {
-    background-position: top !important;
+  [data-theme='winter'] header,
+  [data-theme='winter'] .tabbar {
+    background-color: rgba(255, 255, 255, 0.58) !important;
+    background-image: none !important;
+    -webkit-backdrop-filter: blur(14px) saturate(150%);
+    backdrop-filter: blur(14px) saturate(150%);
   }
   [data-theme='winter'] .tabbar {
-    background-position: bottom !important;
+    border-top-color: rgba(255, 255, 255, 0.32) !important;
+    box-shadow: none !important;
   }
   /* 初雪下分隔线变淡，不要形成突兀白线 */
   [data-theme='winter'] .border-primary-100,
-  [data-theme='winter'] .border-primary-200 {
-    border-color: rgba(255, 255, 255, 0.28) !important;
+  [data-theme='winter'] .border-primary-200,
+  [data-theme='winter'] .border-primary-300 {
+    border-color: rgba(255, 255, 255, 0.30) !important;
   }
 
   /* ============ 🌸 春信· Blossom ============ */
@@ -301,8 +299,8 @@
   }
 
   /* ============ 🌸 春信· Blossom：薄荷渐变背景 ============ */
-  /* 让 body / 根容器 / 顶部 header / sticky 栏透出同一张竖向渐变（顶薄荷→底柔白）。
-   * header 对齐顶部、TabBar 对齐底部，避免中间实色线与底部色块。 */
+  /* 只让 body 一层背景图；所有上层面板统一半透明白色毛玻璃，
+   * 避免 header/tabbar/sticky 各自裁背景图形成“拼接墙纸”。 */
   [data-theme='blossom'] body {
     background-color: rgb(var(--c-appbg));
     background-image: url('/blossom-bg.png');
@@ -312,23 +310,21 @@
     background-attachment: fixed;
   }
   [data-theme='blossom'] .bg-appbg,
-  [data-theme='blossom'] header {
-    background-color: transparent !important;
-    background-image: url('/blossom-bg.png') !important;
-    background-size: cover !important;
-    background-position: center !important;
-    background-repeat: no-repeat !important;
-    background-attachment: fixed !important;
-  }
-  [data-theme='blossom'] header {
-    background-position: top !important;
+  [data-theme='blossom'] header,
+  [data-theme='blossom'] .tabbar {
+    background-color: rgba(255, 255, 255, 0.58) !important;
+    background-image: none !important;
+    -webkit-backdrop-filter: blur(14px) saturate(150%);
+    backdrop-filter: blur(14px) saturate(150%);
   }
   [data-theme='blossom'] .tabbar {
-    background-position: bottom !important;
+    border-top-color: rgba(255, 255, 255, 0.32) !important;
+    box-shadow: none !important;
   }
   /* 春信下分隔线变淡，不要形成突兀白线 */
   [data-theme='blossom'] .border-primary-100,
-  [data-theme='blossom'] .border-primary-200 {
+  [data-theme='blossom'] .border-primary-200,
+  [data-theme='blossom'] .border-primary-300 {
     border-color: rgba(255, 255, 255, 0.30) !important;
   }
 

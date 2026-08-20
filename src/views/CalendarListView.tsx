@@ -205,8 +205,7 @@ export default function CalendarListView() {
         ) : (
           <div className="relative px-4 pb-40">
             <div
-              className="absolute bottom-0 left-[82px] top-0 w-[1.5px]"
-              style={{ backgroundColor: 'rgba(107, 170, 122, 0.2)' }}
+              className="absolute bottom-0 left-[82px] top-0 w-[1.5px] bg-primary-200/60"
             />
 
             <div className="space-y-3">
