@@ -242,10 +242,12 @@ function DayPane({ date }: { date: Date }) {
       </div>
 
       {/* 时间轴 */}
-      <div ref={scrollRef} className="scroll-y min-h-0 w-full max-w-full flex-1 overflow-x-hidden pb-[100px] pt-4">
-        {/* 强制最小高度：25 小时格 × 56px + 底部留白 80px。真机上内联 height/minHeight 在 flex 子项里容易失效，
-           直接给内容根节点加 min-height 是最确定能撑出 scrollHeight 的方式。 */}
-        <div className="relative w-full max-w-full pb-20" style={{ minHeight: 25 * HOUR_H + 80 }}>
+      {/* 外层占满剩余 flex 空间并相对定位；内层 absolute inset-0 明确拿到全高做滚动容器。
+         直接让 flex item 自身当滚动容器在 iOS WebKit 上 scrollHeight 会算错，导致滑不动。 */}
+      <div className="relative min-h-0 flex-1 w-full max-w-full overflow-hidden">
+        <div ref={scrollRef} className="scroll-y absolute inset-0 w-full overflow-x-hidden pb-[100px] pt-4">
+          {/* 强制最小高度：25 小时格 × 56px + 底部留白 80px */}
+          <div className="relative w-full max-w-full pb-20" style={{ minHeight: 25 * HOUR_H + 80 }}>
           {/* 时间格改为正常流布局：absolute 子元素不撑开父元素，在真机上一旦父元素高度失效，
              24 小时格就挤成一团导致 scrollHeight=clientHeight。正常流让内容自然撑开，滚动必然生效。 */}
           <div className="relative w-full">
@@ -497,6 +499,7 @@ function DayPane({ date }: { date: Date }) {
         </div>
       </div>
     </div>
+  </div>
   );
 }
 

@@ -61,18 +61,20 @@ export default function TabBar() {
           fixed bottom 在 iOS standalone 下会导致整页滑不动，故必须用 in-flow。
           z-[30] 低于所有浮层打开态(40~60)，打开浮层时浮层会盖住 TabBar（正确）；
           日常所有浮层关闭态均不渲染或 pointer-events-none，故 TabBar 可正常点击。 */}
+      {/* TabBar —— in-flow flex（真机 standalone 可滑动）+ relative z-[30]。
+          总高 48px 与旧版视觉高度一致；按钮顶部留空、底部贴边，避免图标贴顶。 */}
       <nav
-        className="tabbar relative z-[30] flex shrink-0 flex-col border-t border-primary-100 bg-appbg pb-2 pointer-events-auto"
+        className="tabbar relative z-[30] flex h-12 shrink-0 flex-col border-t border-primary-100 bg-appbg pointer-events-auto"
         style={{ boxShadow: '0 -2px 12px rgba(107, 170, 122, 0.08)' }}
       >
-        <div className="flex h-12 w-full items-center justify-around">
+        <div className="flex h-full w-full items-start justify-around">
           {items.map(({ key, label, Icon }) => {
             const active = tab === key;
             return (
               <button
                 key={key}
                 onClick={() => setTab(key)}
-                className="flex items-center justify-center py-2 press"
+                className="flex items-start justify-center pt-3 press"
                 style={{ minHeight: 44, minWidth: 60 }}
                 aria-label={label}
                 aria-current={active ? 'page' : undefined}
