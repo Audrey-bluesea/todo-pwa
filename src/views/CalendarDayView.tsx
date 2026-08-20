@@ -134,7 +134,10 @@ function DayPane({ date }: { date: Date }) {
   const nowTop = (now.getHours() * 60 + now.getMinutes()) * (HOUR_H / 60);
 
   return (
-    <div className="flex min-h-0 flex-1 w-full max-w-full flex-col overflow-x-hidden">
+    // 改用 CSS Grid：前两行放日期行/全天任务，第三行 1fr 占满剩余空间。
+    // Grid item 有明确高度，内部再用 absolute inset-0 做滚动容器，可避开 iOS WebKit
+    // 对 flex item 滚动容器计算 scrollHeight 的 bug。
+    <div className="grid min-h-0 h-full w-full max-w-full grid-rows-[auto_auto_1fr] overflow-x-hidden">
       {/* 本周日期行 */}
       <div className="shrink-0 border-b border-primary-100 px-2 pb-1 pt-1.5">
         <div className="grid grid-cols-7">
@@ -242,39 +245,34 @@ function DayPane({ date }: { date: Date }) {
       </div>
 
       {/* 时间轴 */}
-      {/* 外层占满剩余 flex 空间并相对定位；内层 absolute inset-0 明确拿到全高做滚动容器。
-         直接让 flex item 自身当滚动容器在 iOS WebKit 上 scrollHeight 会算错，导致滑不动。 */}
-      <div className="relative min-h-0 flex-1 w-full max-w-full overflow-hidden">
+      {/* 用 grid-row 明确拿到剩余高度，再套一层 relative + absolute inset-0 滚动容器。
+         避免把 flex item 自身当滚动容器时 iOS WebKit 算不出 scrollHeight 的问题。 */}
+      <div className="relative min-h-0 w-full max-w-full overflow-hidden">
         <div ref={scrollRef} className="scroll-y absolute inset-0 w-full overflow-x-hidden pb-[100px] pt-4">
-          {/* 强制最小高度：25 小时格 × 56px + 底部留白 80px */}
-          <div className="relative w-full max-w-full pb-20" style={{ minHeight: 25 * HOUR_H + 80 }}>
-          {/* 时间格改为正常流布局：absolute 子元素不撑开父元素，在真机上一旦父元素高度失效，
-             24 小时格就挤成一团导致 scrollHeight=clientHeight。正常流让内容自然撑开，滚动必然生效。 */}
-          <div className="relative w-full">
-            {Array.from({ length: 24 }, (_, h) => (
-              <div key={h} className="relative w-full" style={{ height: HOUR_H }}>
-                <div className="absolute left-0 right-0 top-0 border-t border-primary-200" style={{ marginLeft: GUTTER }} />
-                <span
-                  className="absolute left-0 pr-2 text-[11px] tabular-nums text-neutral-400 leading-none"
-                  style={{ width: GUTTER, textAlign: 'right', top: -6.5 }}
-                >
-                  {pad(h)}:00
-                </span>
-              </div>
-            ))}
-
-            <div className="relative w-full" style={{ height: HOUR_H }}>
-              <div className="absolute left-0 right-0 top-0 border-t border-dashed border-primary-300" style={{ marginLeft: GUTTER }} />
+          <div className="relative w-full max-w-full pb-20" style={{ height: 25 * HOUR_H + 80 }}>
+          {Array.from({ length: 24 }, (_, h) => (
+            <div key={h} className="absolute left-0 right-0" style={{ top: h * HOUR_H, height: HOUR_H }}>
+              <div className="border-t border-primary-200" style={{ marginLeft: GUTTER }} />
               <span
-                className="absolute left-0 pr-2 text-[11px] tabular-nums font-semibold text-primary-500 leading-none"
-                style={{ width: GUTTER, textAlign: 'right', top: -5 }}
+                className="absolute left-0 pr-2 text-[11px] tabular-nums text-neutral-400 leading-none"
+                style={{ width: GUTTER, textAlign: 'right', top: -6.5 }}
               >
-                00:00
+                {pad(h)}:00
               </span>
             </div>
+          ))}
+
+          <div className="absolute left-0 right-0" style={{ top: 24 * HOUR_H, height: HOUR_H }}>
+            <div className="border-t border-dashed border-primary-300" style={{ marginLeft: GUTTER }} />
+            <span
+              className="absolute left-0 pr-2 text-[11px] tabular-nums font-semibold text-primary-500 leading-none"
+              style={{ width: GUTTER, textAlign: 'right', top: -5 }}
+            >
+              00:00
+            </span>
           </div>
 
-          <div className="absolute inset-0" style={{ left: GUTTER, right: 8 }}>
+          <div className="absolute inset-y-0" style={{ left: GUTTER, right: 8 }}>
             {timed.map((t) => {
               const d = t.dueDate as Date;
               const end = t.endDate as Date | undefined;
