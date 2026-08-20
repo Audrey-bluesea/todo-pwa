@@ -268,7 +268,7 @@ export default function TodoTab() {
         key={mountKey}
         ref={scrollRef}
         onScroll={onScroll}
-        className="scroll-y min-h-0 flex-1 anim-fade pb-[76px]"
+        className="scroll-y min-h-0 flex-1 anim-fade pb-[100px]"
       >
         {searchActive ? (
           <div>

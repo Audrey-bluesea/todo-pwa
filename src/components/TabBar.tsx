@@ -24,12 +24,12 @@ export default function TabBar() {
     { key: 'calendar' as const, label: '日历', Icon: IconCalendar },
   ];
 
-  // FAB：固定在 TabBar 上方，bottom 用 CSS 变量动态避开安全区
+  // FAB：与 v16 一致，在 TabBar 上方一点
   const fabStyle: React.CSSProperties = {
     position: 'fixed',
     right: 16,
-    bottom: 'calc(var(--tabbar-h) + var(--sab) + 12px)',
-    zIndex: 50,
+    bottom: 58,
+    zIndex: 80,
   };
 
   return (
@@ -51,10 +51,10 @@ export default function TabBar() {
         )}
       </button>
 
-      {/* TabBar —— in-flow + 高 z-index，确保在 TodoEditorSheet/Drawer 的全屏遮罩之上可点 */}
+      {/* TabBar —— v16 proven 方案：fixed bottom:-48 + height:90，实色背景 + 最高 z-index */}
       <nav
-        className="tabbar relative z-[70] flex shrink-0 flex-col border-t border-primary-100 bg-appbg pb-safe pointer-events-auto"
-        style={{ boxShadow: '0 -2px 12px rgba(107, 170, 122, 0.08)' }}
+        className="tabbar fixed inset-x-0 bottom-[-48px] z-[80] flex flex-col border-t border-primary-100 bg-appbg pointer-events-auto"
+        style={{ height: 90, boxShadow: '0 -2px 12px rgba(107, 170, 122, 0.08)' }}
       >
         <div className="flex h-14 w-full items-center justify-around">
           {items.map(({ key, label, Icon }) => {
