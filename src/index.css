@@ -307,6 +307,63 @@
     background-attachment: fixed !important;
   }
 
+  /* ============ ☁️ sky-blue · 天蓝沙暖 ============ */
+  [data-theme='sky-blue'] {
+    /* primary：柔和天蓝（低饱和） */
+    --c-primary-50: 235 247 253;
+    --c-primary-100: 218 238 250;
+    --c-primary-200: 195 224 243;
+    --c-primary-300: 165 205 230;
+    --c-primary-400: 135 185 215;
+    --c-primary-500: 100 155 190; /* 锚点·柔和天蓝 */
+    --c-primary-600: 80 130 165;
+    --c-primary-700: 62 105 138;
+    --c-primary-800: 46 80 110;
+    --c-primary-900: 32 58 78;
+    /* neutral：暖砂灰阶 */
+    --c-neutral-50: 250 247 244;
+    --c-neutral-100: 242 237 232;
+    --c-neutral-200: 228 220 212;
+    --c-neutral-300: 208 198 188;
+    --c-neutral-400: 180 168 158;
+    --c-neutral-500: 145 133 124;
+    --c-neutral-600: 110 98 90;
+    --c-neutral-700: 82 72 66;
+    --c-neutral-800: 58 50 46;
+    /* 语义令牌 */
+    --c-accent: 218 145 130; /* 柔和珊瑚（逾期强调） */
+    --c-success: 120 175 165; /* 柔和海藻青（已完成） */
+    --c-star: 120 175 165; /* 点缀色 */
+    --c-ink: 55 70 80; /* 正文·深蓝灰 */
+    --c-border: 218 238 250; /* 极淡天蓝边 */
+    --c-muted: 150 165 175; /* 辅助灰蓝 */
+    --c-appbg: 182 226 249; /* 顶部天蓝，与背景图统一 */
+    --shadow-card: 0 4px 12px rgba(62, 105, 138, 0.10);
+    --shadow-card-soft: 0 2px 8px rgba(100, 155, 190, 0.12);
+    --shadow-fab: 0 8px 20px rgba(100, 155, 190, 0.38);
+    --shadow-sheet: 0 -8px 32px rgba(62, 105, 138, 0.14);
+    --shadow-drawer: 8px 0 32px rgba(62, 105, 138, 0.12);
+  }
+
+  /* ============ ☁️ sky-blue：渐变天空背景 ============ */
+  [data-theme='sky-blue'] body {
+    background-color: rgb(var(--c-appbg));
+    background-image: url('/sky-blue-bg.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+  }
+  [data-theme='sky-blue'] .bg-appbg,
+  [data-theme='sky-blue'] header {
+    background-color: transparent !important;
+    background-image: url('/sky-blue-bg.png') !important;
+    background-size: cover !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+    background-attachment: fixed !important;
+  }
+
 /* iOS standalone PWA 高度铁律：html/body/#root 统一 100% + svh/dvh 双保险。
  * 只给 #root 设 dvh、html/body 不设高，会导致 body 高度 auto，flex 根容器无法稳定占满。
  * App 内部再用 h-full 取 #root 高度，避免 dvh 在部分 WebKit 上下文解析异常。 */

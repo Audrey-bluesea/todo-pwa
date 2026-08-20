@@ -7,6 +7,7 @@ const FAB_EMOJI: Partial<Record<string, string>> = {
   autumn: '🍁',
   winter: '❄️',
   blossom: '🍀',
+  'sky-blue': '🪁',
 };
 
 export default function TabBar() {
