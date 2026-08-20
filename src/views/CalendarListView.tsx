@@ -185,7 +185,7 @@ export default function CalendarListView() {
 
       {/* 当日事项时间轴 */}
       <div ref={scrollRef} className="scroll-y min-h-0 flex-1 pb-[100px]">
-        <div className="day-header sticky top-0 z-10 flex items-center gap-2 bg-appbg/90 px-4 py-2 backdrop-blur">
+        <div className="sticky top-0 z-10 flex items-center gap-2 bg-appbg/90 px-4 py-2 backdrop-blur">
           <div className="flex flex-col leading-tight">
             <span className="text-[14px] font-semibold text-primary-700">
               {selected.getMonth() + 1}月{selected.getDate()}日

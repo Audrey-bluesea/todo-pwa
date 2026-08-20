@@ -472,7 +472,7 @@ function BoardCard({
   return (
     <div
       onClick={onOpen}
-      className={`board-card mb-2 flex items-center gap-3 rounded-xl bg-white p-3 shadow-card-soft press ${
+      className={`mb-2 flex items-center gap-3 rounded-xl bg-white p-3 shadow-card-soft press ${
         isOverdueCol && !t.isCompleted ? 'border-l-[3px] border-l-red-300' : ''
       }`}
     >

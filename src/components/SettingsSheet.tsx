@@ -58,13 +58,6 @@ const THEMES: {
     emoji: '🌸',
     swatch: ['#4EA09E', '#B9E2DF', '#D2646C', '#488C74'],
   },
-  {
-    key: 'sky-blue',
-    name: '天蓝',
-    desc: '柔和天蓝 · 沙滩暖阳',
-    emoji: '🪁',
-    swatch: ['#649BBE', '#B6E2F9', '#BCAA9B', '#DA8E82', '#78AFA5'],
-  },
 ];
 
 export default function SettingsSheet({
