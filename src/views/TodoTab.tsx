@@ -194,7 +194,7 @@ export default function TodoTab() {
 
   return (
     <div
-      className="flex min-h-0 flex-1 flex-col"
+      className="flex min-h-0 min-w-0 flex-1 flex-col"
       onTouchStart={handleEdgeTouchStart}
       onTouchMove={handleEdgeTouchMove}
       onTouchEnd={handleEdgeTouchEnd}
@@ -211,22 +211,19 @@ export default function TodoTab() {
 
           <div className="flex-1" />
 
-          {/* 列表 / 看板 图标分段控制器（含分组下拉，搜索态隐藏） */}
+          {/* 列表 / 看板 图标分段控制器 + 搜索/计时按钮。整体 shrink-0，防止看板视图下
+              内部横向 pager 把 flex 容器撑宽后，右侧按钮被挤出屏幕右边。 */}
           {!searchActive && (
-            <ViewSegment
-              isBoard={isBoardView}
-              onSelectList={handleSelectList}
-              onSelectBoard={handleSelectBoard}
-              groupOptions={groupOptions}
-              currentGroup={currentGroup}
-              onSelectGroup={handleSelectGroup}
-              hideGroupDropdown={isInbox || isCompletedView}
-            />
-          )}
-
-          {/* 全局搜索入口（搜索态隐藏，避免重复） */}
-          {!searchActive && (
-            <>
+            <div className="flex shrink-0 items-center gap-1">
+              <ViewSegment
+                isBoard={isBoardView}
+                onSelectList={handleSelectList}
+                onSelectBoard={handleSelectBoard}
+                groupOptions={groupOptions}
+                currentGroup={currentGroup}
+                onSelectGroup={handleSelectGroup}
+                hideGroupDropdown={isInbox || isCompletedView}
+              />
               <TimerButton />
               <button
                 onClick={() => setSearchActive(true)}
@@ -235,7 +232,7 @@ export default function TodoTab() {
               >
                 <IconSearch size={22} />
               </button>
-            </>
+            </div>
           )}
 
           {/* 搜索态：取消按钮 */}
