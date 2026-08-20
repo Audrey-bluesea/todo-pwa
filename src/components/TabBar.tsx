@@ -29,7 +29,7 @@ export default function TabBar() {
     position: 'fixed',
     right: 16,
     bottom: 58,
-    zIndex: 80,
+    zIndex: 50,
   };
 
   return (
@@ -51,10 +51,13 @@ export default function TabBar() {
         )}
       </button>
 
-      {/* TabBar —— v16 proven 方案：fixed bottom:-48 + height:90，实色背景 + 最高 z-index */}
+      {/* TabBar —— in-flow flex（真机 standalone 可滑动）+ relative z-[30]。
+          fixed bottom 在 iOS standalone 下会导致整页滑不动，故必须用 in-flow。
+          z-[30] 低于所有浮层打开态(40~60)，打开浮层时浮层会盖住 TabBar（正确）；
+          日常所有浮层关闭态均不渲染或 pointer-events-none，故 TabBar 可正常点击。 */}
       <nav
-        className="tabbar fixed inset-x-0 bottom-[-48px] z-[80] flex flex-col border-t border-primary-100 bg-appbg pointer-events-auto"
-        style={{ height: 90, boxShadow: '0 -2px 12px rgba(107, 170, 122, 0.08)' }}
+        className="tabbar relative z-[30] flex shrink-0 flex-col border-t border-primary-100 bg-appbg pb-safe pointer-events-auto"
+        style={{ boxShadow: '0 -2px 12px rgba(107, 170, 122, 0.08)' }}
       >
         <div className="flex h-14 w-full items-center justify-around">
           {items.map(({ key, label, Icon }) => {
