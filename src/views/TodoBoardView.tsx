@@ -463,35 +463,12 @@ function BoardCard({
   hideCategory?: boolean;
 }) {
   const hasTime = t.dueDate && !isAllDay(t.dueDate);
+  const isCrossDay = !!(t.dueDate && t.endDate && !isSameDay(t.dueDate, t.endDate));
 
-  // 日期 badge 样式：有 endDate 的任务统一显示起止范围，与 TodoCard 保持一致
-  const isCrossDay = !!t.endDate && !isSameDay(t.dueDate as Date, t.endDate as Date);
-  const hasEndDate = !!t.endDate;
-  const dateBadgeStyle = useMemo(() => {
-    if (!t.dueDate) return { bg: 'bg-neutral-100', text: 'text-neutral-500', label: '--' };
-    // 有 End 的任务：统一显示起止范围；但同天+全天只显示单日期
-    if (hasEndDate && t.endDate) {
-      const ed = t.endDate as Date;
-      const startLabel = `${(t.dueDate as Date).getMonth() + 1}/${(t.dueDate as Date).getDate()}${hasTime ? ` ${fmtTime(t.dueDate)}` : ''}`;
-      // 同天 + 全天：不画箭头，只显示单日期
-      if (!isCrossDay && !hasTime && isAllDay(ed)) {
-        return { bg: 'bg-primary-50', text: 'text-primary-600', label: startLabel };
-      }
-      const endLabel = isCrossDay
-        ? `${ed.getMonth() + 1}/${ed.getDate()}${!isAllDay(ed) ? ` ${fmtTime(ed)}` : ''}`
-        : (!isAllDay(ed) ? `${fmtTime(ed)}` : '');
-      return { bg: 'bg-primary-50', text: 'text-primary-600', label: `${startLabel} → ${endLabel}` };
-    }
-    const d = dayDiff(t.dueDate, startOfDay(new Date()));
-    if (d < 0) return { bg: 'bg-red-50', text: 'text-red-500', label: humanDate(t.dueDate) };
-    if (d === 0)
-      return { bg: 'bg-primary-50', text: 'text-primary-700', label: hasTime ? `Today ${fmtTime(t.dueDate)}` : 'Today' };
-    return {
-      bg: 'bg-blue-50',
-      text: 'text-blue-600',
-      label: `${humanDate(t.dueDate)}${hasTime ? ` ${fmtTime(t.dueDate)}` : ''}`,
-    };
-  }, [t.dueDate, t.endDate, hasTime, isCrossDay]);
+  // 时间标签统一成与 TodoCard 一致：未完成主色浅底，已完成中性浅灰底
+  const timeChipCls = t.isCompleted
+    ? 'bg-neutral-100 text-neutral-400'
+    : 'bg-primary-100 text-primary-700';
 
   return (
     <div
@@ -535,14 +512,33 @@ function BoardCard({
           {t.title || 'No Title'}
         </div>
         <div className="mt-1 flex items-center justify-between gap-2">
-          {/* 日期 badge（无日期/无时间时不显示） */}
-          {t.dueDate && (
-          <span
-            className={`inline-flex items-center gap-1 rounded-full px-2 py-[2px] text-[11.5px] font-medium ${dateBadgeStyle.bg} ${dateBadgeStyle.text}`}
-          >
-            {hasTime && <IconClock size={10} />}
-            {dateBadgeStyle.label}
-          </span>
+          {/* 时间标签：与 TodoCard 逻辑保持一致 */}
+          {t.dueDate && t.endDate ? (
+            isSameDay(t.dueDate, t.endDate) && !hasTime && isAllDay(t.endDate) ? (
+              // 同天全天：只显示日期
+              <span className={`inline-flex items-center rounded-full px-2 py-[2px] text-[11.5px] font-medium ${timeChipCls}`}>
+                {humanDate(t.dueDate)}
+              </span>
+            ) : (
+              // 跨天或带时间：显示起止范围
+              <span className={`inline-flex items-center gap-1 rounded-full px-2 py-[2px] text-[11.5px] font-medium ${timeChipCls}`}>
+                <span>{humanDate(t.dueDate)}{hasTime ? ` ${fmtTime(t.dueDate)}` : ''}</span>
+                <span className="text-primary-300">→</span>
+                <span>
+                  {isCrossDay
+                    ? humanDate(t.endDate) + (!isAllDay(t.endDate) ? ` ${fmtTime(t.endDate)}` : '')
+                    : (!isAllDay(t.endDate) ? fmtTime(t.endDate) : '')}
+                </span>
+              </span>
+            )
+          ) : (
+            t.dueDate && (
+              <span className={`inline-flex items-center gap-1 rounded-full px-2 py-[2px] text-[11.5px] font-medium ${timeChipCls}`}>
+                {hasTime && <IconClock size={10} />}
+                {humanDate(t.dueDate)}
+                {hasTime ? ` ${fmtTime(t.dueDate)}` : ''}
+              </span>
+            )
           )}
 
           {/* 清单标签 */}
