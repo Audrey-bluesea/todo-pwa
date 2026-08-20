@@ -134,7 +134,7 @@ function DayPane({ date }: { date: Date }) {
   const nowTop = (now.getHours() * 60 + now.getMinutes()) * (HOUR_H / 60);
 
   return (
-    <div className="flex h-full min-h-0 w-full max-w-full flex-col overflow-x-hidden">
+    <div className="flex min-h-0 flex-1 w-full max-w-full flex-col overflow-x-hidden">
       {/* 本周日期行 */}
       <div className="shrink-0 border-b border-primary-100 px-2 pb-1 pt-1.5">
         <div className="grid grid-cols-7">

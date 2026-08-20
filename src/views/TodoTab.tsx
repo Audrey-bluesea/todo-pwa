@@ -194,7 +194,7 @@ export default function TodoTab() {
 
   return (
     <div
-      className="flex h-full flex-col"
+      className="flex min-h-0 flex-1 flex-col"
       onTouchStart={handleEdgeTouchStart}
       onTouchMove={handleEdgeTouchMove}
       onTouchEnd={handleEdgeTouchEnd}

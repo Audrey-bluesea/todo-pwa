@@ -307,19 +307,21 @@
     background-attachment: fixed !important;
   }
 
+/* iOS standalone PWA 高度铁律：html/body/#root 统一 100% + svh/dvh 双保险。
+ * 只给 #root 设 dvh、html/body 不设高，会导致 body 高度 auto，flex 根容器无法稳定占满。
+ * App 内部再用 h-full 取 #root 高度，避免 dvh 在部分 WebKit 上下文解析异常。 */
 html,
-body {
+body,
+#root {
   height: 100%;
+  height: 100svh;
+  height: 100dvh;
   width: 100%;
   margin: 0;
   overscroll-behavior: none;
 }
 
-/* iOS standalone PWA 必须用 dvh/svh，避免 100% 解析到布局视口导致底部栏错位 */
 #root {
-  height: 100svh;
-  height: 100dvh;
-  width: 100%;
   overflow: hidden;
 }
 

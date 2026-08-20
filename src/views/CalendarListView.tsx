@@ -137,7 +137,7 @@ export default function CalendarListView() {
   const calOverflow = collapsed && !animating && dragOffset === 0 ? 'hidden' : undefined;
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex min-h-0 flex-1 flex-col">
       {/* 月历区域：外层管纵向收起，内部 SwipePager 管横向切月（轮播）*/}
       <div
         ref={calRef}

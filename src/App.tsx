@@ -51,7 +51,8 @@ export default function App() {
   }, [theme]);
 
   return (
-    <div className="relative flex h-dvh w-full flex-col overflow-hidden bg-appbg">
+    // 根容器用 h-full 取 #root 的 dvh 高度；h-dvh 在 iOS standalone 部分上下文解析不稳。
+    <div className="relative flex h-full w-full flex-col overflow-hidden bg-appbg">
       <main className="min-h-0 flex-1 overflow-hidden">
         {!ready ? (
           <div className="flex h-full flex-col items-center justify-center gap-3">

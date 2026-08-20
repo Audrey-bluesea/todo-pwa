@@ -325,7 +325,7 @@ export default function TodoBoardView({
   };
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex min-h-0 flex-1 flex-col">
       {/* ====== 创建分组入口（仅看板-按分组模式） ====== */}
       {filter.kind === 'category' && groupBy === 'section' && !addingSec && (
         <div className="shrink-0 px-3 pt-2">
@@ -400,7 +400,7 @@ export default function TodoBoardView({
         onTouchEnd={onTouchEnd}
       >
         <div
-          className="flex h-full"
+          className="flex min-h-0 flex-1"
           style={{
             transform: `translateX(calc(${-activeTabIdx * 100}% + ${dragX}px))`,
             transition: dragging ? 'none' : 'transform 0.3s cubic-bezier(0.22, 0.61, 0.36, 1)',

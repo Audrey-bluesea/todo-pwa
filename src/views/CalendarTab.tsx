@@ -68,7 +68,7 @@ export default function CalendarTab() {
   };
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex min-h-0 flex-1 flex-col">
       <header className="shrink-0 pt-safe z-30">
         {searchActive ? (
           <div className="flex items-center gap-2 px-3 pb-2 pt-2">
