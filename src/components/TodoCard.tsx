@@ -194,7 +194,6 @@ export default function TodoCard({ todo, category, showDate, hideCategory, query
                     <span
                       className={`flex items-center gap-1 rounded-full px-1.5 py-[1px] text-[11.5px] font-medium ${timeChipCls}`}
                     >
-                      {hasTime && <IconClock size={11} />}
                       {showDate && `${humanDate(todo.dueDate)} `}
                       {hasTime ? fmtTime(todo.dueDate) : '全天'}
                     </span>

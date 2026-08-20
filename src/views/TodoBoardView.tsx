@@ -4,7 +4,6 @@ import { useUIStore } from '../store/uiStore';
 import type { Todo, DrawerFilter, BoardMode, Category } from '../types';
 import { addDays, dayDiff, fmtTime, humanDate, isAllDay, isSameDay, startOfDay } from '../lib/date';
 import { scrollMemory } from '../lib/scrollMemory';
-import { IconClock } from '../components/Icons';
 import EmptyState from '../components/EmptyState';
 
 /* ---------- 类型定义 ---------- */
@@ -534,7 +533,6 @@ function BoardCard({
           ) : (
             t.dueDate && (
               <span className={`inline-flex items-center gap-1 rounded-full px-2 py-[2px] text-[11.5px] font-medium ${timeChipCls}`}>
-                {hasTime && <IconClock size={10} />}
                 {humanDate(t.dueDate)}
                 {hasTime ? ` ${fmtTime(t.dueDate)}` : ''}
               </span>
