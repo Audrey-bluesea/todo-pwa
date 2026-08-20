@@ -31,7 +31,7 @@ export default function CalendarWeekCards() {
   const days = useMemo(() => weekDays(selected), [selected]);
 
   return (
-    <div className="scroll-y h-full px-3 pb-[calc(var(--tabbar-h)+var(--sab)+16px)] pt-2">
+    <div className="scroll-y h-full px-3 pb-[76px] pt-2">
       <div className="grid grid-cols-2 gap-2.5">
         {/* 第 1 格：缩略月历 —— 点击某天切换下方周卡片到对应星期 */}
         <MiniMonth

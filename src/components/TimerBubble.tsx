@@ -42,7 +42,7 @@ export default function TimerBubble() {
       <button
         onClick={() => setExpanded(true)}
         className="fixed left-4 z-40 flex items-center gap-2 rounded-full border border-primary-200 bg-primary-100 px-3 py-2 shadow-fab press active:bg-primary-200 anim-pop"
-        style={{ bottom: 56 }}
+        style={{ bottom: 'calc(var(--tabbar-h) + var(--sab) + 12px)' }}
         aria-label="计时中，点击展开"
       >
         <span className="flex h-5 w-5 items-center justify-center rounded-lg bg-primary-500">

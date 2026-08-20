@@ -66,7 +66,7 @@ function MonthPane({ date }: { date: Date }) {
         ))}
       </div>
 
-      <div className="scroll-y min-h-0 flex-1 pb-[calc(var(--tabbar-h)+var(--sab)+16px)]" style={{ touchAction: 'pan-y' }}>
+      <div className="scroll-y min-h-0 flex-1 pb-[76px]" style={{ touchAction: 'pan-y' }}>
         {weeks.map((week, wi) => (
           <div key={wi} className="grid grid-cols-7">
             {week.map((d) => {

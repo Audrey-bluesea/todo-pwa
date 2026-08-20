@@ -51,7 +51,7 @@ export default function App() {
   }, [theme]);
 
   return (
-    <div className="flex h-full w-full flex-col overflow-hidden bg-appbg">
+    <div className="relative flex h-dvh w-full flex-col overflow-hidden bg-appbg">
       <main className="min-h-0 flex-1 overflow-hidden">
         {!ready ? (
           <div className="flex h-full flex-col items-center justify-center gap-3">

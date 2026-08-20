@@ -24,29 +24,11 @@ export default function TabBar() {
     { key: 'calendar' as const, label: '日历', Icon: IconCalendar },
   ];
 
-  const tabbarStyle: React.CSSProperties = {
-    position: 'fixed',
-    left: 0,
-    right: 0,
-    /** ★ v29 最终版 —— 回到 v16 proven 尺寸 + 用户方案：
-     *  v16(bottom:-60, height:90) 用户确认"有明显进展"，图标完整可见。
-     *  当时唯一问题是 glass-strong 毛玻璃遮挡 + z-index 不够。
-     *  现在三个改动：
-     *  ① 实色背景替代毛玻璃 → 不再遮挡
-     *  ② zIndex:999 → 最高层，盖过一切
-     *  ③ 保持 bottom:-60 + height:90 → 图标区完整在可视区内 */
-    bottom: -48,
-    zIndex: 40,
-    height: 90,
-    backgroundColor: 'rgb(var(--c-appbg))',
-    boxShadow: '0 -2px 12px rgba(107, 170, 122, 0.08)',
-  };
-
-  // FAB：与 v16 完全一致，在 TabBar 上方一点
+  // FAB：固定在 TabBar 上方，bottom 用 CSS 变量动态避开安全区
   const fabStyle: React.CSSProperties = {
     position: 'fixed',
     right: 16,
-    bottom: 58,
+    bottom: 'calc(var(--tabbar-h) + var(--sab) + 12px)',
     zIndex: 50,
   };
 
@@ -71,10 +53,10 @@ export default function TabBar() {
 
       {/* TabBar —— 跟 v16 完全一样的单层结构 */}
       <nav
-        className="tabbar fixed inset-x-0 border-t border-primary-100"
-        style={tabbarStyle}
+        className="tabbar flex shrink-0 flex-col border-t border-primary-100 z-40 pb-safe"
+        style={{ boxShadow: '0 -2px 12px rgba(107, 170, 122, 0.08)' }}
       >
-        <div className="flex items-center justify-around" style={{ height: 56 }}>
+        <div className="flex h-14 w-full items-center justify-around">
           {items.map(({ key, label, Icon }) => {
             const active = tab === key;
             return (
