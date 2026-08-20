@@ -16,8 +16,14 @@ export default function TabBar() {
   const filter = useUIStore((s) => s.filter);
   const selectedDate = useUIStore((s) => s.selectedDate);
   const theme = useUIStore((s) => s.theme);
+  const drawerOpen = useUIStore((s) => s.drawerOpen);
 
   const fabEmoji = FAB_EMOJI[theme];
+
+  // 抽屉打开时，TabBar 与 FAB 整体隐藏，避免底部 TabBar/FAB 压住抽屉内容
+  // （抽屉 z-40 < FAB z-50，且 in-flow 的 TabBar 与 fixed 抽屉层级交叉，真机表现不稳定）。
+  // 直接隐藏是最确定、零层级依赖的解法。
+  if (drawerOpen) return null;
 
   const items = [
     { key: 'todos' as const, label: '待办', Icon: IconChecklist },
