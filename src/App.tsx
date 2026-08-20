@@ -65,7 +65,12 @@ export default function App() {
       const app = root?.firstElementChild as HTMLElement | null;
       const main = app?.querySelector('main') as HTMLElement | null;
       const tabbar = document.querySelector('.tabbar') as HTMLElement | null;
-      const scroller = main?.querySelector('.scroll-y') as HTMLElement | null;
+      const scrollers = Array.from(document.querySelectorAll('.scroll-y'));
+      const scroller =
+        scrollers.find((el) => {
+          const r = el.getBoundingClientRect();
+          return r.top >= 0 && r.top < window.innerHeight && el.scrollHeight > el.clientHeight;
+        }) ?? scrollers[0] ?? null;
       const vvh = window.visualViewport ? Math.round(window.visualViewport.height) : 'n/a';
       const scrollInfo = scroller
         ? `${Math.round(scroller.clientHeight)}/${Math.round(scroller.scrollHeight)} ${getComputedStyle(scroller).overflowY}`

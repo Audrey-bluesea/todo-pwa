@@ -242,7 +242,7 @@ function DayPane({ date }: { date: Date }) {
       </div>
 
       {/* 时间轴 */}
-      <div ref={scrollRef} className="scroll-y min-h-0 w-full max-w-full flex-1 overflow-x-hidden pb-[100px] pt-4" style={{ touchAction: 'pan-y' }}>
+      <div ref={scrollRef} className="scroll-y min-h-0 w-full max-w-full flex-1 overflow-x-hidden pb-[100px] pt-4">
         <div className="relative w-full max-w-full pb-20" style={{ height: 25 * HOUR_H + 80 }}>
           {Array.from({ length: 24 }, (_, h) => (
             <div key={h} className="absolute left-0 right-0" style={{ top: h * HOUR_H, height: HOUR_H }}>

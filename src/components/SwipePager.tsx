@@ -164,7 +164,7 @@ export default function SwipePager({
   return (
     <div
       className={className}
-      style={{ overflow: 'hidden', height: '100%', width: '100%', touchAction: 'pan-y' }}
+      style={{ overflow: 'hidden', height: '100%', width: '100%', touchAction: 'pan-x' }}
       {...{ onTouchStart, onTouchMove, onTouchEnd }}
     >
       <div
