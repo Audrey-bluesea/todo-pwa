@@ -866,6 +866,17 @@ export default function TodoEditorSheet() {
                     </button>
                     <input value={s.content} autoFocus={i === subTasks.length - 1 && !s.content}
                       onChange={(e) => setSubTasks((list) => list.map((x) => (x.id === s.id ? { ...x, content: e.target.value } : x)))}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          if (s.content.trim()) {
+                            setSubTasks((list) => [
+                              ...list,
+                              { id: Math.random().toString(36).slice(2), content: '', isCompleted: false },
+                            ]);
+                          }
+                        }
+                      }}
                       placeholder="子任务内容"
                       className={`min-w-0 flex-1 rounded-xl border border-primary-200 bg-white px-3 py-2 text-[14px] outline-none placeholder:text-neutral-400 focus:border-primary-400 ${
                         s.isCompleted ? 'text-neutral-400 line-through' : 'text-neutral-600'
