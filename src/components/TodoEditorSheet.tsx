@@ -149,7 +149,7 @@ function DateTimePicker({
 
   // ── Render ──
   return createPortal(
-    <div className="fixed inset-0 z-[60] flex items-end justify-center">
+    <div className={`fixed inset-0 z-[60] flex items-end justify-center ${!open ? 'pointer-events-none' : ''}`}>
       <div
         className={closing.current ? '' : 'anim-fade'}
         style={{

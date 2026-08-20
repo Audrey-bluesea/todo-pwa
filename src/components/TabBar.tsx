@@ -51,9 +51,9 @@ export default function TabBar() {
         )}
       </button>
 
-      {/* TabBar —— 跟 v16 完全一样的单层结构 */}
+      {/* TabBar —— in-flow + 高 z-index，确保在 TodoEditorSheet/Drawer 的全屏遮罩之上可点 */}
       <nav
-        className="tabbar flex shrink-0 flex-col border-t border-primary-100 z-40 pb-safe"
+        className="tabbar relative z-[70] flex shrink-0 flex-col border-t border-primary-100 bg-appbg pb-safe pointer-events-auto"
         style={{ boxShadow: '0 -2px 12px rgba(107, 170, 122, 0.08)' }}
       >
         <div className="flex h-14 w-full items-center justify-around">
