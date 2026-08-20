@@ -62,10 +62,10 @@ export default function TabBar() {
           z-[30] 低于所有浮层打开态(40~60)，打开浮层时浮层会盖住 TabBar（正确）；
           日常所有浮层关闭态均不渲染或 pointer-events-none，故 TabBar 可正常点击。 */}
       <nav
-        className="tabbar relative z-[30] flex shrink-0 flex-col border-t border-primary-100 bg-appbg pb-safe pointer-events-auto"
+        className="tabbar relative z-[30] flex shrink-0 flex-col border-t border-primary-100 bg-appbg pb-2 pointer-events-auto"
         style={{ boxShadow: '0 -2px 12px rgba(107, 170, 122, 0.08)' }}
       >
-        <div className="flex h-14 w-full items-center justify-around">
+        <div className="flex h-10 w-full items-center justify-around">
           {items.map(({ key, label, Icon }) => {
             const active = tab === key;
             return (

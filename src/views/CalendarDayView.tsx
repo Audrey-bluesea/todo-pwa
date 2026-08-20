@@ -243,30 +243,34 @@ function DayPane({ date }: { date: Date }) {
 
       {/* 时间轴 */}
       <div ref={scrollRef} className="scroll-y min-h-0 w-full max-w-full flex-1 overflow-x-hidden pb-[100px] pt-4">
-        <div className="relative w-full max-w-full pb-20" style={{ height: 25 * HOUR_H + 80 }}>
-          {Array.from({ length: 24 }, (_, h) => (
-            <div key={h} className="absolute left-0 right-0" style={{ top: h * HOUR_H, height: HOUR_H }}>
-              <div className="border-t border-primary-200" style={{ marginLeft: GUTTER }} />
+        <div className="relative w-full max-w-full pb-20">
+          {/* 时间格改为正常流布局：absolute 子元素不撑开父元素，在真机上一旦父元素高度失效，
+             24 小时格就挤成一团导致 scrollHeight=clientHeight。正常流让内容自然撑开，滚动必然生效。 */}
+          <div className="relative w-full">
+            {Array.from({ length: 24 }, (_, h) => (
+              <div key={h} className="relative w-full" style={{ height: HOUR_H }}>
+                <div className="absolute left-0 right-0 top-0 border-t border-primary-200" style={{ marginLeft: GUTTER }} />
+                <span
+                  className="absolute left-0 pr-2 text-[11px] tabular-nums text-neutral-400 leading-none"
+                  style={{ width: GUTTER, textAlign: 'right', top: -6.5 }}
+                >
+                  {pad(h)}:00
+                </span>
+              </div>
+            ))}
+
+            <div className="relative w-full" style={{ height: HOUR_H }}>
+              <div className="absolute left-0 right-0 top-0 border-t border-dashed border-primary-300" style={{ marginLeft: GUTTER }} />
               <span
-                className="absolute left-0 pr-2 text-[11px] tabular-nums text-neutral-400 leading-none"
-                style={{ width: GUTTER, textAlign: 'right', top: -6.5 }}
+                className="absolute left-0 pr-2 text-[11px] tabular-nums font-semibold text-primary-500 leading-none"
+                style={{ width: GUTTER, textAlign: 'right', top: -5 }}
               >
-                {pad(h)}:00
+                00:00
               </span>
             </div>
-          ))}
-
-          <div className="absolute left-0 right-0" style={{ top: 24 * HOUR_H, height: HOUR_H }}>
-            <div className="border-t border-dashed border-primary-300" style={{ marginLeft: GUTTER }} />
-            <span
-              className="absolute left-0 pr-2 text-[11px] tabular-nums font-semibold text-primary-500 leading-none"
-              style={{ width: GUTTER, textAlign: 'right', top: -5 }}
-            >
-              00:00
-            </span>
           </div>
 
-          <div className="absolute inset-y-0" style={{ left: GUTTER, right: 8 }}>
+          <div className="absolute inset-0" style={{ left: GUTTER, right: 8 }}>
             {timed.map((t) => {
               const d = t.dueDate as Date;
               const end = t.endDate as Date | undefined;
