@@ -65,7 +65,11 @@ export default function App() {
       const app = root?.firstElementChild as HTMLElement | null;
       const main = app?.querySelector('main') as HTMLElement | null;
       const tabbar = document.querySelector('.tabbar') as HTMLElement | null;
+      const scroller = main?.querySelector('.scroll-y') as HTMLElement | null;
       const vvh = window.visualViewport ? Math.round(window.visualViewport.height) : 'n/a';
+      const scrollInfo = scroller
+        ? `${Math.round(scroller.clientHeight)}/${Math.round(scroller.scrollHeight)} ${getComputedStyle(scroller).overflowY}`
+        : 'none';
       hud.textContent = [
         'innerH=' + window.innerHeight,
         'vvh=' + vvh,
@@ -73,6 +77,7 @@ export default function App() {
         'mainH=' + num(main),
         'tabTop=' + top(tabbar),
         'tabH=' + num(tabbar),
+        'scroll=' + scrollInfo,
         'rootInline=' + (root?.style.height || '(none)'),
       ].join('\n');
     };

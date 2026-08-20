@@ -340,7 +340,9 @@ body,
     -webkit-tap-highlight-color: transparent;
     /* 禁止整页橡皮筋 & 双指缩放 */
     overscroll-behavior: none;
-    touch-action: manipulation;
+    /* touch-action:manipulation 在 iOS standalone + fixed 根容器下会干扰子滚动容器；
+       改回 auto，由每个 .scroll-y 自己声明 pan-y。viewport 已 user-scalable=no，无需 manipulation 防双击缩放。 */
+    touch-action: auto;
     overflow: hidden;
   }
 
@@ -404,6 +406,13 @@ body,
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
+    /* iOS standalone 在 fixed/overflow:hidden 根容器下必须显式声明只许竖向滚动，
+       否则浏览器可能把触摸交给祖先或被全局 touch-action 覆盖，导致滑不动。 */
+    touch-action: pan-y;
+    /* 强制 GPU 层，避免 fixed 祖先导致子滚动容器 momentum scroll 失效 */
+    position: relative;
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
   }
 
   /* TabBar 背景色（组件自身用 inline style 控制高度和定位） */
