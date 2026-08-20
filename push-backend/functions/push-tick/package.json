@@ -1,0 +1,8 @@
+{
+  "name": "push-tick",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "@cloudbase/node-sdk": "^2.9.0"
+  }
+}

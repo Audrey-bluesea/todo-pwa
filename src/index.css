@@ -1,0 +1,640 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --sat: env(safe-area-inset-top, 0px);
+    --sab: env(safe-area-inset-bottom, 0px);
+    --sal: env(safe-area-inset-left, 0px);
+    --sar: env(safe-area-inset-right, 0px);
+    --tabbar-h: 56px;
+
+    /* ============ 🍵 抹茶绿主题（默认）============ */
+    /* primary 色阶（RGB 三元组） */
+    --c-primary-50: 244 249 244;
+    --c-primary-100: 230 242 232;
+    --c-primary-200: 203 229 208;
+    --c-primary-300: 168 213 186;
+    --c-primary-400: 133 192 154;
+    --c-primary-500: 107 170 122;
+    --c-primary-600: 82 148 99;
+    --c-primary-700: 62 122 78;
+    --c-primary-800: 46 92 59;
+    --c-primary-900: 31 62 40;
+    /* neutral 色阶 */
+    --c-neutral-50: 250 251 250;
+    --c-neutral-100: 241 244 241;
+    --c-neutral-200: 227 232 227;
+    --c-neutral-300: 207 214 207;
+    --c-neutral-400: 181 189 181;
+    --c-neutral-500: 138 150 138;
+    --c-neutral-600: 74 90 74;
+    --c-neutral-700: 58 70 58;
+    --c-neutral-800: 42 51 42;
+    /* 语义令牌 */
+    --c-accent: 232 163 61; /* 柔和琥珀（逾期强调） */
+    --c-success: 133 192 154; /* 海藻绿（已完成） */
+    --c-ink: 74 90 74; /* 正文 */
+    --c-border: 230 242 232; /* 极淡边（抹茶下近乎无） */
+    --c-muted: 138 150 138; /* 辅助灰 */
+    --c-appbg: 246 250 246; /* 全局背景 */
+    /* 字体 */
+    --font-base: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB',
+      'Microsoft YaHei', Inter, system-ui, sans-serif;
+    /* 圆角 / 阴影 */
+    --px-radius: 16px;
+    --shadow-card: 0 4px 12px rgba(107, 170, 122, 0.12);
+    --shadow-card-soft: 0 2px 8px rgba(168, 213, 186, 0.15);
+    --shadow-fab: 0 8px 20px rgba(133, 192, 154, 0.45);
+    --shadow-sheet: 0 -8px 32px rgba(62, 122, 78, 0.16);
+    --shadow-drawer: 8px 0 32px rgba(62, 122, 78, 0.14);
+  }
+
+  /* ============ 🌊 海边像素主题（温馨海滩小屋风） ============ */
+  [data-theme='pixel'] {
+    /* 主色：柔和海青（治愈系，非电子蓝） */
+    --c-primary-50: 249 248 244; /* 与暖沙底融合的选中色，避免冷蓝跳出 */
+    --c-primary-100: 222 240 245; /* 浅海雾 */
+    --c-primary-200: 191 224 233;
+    --c-primary-300: 142 200 213; /* 浅青蓝 */
+    --c-primary-400: 118 188 202;
+    --c-primary-500: 99 170 187; /* 柔和海青（主色，参考图按钮色） */
+    --c-primary-600: 76 148 165;
+    --c-primary-700: 58 122 138;
+    --c-primary-800: 44 96 110;
+    --c-primary-900: 30 70 82;
+    /* 中性：暖砂灰阶 */
+    --c-neutral-50: 250 248 244;
+    --c-neutral-100: 243 239 232;
+    --c-neutral-200: 230 225 215;
+    --c-neutral-300: 208 202 190;
+    --c-neutral-400: 173 166 153;
+    --c-neutral-500: 140 133 120;
+    --c-neutral-600: 90 84 74;
+    --c-neutral-700: 70 64 56;
+    --c-neutral-800: 54 49 43;
+    --c-accent: 240 184 96; /* 暖沙黄（点缀，非刺眼） */
+    --c-success: 132 197 152; /* 柔和海藻绿 */
+    --c-ink: 70 64 56; /* 暖墨（正文可读） */
+    --c-border: 222 216 205; /* 柔和沙边（1px 浅描边） */
+    --c-border-dark: 30 43 60; /* 仅装饰像素（海浪）描边用 */
+    --c-muted: 140 133 120;
+    --c-appbg: 246 242 234; /* 暖沙白（页面底） */
+    /* 圆体中文：iOS 原生 ui-rounded（SF Pro Rounded）优先，零网络依赖、即时生效、可读性好 */
+    --font-base: ui-rounded, 'SF Pro Rounded', -apple-system, BlinkMacSystemFont, 'PingFang SC',
+      'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+    --px-radius: 14px; /* 温润圆角（参考图 12~16px） */
+    /* 柔和阴影（非硬像素阴影） */
+    --shadow-card: 0 4px 14px rgba(70, 90, 100, 0.08);
+    --shadow-card-soft: 0 2px 8px rgba(70, 90, 100, 0.06);
+    --shadow-fab: 0 8px 20px rgba(99, 170, 187, 0.4);
+    --shadow-sheet: 0 -8px 32px rgba(70, 90, 100, 0.1);
+    --shadow-drawer: -8px 0 32px rgba(70, 90, 100, 0.1);
+  }
+
+  /* ============ 🍃 春季·花见 ============ */
+  [data-theme='spring'] {
+    --c-primary-50: 255 255 255;
+    --c-primary-100: 255 240 243;
+    --c-primary-200: 252 210 218;
+    --c-primary-300: 248 180 194;
+    --c-primary-400: 245 160 175;
+    --c-primary-500: 242 139 156;
+    --c-primary-600: 239 118 137;
+    --c-primary-700: 236 98 118;
+    --c-primary-800: 233 78 99;
+    --c-primary-900: 230 57 80;
+    --c-neutral-50: 250 235 238;
+    --c-neutral-100: 241 225 229;
+    --c-neutral-200: 222 207 211;
+    --c-neutral-300: 201 185 189;
+    --c-neutral-400: 174 158 162;
+    --c-neutral-500: 146 131 136;
+    --c-neutral-600: 114 98 103;
+    --c-neutral-700: 92 76 82;
+    --c-neutral-800: 74 58 64;
+    --c-accent: 255 217 61; /* 逾期/紧急 */
+    --c-success: 168 230 207; /* 已完成 */
+    --c-star: 255 217 61; /* 点缀色（备用，暂无星标 UI） */
+    --c-ink: 74 58 64; /* 正文 */
+    --c-border: 222 207 211; /* 浅边 */
+    --c-muted: 184 167 173; /* 辅助灰 */
+    --c-appbg: 255 240 243; /* 全局背景 */
+    --shadow-card: 0 4px 12px rgba(242, 139, 156, 0.10);
+    --shadow-card-soft: 0 2px 8px rgba(242, 139, 156, 0.12);
+    --shadow-fab: 0 8px 20px rgba(242, 139, 156, 0.40);
+    --shadow-sheet: 0 -8px 32px rgba(242, 139, 156, 0.16);
+    --shadow-drawer: 8px 0 32px rgba(242, 139, 156, 0.14);
+  }
+
+  /* ============ ☀️ 夏季·盛夏光年 ============ */
+  [data-theme='summer'] {
+    --c-primary-50: 255 255 255;
+    --c-primary-100: 240 249 255;
+    --c-primary-200: 182 224 251;
+    --c-primary-300: 123 200 247;
+    --c-primary-400: 84 178 233;
+    --c-primary-500: 45 156 219;
+    --c-primary-600: 6 134 205;
+    --c-primary-700: 0 112 191;
+    --c-primary-800: 0 90 177;
+    --c-primary-900: 0 68 163;
+    --c-neutral-50: 234 243 249;
+    --c-neutral-100: 223 232 239;
+    --c-neutral-200: 202 212 220;
+    --c-neutral-300: 176 187 196;
+    --c-neutral-400: 144 156 167;
+    --c-neutral-500: 112 125 137;
+    --c-neutral-600: 74 88 102;
+    --c-neutral-700: 48 63 79;
+    --c-neutral-800: 27 42 59;
+    --c-accent: 242 153 74; /* 逾期/紧急 */
+    --c-success: 39 174 96; /* 已完成 */
+    --c-star: 39 174 96; /* 点缀色（备用，暂无星标 UI） */
+    --c-ink: 27 42 59; /* 正文 */
+    --c-border: 202 212 220; /* 浅边 */
+    --c-muted: 152 175 199; /* 辅助灰 */
+    --c-appbg: 240 249 255; /* 全局背景 */
+    --shadow-card: 0 4px 12px rgba(45, 156, 219, 0.10);
+    --shadow-card-soft: 0 2px 8px rgba(45, 156, 219, 0.12);
+    --shadow-fab: 0 8px 20px rgba(45, 156, 219, 0.40);
+    --shadow-sheet: 0 -8px 32px rgba(45, 156, 219, 0.16);
+    --shadow-drawer: 8px 0 32px rgba(45, 156, 219, 0.14);
+  }
+
+  /* ============ 🍂 秋季·拾秋 ============ */
+  [data-theme='autumn'] {
+    --c-primary-50: 255 255 255;
+    --c-primary-100: 253 247 242;
+    --c-primary-200: 244 211 190;
+    --c-primary-300: 235 175 139;
+    --c-primary-400: 226 148 106;
+    --c-primary-500: 217 122 72;
+    --c-primary-600: 208 96 38;
+    --c-primary-700: 199 69 5;
+    --c-primary-800: 190 42 0;
+    --c-primary-900: 181 16 0;
+    --c-neutral-50: 247 241 236;
+    --c-neutral-100: 238 231 225;
+    --c-neutral-200: 218 210 204;
+    --c-neutral-300: 195 186 179;
+    --c-neutral-400: 167 156 148;
+    --c-neutral-500: 138 125 116;
+    --c-neutral-600: 103 89 78;
+    --c-neutral-700: 80 64 53;
+    --c-neutral-800: 61 44 32;
+    --c-accent: 192 57 43; /* 逾期/紧急 */
+    --c-success: 142 110 83; /* 已完成 */
+    --c-star: 142 110 83; /* 点缀色（备用，暂无星标 UI） */
+    --c-ink: 61 44 32; /* 正文 */
+    --c-border: 218 210 204; /* 浅边 */
+    --c-muted: 188 168 154; /* 辅助灰 */
+    --c-appbg: 253 247 242; /* 全局背景 */
+    --shadow-card: 0 4px 12px rgba(217, 122, 72, 0.10);
+    --shadow-card-soft: 0 2px 8px rgba(217, 122, 72, 0.12);
+    --shadow-fab: 0 8px 20px rgba(217, 122, 72, 0.40);
+    --shadow-sheet: 0 -8px 32px rgba(217, 122, 72, 0.16);
+    --shadow-drawer: 8px 0 32px rgba(217, 122, 72, 0.14);
+  }
+
+  /* ============ ❄️ 冬季·初雪 ============ */
+  [data-theme='winter'] {
+    --c-primary-50: 244 249 253;
+    --c-primary-100: 219 234 247; /* 选中态底（更蓝） */
+    --c-primary-200: 193 218 240;
+    --c-primary-300: 150 186 220;
+    --c-primary-400: 108 156 200;
+    --c-primary-500: 70 128 178; /* 锚点·天蓝（在蓝底上更跳） */
+    --c-primary-600: 48 102 152;
+    --c-primary-700: 28 78 126; /* 标题·浓郁 Azure */
+    --c-primary-800: 16 56 98;
+    --c-primary-900: 8 34 72;
+    --c-neutral-50: 236 244 250;
+    --c-neutral-100: 222 233 243;
+    --c-neutral-200: 200 215 230;
+    --c-neutral-300: 174 193 213;
+    --c-neutral-400: 142 164 188;
+    --c-neutral-500: 108 130 158; /* 辅助文字（偏蓝，和谐） */
+    --c-neutral-600: 72 94 124;
+    --c-neutral-700: 46 66 98;
+    --c-neutral-800: 28 44 72;
+    --c-accent: 214 92 116; /* 逾期/紧急（珊瑚红，蓝底上点睛） */
+    --c-success: 116 164 168; /* 已完成（霜冻青，蓝底可辨） */
+    --c-star: 116 164 168; /* 点缀色 */
+    --c-ink: 22 44 76; /* 正文/标题（深 Azure） */
+    --c-border: 198 215 232; /* 浅蓝边 */
+    --c-muted: 148 174 200; /* 辅助灰（偏蓝） */
+    --c-appbg: 158 198 238; /* 渐变图顶部天蓝（与状态栏/安全区统一） */
+    --shadow-card: 0 4px 12px rgba(60, 110, 160, 0.12);
+    --shadow-card-soft: 0 2px 8px rgba(60, 110, 160, 0.14);
+    --shadow-fab: 0 8px 20px rgba(60, 110, 160, 0.42);
+    --shadow-sheet: 0 -8px 32px rgba(60, 110, 160, 0.18);
+    --shadow-drawer: 8px 0 32px rgba(60, 110, 160, 0.16);
+  }
+
+  /* ============ ❄️ 冬季·初雪：渐变天空背景（由 #2 取色生成） ============ */
+  /* 让 body / 根容器 / 顶部 header / sticky 栏透出同一张竖向渐变（顶更蓝→底泛白） */
+  [data-theme='winter'] body {
+    background-color: rgb(var(--c-appbg));
+    background-image: url('/winter-bg.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+  }
+  [data-theme='winter'] .bg-appbg,
+  [data-theme='winter'] header {
+    background-color: transparent !important;
+    background-image: url('/winter-bg.png') !important;
+    background-size: cover !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+    background-attachment: fixed !important;
+  }
+
+  /* ============ 🌸 春信· Blossom ============ */
+  [data-theme='blossom'] {
+    --c-primary-50: 236 248 247;
+    --c-primary-100: 214 240 238;
+    --c-primary-200: 185 226 223;
+    --c-primary-300: 152 206 203;
+    --c-primary-400: 120 182 180;
+    --c-primary-500: 78 160 158; /* 锚点·青碧（薄荷底上清晰可辨） */
+    --c-primary-600: 52 134 132;
+    --c-primary-700: 32 108 107; /* 标题·深青 */
+    --c-primary-800: 18 84 84;
+    --c-primary-900: 8 62 63;
+    --c-neutral-50: 239 247 246;
+    --c-neutral-100: 225 239 238;
+    --c-neutral-200: 207 228 226;
+    --c-neutral-300: 183 212 210;
+    --c-neutral-400: 155 191 189;
+    --c-neutral-500: 124 166 164; /* 辅助文字（偏青，和谐） */
+    --c-neutral-600: 94 138 136;
+    --c-neutral-700: 66 112 110;
+    --c-neutral-800: 42 86 85;
+    --c-accent: 210 100 108; /* 逾期/紧急（暖玫红，青底点睛） */
+    --c-success: 72 140 116; /* 已完成（苔藓绿） */
+    --c-star: 72 140 116; /* 点缀色 */
+    --c-ink: 24 58 58; /* 正文/标题（深海青） */
+    --c-border: 195 220 218; /* 浅青边 */
+    --c-muted: 162 198 196; /* 辅助灰（偏青） */
+    --c-appbg: 185 220 222; /* 渐变图顶部薄荷（与状态栏/安全区统一） */
+    --shadow-card: 0 4px 12px rgba(60, 130, 128, 0.12);
+    --shadow-card-soft: 0 2px 8px rgba(60, 130, 128, 0.14);
+    --shadow-fab: 0 8px 20px rgba(60, 130, 128, 0.42);
+    --shadow-sheet: 0 -8px 32px rgba(60, 130, 128, 0.18);
+    --shadow-drawer: 8px 0 32px rgba(60, 130, 128, 0.16);
+  }
+
+  /* ============ 🌸 春信· Blossom：薄荷渐变背景 ============ */
+  [data-theme='blossom'] body {
+    background-color: rgb(var(--c-appbg));
+    background-image: url('/blossom-bg.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+  }
+  [data-theme='blossom'] .bg-appbg,
+  [data-theme='blossom'] header {
+    background-color: transparent !important;
+    background-image: url('/blossom-bg.png') !important;
+    background-size: cover !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+    background-attachment: fixed !important;
+  }
+
+html,
+body {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  overscroll-behavior: none;
+}
+
+/* 推送前正常工作的版本：#root 只设 height:100%，不碰 dvh。
+   TabBar 用 position:fixed 脱离文档流，不影响 #root 高度。 */
+#root {
+  height: 100%;
+}
+
+  html {
+    /* 双保险：即便 meta 被覆盖也禁止文本自动放大 */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  body {
+    margin: 0;
+    background-color: rgb(var(--c-appbg));
+    color: rgb(var(--c-ink));
+    font-family: var(--font-base);
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+    /* 禁止整页橡皮筋 & 双指缩放 */
+    overscroll-behavior: none;
+    touch-action: manipulation;
+    overflow: hidden;
+  }
+
+  /* 像素主题：方块闪烁光标 */
+  [data-theme='pixel'] input,
+  [data-theme='pixel'] textarea {
+    caret-color: rgb(var(--c-primary-500));
+    caret-shape: block;
+  }
+
+  button,
+  input,
+  textarea,
+  select {
+    font-family: inherit;
+    font-size: 16px; /* 防止 iOS 聚焦时自动放大 */
+    color: inherit;
+  }
+
+  button {
+    -webkit-appearance: none;
+    appearance: none;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+  }
+
+  input[type='date'],
+  input[type='time'] {
+    -webkit-appearance: none;
+    appearance: none;
+  }
+}
+
+@layer components {
+  /* 毛玻璃规范 */
+  .glass {
+    background: rgba(255, 255, 255, 0.72);
+    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+  }
+
+  .glass-strong {
+    background: rgba(255, 255, 255, 0.85);
+    -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(20px);
+  }
+
+  /* 44px 最小热区 */
+  .hit {
+    min-width: 44px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .scroll-y {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+
+  /* TabBar 背景色（组件自身用 inline style 控制高度和定位） */
+  .tabbar {
+    background-color: rgb(var(--c-appbg));
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+}
+
+@layer utilities {
+  .pt-safe {
+    padding-top: var(--sat);
+  }
+  .pb-safe {
+    padding-bottom: var(--sab);
+  }
+  .h-dvh {
+    height: 100vh;
+    height: 100dvh;
+  }
+  .press {
+    transition: transform 120ms ease, filter 120ms ease, background-color 120ms ease;
+  }
+  .press:active {
+    transform: scale(0.97);
+  }
+  .line-clamp-1 {
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}
+
+/* 弹层动画 */
+@keyframes sheet-up {
+  from {
+    transform: translate3d(0, 100%, 0);
+  }
+  to {
+    transform: translate3d(0, 0, 0);
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes drawer-in {
+  from {
+    transform: translate3d(-100%, 0, 0);
+  }
+  to {
+    transform: translate3d(0, 0, 0);
+  }
+}
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.anim-sheet {
+  animation: sheet-up 320ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+.anim-fade {
+  animation: fade-in 240ms ease;
+}
+.anim-drawer {
+  animation: drawer-in 300ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+.anim-pop {
+  animation: pop-in 200ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+/* ============ 🌊 海边像素主题：签名元素 ============ */
+
+/* 像素风格容器：极浅描边（仅像素主题生效，抹茶下无边框） */
+.px-surface {
+  border: 0 solid transparent;
+}
+[data-theme='pixel'] .px-surface {
+  border: 1px solid rgb(var(--c-border));
+}
+
+/* 像素风格分割线：1px 虚线（柔） */
+.px-divider {
+  border: 0;
+}
+[data-theme='pixel'] .px-divider {
+  border-top: 1px dashed rgb(var(--c-border));
+}
+
+/* 像素海浪：蓝色方块上下浮动，模拟呼吸的海 */
+@keyframes px-wave-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+.px-wave {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 28px;
+}
+.px-wave__block {
+  width: 10px;
+  height: 10px;
+  background: rgb(var(--c-primary-500));
+  border: 2px solid rgb(var(--c-border-dark));
+  animation: px-wave-bob 1.4s ease-in-out infinite;
+}
+.px-wave__block:nth-child(2) {
+  animation-delay: 0.15s;
+  background: rgb(var(--c-primary-300));
+}
+.px-wave__block:nth-child(3) {
+  animation-delay: 0.3s;
+  background: rgb(var(--c-accent));
+}
+.px-wave__block:nth-child(4) {
+  animation-delay: 0.45s;
+  background: rgb(var(--c-primary-300));
+}
+.px-wave__block:nth-child(5) {
+  animation-delay: 0.6s;
+  background: rgb(var(--c-primary-500));
+}
+
+/* ============ 🌊 海边像素主题：组件级视觉覆盖（温馨柔风） ============ */
+/* 说明：全部限定在 [data-theme='pixel']，抹茶绿不受影响。
+   原则：像素感来自「海边氛围 + 装饰插画」，UI 组件本身保持现代柔风（白卡 + 柔影 + 温润圆角）。 */
+
+/* 1. 待办卡片：纯白 + 柔和阴影 + 极浅描边（温润不硬） */
+[data-theme='pixel'] .todo-card {
+  background: #ffffff;
+  border: 1px solid rgb(var(--c-border));
+  box-shadow: 0 4px 14px rgba(70, 90, 100, 0.08);
+}
+/* 卡片左侧分类色条：保留色，去掉硬描边，仅留极浅分隔线 */
+[data-theme='pixel'] .todo-bar {
+  border-right: 1px solid rgba(70, 90, 100, 0.1);
+}
+
+/* 2. 区块标签（已逾期 / 今天 / 未来 7 天…）：圆润药丸 + 浅底 + 柔阴影 */
+[data-theme='pixel'] .bucket-label {
+  background: #ffffff;
+  border: 1px solid rgb(var(--c-border));
+  box-shadow: 0 2px 6px rgba(70, 90, 100, 0.06);
+}
+
+/* 3. 顶部大标题：圆体 + 轻微字距（去掉硬描边投影） */
+[data-theme='pixel'] h1 {
+  letter-spacing: 0.5px;
+  font-family: ui-rounded, 'SF Pro Rounded', -apple-system, 'PingFang SC', sans-serif;
+}
+
+/* 4. 底部 Tab 栏：浅顶边 + 柔阴影 + 实色（覆盖毛玻璃） */
+[data-theme='pixel'] .tabbar {
+  border-top: 1px solid rgb(var(--c-border)) !important;
+  box-shadow: 0 -4px 16px rgba(70, 90, 100, 0.06) !important;
+  background: rgb(var(--c-appbg)) !important;
+}
+[data-theme='pixel'] .tabbar button[aria-current='page'] svg {
+  filter: none;
+}
+/* FAB 加号：圆润 + 柔阴影（不强制方块） */
+[data-theme='pixel'] .fab {
+  border-radius: 9999px !important;
+}
+
+/* 5. 列表 / 看板 分段控制器：无边框 + 浅底 + 圆润 */
+[data-theme='pixel'] .seg-track {
+  background: rgb(var(--c-appbg)) !important;
+}
+[data-theme='pixel'] .seg-track button.bg-white {
+  box-shadow: 0 2px 6px rgba(70, 90, 100, 0.08);
+}
+/* 分段下拉菜单 */
+[data-theme='pixel'] .seg-menu {
+  border: 1px solid rgb(var(--c-border)) !important;
+  box-shadow: 0 8px 24px rgba(70, 90, 100, 0.12) !important;
+  background: #ffffff !important;
+}
+
+/* 6. 底部弹层（设置 / 编辑器 / 清单编辑）：浅顶边 + 柔阴影 + 实色 */
+[data-theme='pixel'] .anim-sheet {
+  border-top: 1px solid rgb(var(--c-border));
+  box-shadow: 0 -8px 32px rgba(70, 90, 100, 0.1) !important;
+  background: rgb(var(--c-appbg)) !important;
+}
+
+/* 7. 抽屉：浅右边 + 实色背景（覆盖毛玻璃） */
+[data-theme='pixel'] aside {
+  border-right: 1px solid rgb(var(--c-border)) !important;
+  background: rgb(var(--c-appbg)) !important;
+}
+
+/* 8. 输入控件：浅边 + 柔角 + 白底 */
+[data-theme='pixel'] input,
+[data-theme='pixel'] textarea,
+[data-theme='pixel'] select {
+  border: 1px solid rgb(var(--c-border));
+  border-radius: var(--px-radius);
+  background: #ffffff;
+}
+
+  /* 9. 主操作按钮（保存 / 添加等）：柔阴影 + 浅边 */
+  [data-theme='pixel'] button.bg-primary-500,
+  [data-theme='pixel'] button.bg-primary-600 {
+    border: 1px solid rgb(var(--c-primary-700));
+    box-shadow: 0 4px 12px rgba(99, 170, 187, 0.35);
+  }
+

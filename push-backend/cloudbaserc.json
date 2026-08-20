@@ -1,0 +1,13 @@
+{
+  "envId": "todo-d1g2t6903e3fcfef5",
+  "functionRoot": "functions",
+  "functions": [
+    {
+      "name": "push-manage",
+      "runtime": "Nodejs20.19",
+      "handler": "index.main",
+      "memorySize": 128,
+      "timeout": 60
+    }
+  ]
+}
