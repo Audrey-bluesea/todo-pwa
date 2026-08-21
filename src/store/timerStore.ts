@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { TimeEntry } from '../types';
+import type { QuickTimerPreset, TimeEntry } from '../types';
 import * as db from '../db/idb';
 import { uid } from '../lib/date';
 import { useDataStore } from './dataStore';
@@ -40,6 +40,8 @@ interface TimerState {
   timeEntries: TimeEntry[];
   /** 所有进行中的计时（支持并发多计时） */
   running: RunningTimer[];
+  /** 快捷计时预设（洗澡、睡觉等常用任务） */
+  quickPresets: QuickTimerPreset[];
 
   init: () => Promise<void>;
   /** 开始计时（追加新会话，不打断其它进行中的计时）。自由计时传 todoId=null */
@@ -54,6 +56,12 @@ interface TimerState {
   updateTimeEntry: (id: string, patch: Partial<TimeEntry>) => Promise<void>;
   /** 修改进行中的计时（标题 / 清单），按 id 定位 */
   updateRunning: (id: string, patch: Partial<RunningTimer>) => Promise<void>;
+  /** 添加快捷计时预设 */
+  addQuickPreset: (input: { title: string; categoryId?: string | null }) => Promise<string>;
+  /** 修改快捷计时预设 */
+  updateQuickPreset: (id: string, patch: Partial<QuickTimerPreset>) => Promise<void>;
+  /** 删除快捷计时预设 */
+  removeQuickPreset: (id: string) => Promise<void>;
 }
 
 export const useTimerStore = create<TimerState>((set, get) => {
@@ -82,11 +90,13 @@ export const useTimerStore = create<TimerState>((set, get) => {
     ready: false,
     timeEntries: [],
     running: [],
+    quickPresets: [],
 
     async init() {
       if (get().ready) return;
       const entries = await db.allTimeEntries();
       const raw = await db.getMeta<RunningTimer | RunningTimer[]>(RUNNING_KEY);
+      const rawPresets = await db.getMeta<QuickTimerPreset[]>('timer:quickPresets');
       let list: RunningTimer[] = [];
       if (Array.isArray(raw)) list = raw;
       else if (raw && typeof (raw as RunningTimer).start === 'number') {
@@ -94,7 +104,11 @@ export const useTimerStore = create<TimerState>((set, get) => {
         list = [raw as RunningTimer];
       }
       list = list.filter((r) => r && typeof r.start === 'number' && !Number.isNaN(r.start));
-      set({ timeEntries: entries, running: list, ready: true });
+      const presets = (rawPresets ?? []).map((p) => ({
+        ...p,
+        createdAt: new Date(p.createdAt),
+      }));
+      set({ timeEntries: entries, running: list, quickPresets: presets, ready: true });
     },
 
     async startTimer({ todoId = null, title, categoryId = null }) {
@@ -166,6 +180,33 @@ export const useTimerStore = create<TimerState>((set, get) => {
       if (patch.start !== undefined && cur.todoId) {
         syncTodoTime(cur.todoId, new Date(patch.start), null);
       }
+    },
+
+    async addQuickPreset(input) {
+      const maxOrder = get().quickPresets.reduce((m, p) => Math.max(m, p.sortOrder ?? -1), -1);
+      const preset: QuickTimerPreset = {
+        id: uid(),
+        title: input.title.trim() || '快捷计时',
+        categoryId: input.categoryId ?? null,
+        createdAt: new Date(),
+        sortOrder: maxOrder + 1,
+      };
+      const next = [...get().quickPresets, preset];
+      set({ quickPresets: next });
+      await db.setMeta('timer:quickPresets', next);
+      return preset.id;
+    },
+
+    async updateQuickPreset(id, patch) {
+      const next = get().quickPresets.map((p) => (p.id === id ? { ...p, ...patch } : p));
+      set({ quickPresets: next });
+      await db.setMeta('timer:quickPresets', next);
+    },
+
+    async removeQuickPreset(id) {
+      const next = get().quickPresets.filter((p) => p.id !== id);
+      set({ quickPresets: next });
+      await db.setMeta('timer:quickPresets', next);
     },
   };
 });

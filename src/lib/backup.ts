@@ -1,15 +1,16 @@
 import { useDataStore } from '../store/dataStore';
 import { useTimerStore } from '../store/timerStore';
 import * as db from '../db/idb';
-import type { Category, Todo, TimeEntry } from '../types';
+import type { Category, Todo, TimeEntry, QuickTimerPreset } from '../types';
 
 const APP_ID = 'matcha-todo';
-const BACKUP_VERSION = 1;
+const BACKUP_VERSION = 2;
 
 export interface BackupData {
   categories: Category[];
   todos: Todo[];
   timeEntries: TimeEntry[];
+  quickPresets: QuickTimerPreset[];
 }
 
 export interface BackupFile {
@@ -22,12 +23,12 @@ export interface BackupFile {
 /** 收集当前全部数据，生成备份对象（Date 会被 JSON 自动转成 ISO 字符串） */
 export function buildBackup(): BackupFile {
   const { categories, todos } = useDataStore.getState();
-  const { timeEntries } = useTimerStore.getState();
+  const { timeEntries, quickPresets } = useTimerStore.getState();
   return {
     app: APP_ID,
     version: BACKUP_VERSION,
     exportedAt: new Date().toISOString(),
-    data: { categories, todos, timeEntries },
+    data: { categories, todos, timeEntries, quickPresets },
   };
 }
 
@@ -65,7 +66,11 @@ function reviveData(raw: Partial<BackupData>): BackupData {
     end: e.end ? new Date(e.end) : null,
     createdAt: new Date(e.createdAt),
   }));
-  return { categories, todos, timeEntries };
+  const quickPresets = (raw.quickPresets ?? []).map((p: any) => ({
+    ...p,
+    createdAt: new Date(p.createdAt),
+  }));
+  return { categories, todos, timeEntries, quickPresets };
 }
 
 /** 解析并校验备份文件，返回可用的数据；格式不对则抛错 */
@@ -85,16 +90,17 @@ export async function parseBackupFile(file: File): Promise<BackupData> {
 
 /** 用导入的数据覆盖当前全部数据（清空三张表后写入，并同步内存状态） */
 export async function restoreBackup(data: BackupData) {
-  const { categories, todos, timeEntries } = data;
+  const { categories, todos, timeEntries, quickPresets } = data;
 
   await db.clearCategories();
   await db.clearTodos();
   await db.clearTimeEntries();
+  await db.setMeta('timer:quickPresets', quickPresets ?? []);
 
   await db.putCategories(categories);
   await db.putTodos(todos);
   await db.putTimeEntries(timeEntries);
 
   useDataStore.setState({ categories, todos });
-  useTimerStore.setState({ timeEntries });
+  useTimerStore.setState({ timeEntries, quickPresets: quickPresets ?? [] });
 }

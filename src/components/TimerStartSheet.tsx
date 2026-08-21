@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
+import type { QuickTimerPreset } from '../types';
 import { useUIStore } from '../store/uiStore';
 import { useTimerStore, fmtElapsed, fmtDuration } from '../store/timerStore';
 import { useDataStore } from '../store/dataStore';
@@ -16,11 +17,17 @@ export default function TimerStartSheet() {
   const stopTimer = useTimerStore((s) => s.stopTimer);
   const removeTimeEntry = useTimerStore((s) => s.removeTimeEntry);
   const timeEntries = useTimerStore((s) => s.timeEntries);
+  const quickPresets = useTimerStore((s) => s.quickPresets);
+  const addQuickPreset = useTimerStore((s) => s.addQuickPreset);
+  const updateQuickPreset = useTimerStore((s) => s.updateQuickPreset);
+  const removeQuickPreset = useTimerStore((s) => s.removeQuickPreset);
 
   const categories = useDataStore((s) => s.categories);
 
   const [label, setLabel] = useState('');
   const [freeCat, setFreeCat] = useState(''); // '' = 收集箱（未分类）
+  const [presetMode, setPresetMode] = useState<'view' | 'edit'>('view');
+  const [draftPreset, setDraftPreset] = useState<QuickTimerPreset | null>(null);
   const [, setTick] = useState(0);
 
   // 运行中：实时刷新已用时长
@@ -57,6 +64,50 @@ export default function TimerStartSheet() {
   const handleDelete = async (id: string) => {
     await removeTimeEntry(id);
     showToast('已删除记录');
+  };
+
+  const startPreset = async (preset: QuickTimerPreset) => {
+    await startTimer({ title: preset.title, categoryId: preset.categoryId });
+    showToast('开始计时');
+    close();
+  };
+
+  const saveDraftPreset = async () => {
+    if (!draftPreset?.title.trim()) {
+      showToast('先写个名称吧');
+      return;
+    }
+    if (draftPreset.id) {
+      await updateQuickPreset(draftPreset.id, {
+        title: draftPreset.title.trim(),
+        categoryId: draftPreset.categoryId || null,
+      });
+    } else {
+      await addQuickPreset({
+        title: draftPreset.title.trim(),
+        categoryId: draftPreset.categoryId || null,
+      });
+    }
+    setDraftPreset(null);
+  };
+
+  const deletePreset = async (id: string, title: string) => {
+    if (typeof window !== 'undefined' && window.confirm(`确定删除快捷计时「${title}」？`)) {
+      await removeQuickPreset(id);
+    }
+  };
+
+  const openPresetDraft = (preset?: QuickTimerPreset) => {
+    setPresetMode('edit');
+    setDraftPreset(
+      preset ?? {
+        id: '',
+        title: '',
+        categoryId: '',
+        createdAt: new Date(),
+        sortOrder: quickPresets.length,
+      },
+    );
   };
 
   return createPortal(
@@ -154,6 +205,128 @@ export default function TimerStartSheet() {
           >
             开始
           </button>
+        </div>
+
+        {/* 快捷计时 */}
+        <div className="mb-4">
+          <div className="mb-2 flex items-center justify-between">
+            <span className="text-[13px] font-semibold text-neutral-500">快捷计时</span>
+            {quickPresets.length > 0 && (
+              <button
+                onClick={() => {
+                  setPresetMode((m) => (m === 'edit' ? 'view' : 'edit'));
+                  setDraftPreset(null);
+                }}
+                className="text-[12px] text-primary-600 press"
+              >
+                {presetMode === 'edit' ? '完成' : '管理'}
+              </button>
+            )}
+          </div>
+
+          {draftPreset && (
+            <div className="anim-pop mb-3 rounded-2xl bg-primary-50 p-3">
+              <input
+                value={draftPreset.title}
+                onChange={(e) => setDraftPreset((d) => (d ? { ...d, title: e.target.value } : d))}
+                placeholder="快捷任务名称（如：洗澡）"
+                className="mb-2 w-full rounded-xl border border-primary-100 bg-white px-3 py-2 text-[14px] text-neutral-700 outline-none placeholder:text-neutral-400 focus:border-primary-300"
+              />
+              <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
+                <button
+                  onClick={() => setDraftPreset((d) => (d ? { ...d, categoryId: '' } : d))}
+                  className={`shrink-0 rounded-full px-3 py-1.5 text-[12px] press ${
+                    draftPreset.categoryId === ''
+                      ? 'bg-primary-500 text-white'
+                      : 'border border-primary-100 bg-white text-neutral-600'
+                  }`}
+                  style={{ minHeight: 30 }}
+                >
+                  收集箱
+                </button>
+                {categories.map((c) => (
+                  <button
+                    key={c.id}
+                    onClick={() => setDraftPreset((d) => (d ? { ...d, categoryId: c.id } : d))}
+                    className={`shrink-0 rounded-full px-3 py-1.5 text-[12px] press ${
+                      draftPreset.categoryId === c.id
+                        ? 'bg-primary-500 text-white'
+                        : 'border border-primary-100 bg-white text-neutral-600'
+                    }`}
+                    style={{ minHeight: 30 }}
+                  >
+                    {c.name}
+                  </button>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setDraftPreset(null)}
+                  className="flex-1 rounded-xl bg-white py-2 text-[13px] text-neutral-500 press active:bg-neutral-50"
+                >
+                  取消
+                </button>
+                <button
+                  onClick={() => void saveDraftPreset()}
+                  className="flex-1 rounded-xl bg-primary-500 py-2 text-[13px] font-semibold text-white press active:bg-primary-600"
+                >
+                  保存
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {quickPresets.map((preset) => {
+              const cat = categories.find((c) => c.id === preset.categoryId);
+              return (
+                <div key={preset.id} className="relative shrink-0">
+                  {presetMode === 'edit' && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        void deletePreset(preset.id, preset.title);
+                      }}
+                      className="absolute -right-1 -top-1 z-10 flex h-4 w-4 items-center justify-center rounded-full bg-neutral-400 text-white"
+                      aria-label="删除"
+                    >
+                      <IconClose size={10} className="stroke-white" strokeWidth={2.5} />
+                    </button>
+                  )}
+                  <button
+                    onClick={() => {
+                      if (presetMode === 'edit') {
+                        setDraftPreset({ ...preset });
+                      } else {
+                        void startPreset(preset);
+                      }
+                    }}
+                    className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] press ${
+                      presetMode === 'edit'
+                        ? 'border border-dashed border-primary-300 bg-white text-neutral-600'
+                        : 'border border-primary-100 bg-white text-neutral-700'
+                    }`}
+                    style={{ minHeight: 34 }}
+                  >
+                    {cat?.color && (
+                      <span
+                        className="h-2 w-2 rounded-full"
+                        style={{ backgroundColor: cat.color }}
+                      />
+                    )}
+                    <span>{preset.title}</span>
+                  </button>
+                </div>
+              );
+            })}
+            <button
+              onClick={() => openPresetDraft()}
+              className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full border border-dashed border-primary-300 text-[18px] text-primary-500 press active:bg-primary-50"
+              aria-label="添加快捷计时"
+            >
+              +
+            </button>
+          </div>
         </div>
 
         {/* 今日记录 */}

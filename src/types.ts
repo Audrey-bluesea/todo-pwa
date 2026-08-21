@@ -64,6 +64,15 @@ export interface Todo {
   reminder?: { enabled: boolean; leadMin: number } | null;
 }
 
+export interface QuickTimerPreset {
+  id: string;
+  title: string;
+  /** 关联分类 id；'' 或 null 表示收集箱 */
+  categoryId: string | null;
+  createdAt: Date;
+  sortOrder: number;
+}
+
 export type TabKey = 'todos' | 'calendar';
 export type TodoViewMode = 'list' | 'board';
 export type CalendarViewMode = 'list' | 'day' | 'week' | 'month';
