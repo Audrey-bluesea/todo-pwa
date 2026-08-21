@@ -75,9 +75,9 @@ export default function CalendarWeekTimelineView() {
 
   return (
     <div className="flex min-h-0 h-full w-full min-w-0 flex-col overflow-hidden">
-      {/* 统一滚动容器：横向给 7 列更宽裕空间，纵向滚动时间轴 */}
-      <div ref={scrollRef} className="scroll-y flex-1 overflow-auto min-w-0">
-        <div className="min-w-[460px] w-full">
+      {/* 统一滚动容器：仅纵向滚动；7 列等分剩余宽度，不横向滑动 */}
+      <div ref={scrollRef} className="scroll-y flex-1 min-w-0 overflow-x-hidden">
+        <div className="w-full min-w-0">
           {/* 日期头：7 列，与下方时间轴列对齐；点击进入日视图；纵向滚动时 sticky 置顶 */}
           <div className="day-week-header sticky top-0 z-10 shrink-0 border-b border-primary-100 bg-[rgb(var(--c-appbg))] px-0 pb-1 pt-1.5">
             <div className="flex">
@@ -157,8 +157,8 @@ export default function CalendarWeekTimelineView() {
               </span>
             </div>
 
-            {/* 7 列事件区 */}
-            <div className="absolute inset-y-0 grid grid-cols-7" style={{ left: GUTTER, right: 4 }}>
+            {/* 7 列事件区（等分剩余宽度，与日期头对齐） */}
+            <div className="absolute inset-y-0 grid grid-cols-7" style={{ left: GUTTER, right: 0 }}>
               {days.map((d) => (
                 <DayColumn
                   key={+d}
@@ -303,37 +303,39 @@ function DayColumn({
               borderLeft: `3px solid ${color}`,
             }}
           >
-            <div className="min-w-0 flex-1">
-              {showTimeText && evtH >= 36 ? (
-                <>
+            {evtH >= 24 && (
+              <div className="min-w-0 flex-1">
+                {showTimeText && evtH >= 36 ? (
+                  <>
+                    <div
+                      className={`overflow-hidden break-words leading-tight text-[12px] ${
+                        t.isCompleted ? 'text-neutral-700 line-through' : 'text-neutral-600'
+                      }`}
+                    >
+                      {running.some((r) => r.todoId === t.id) && (
+                        <span className="mr-1 inline-block h-[6px] w-[6px] animate-pulse rounded-full bg-red-500 align-middle" />
+                      )}
+                      {t.title}
+                    </div>
+                    <div className="overflow-hidden whitespace-nowrap text-[10px] text-primary-500">
+                      {fmtTime(seg.segStart)}
+                      {!(seg.segStart.getTime() === seg.segEnd.getTime()) && ` · ${fmtTime(seg.segEnd)}`}
+                    </div>
+                  </>
+                ) : (
                   <div
-                    className={`overflow-hidden break-words leading-tight text-[12px] ${
-                      t.isCompleted ? 'text-neutral-700 line-through' : 'text-neutral-600'
-                    }`}
+                    className={`overflow-hidden break-words leading-tight ${
+                      evtH < 28 ? 'text-[10px]' : 'text-[12px]'
+                    } ${t.isCompleted ? 'text-neutral-700 line-through' : 'text-neutral-600'}`}
                   >
                     {running.some((r) => r.todoId === t.id) && (
                       <span className="mr-1 inline-block h-[6px] w-[6px] animate-pulse rounded-full bg-red-500 align-middle" />
                     )}
                     {t.title}
                   </div>
-                  <div className="overflow-hidden whitespace-nowrap text-[10px] text-primary-500">
-                    {fmtTime(seg.segStart)}
-                    {!(seg.segStart.getTime() === seg.segEnd.getTime()) && ` · ${fmtTime(seg.segEnd)}`}
-                  </div>
-                </>
-              ) : (
-                <div
-                  className={`overflow-hidden break-words leading-tight ${
-                    evtH < 28 ? 'text-[10px]' : 'text-[12px]'
-                  } ${t.isCompleted ? 'text-neutral-700 line-through' : 'text-neutral-600'}`}
-                >
-                  {running.some((r) => r.todoId === t.id) && (
-                    <span className="mr-1 inline-block h-[6px] w-[6px] animate-pulse rounded-full bg-red-500 align-middle" />
-                  )}
-                  {t.title}
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            )}
           </button>
         );
       })}
@@ -368,32 +370,34 @@ function DayColumn({
               borderLeft: `3px solid ${accent}`,
             }}
           >
-            <div className="min-w-0 flex-1">
-              {showTimeText && evtH >= 36 ? (
-                <>
-                  <div className="overflow-hidden break-words leading-tight text-[12px]" style={{ color: textColor }}>
+            {evtH >= 24 && (
+              <div className="min-w-0 flex-1">
+                {showTimeText && evtH >= 36 ? (
+                  <>
+                    <div className="overflow-hidden break-words leading-tight text-[12px]" style={{ color: textColor }}>
+                      {e.live && (
+                        <span className="mr-1 inline-block h-[6px] w-[6px] animate-pulse rounded-full bg-red-500 align-middle" />
+                      )}
+                      {e.title}
+                    </div>
+                    <div className="overflow-hidden whitespace-nowrap text-[10px]" style={{ color: timeColor }}>
+                      {fmtTime(seg.segStart)}
+                      {e.end ? `–${fmtTime(seg.segEnd)}` : ' · 进行中'}
+                    </div>
+                  </>
+                ) : (
+                  <div
+                    className={`overflow-hidden break-words leading-tight ${evtH < 28 ? 'text-[10px]' : 'text-[12px]'}`}
+                    style={{ color: textColor }}
+                  >
                     {e.live && (
                       <span className="mr-1 inline-block h-[6px] w-[6px] animate-pulse rounded-full bg-red-500 align-middle" />
                     )}
                     {e.title}
                   </div>
-                  <div className="overflow-hidden whitespace-nowrap text-[10px]" style={{ color: timeColor }}>
-                    {fmtTime(seg.segStart)}
-                    {e.end ? `–${fmtTime(seg.segEnd)}` : ' · 进行中'}
-                  </div>
-                </>
-              ) : (
-                <div
-                  className={`overflow-hidden break-words leading-tight ${evtH < 28 ? 'text-[10px]' : 'text-[12px]'}`}
-                  style={{ color: textColor }}
-                >
-                  {e.live && (
-                    <span className="mr-1 inline-block h-[6px] w-[6px] animate-pulse rounded-full bg-red-500 align-middle" />
-                  )}
-                  {e.title}
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            )}
           </button>
         );
       })}
