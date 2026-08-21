@@ -2,6 +2,8 @@ import { useUIStore } from '../store/uiStore';
 import { IconCalendar, IconChecklist, IconPlus } from './Icons';
 
 const FAB_EMOJI: Partial<Record<string, string>> = {
+  matcha: '🍵',
+  pixel: '🎡',
   spring: '🌸',
   summer: '🎐',
   autumn: '🍁',
