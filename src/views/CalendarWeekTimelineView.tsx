@@ -294,9 +294,7 @@ function DayColumn({
           <button
             key={t.id}
             onClick={() => openEditor({ todoId: t.id })}
-            className={`day-event absolute mx-[1px] flex overflow-hidden rounded-[4px] px-1.5 py-1 text-left shadow-card-soft ${
-              evtH < 32 ? 'items-center' : 'items-start'
-            } bg-white`}
+            className="day-event absolute mx-[1px] flex items-start overflow-hidden rounded-[4px] px-1.5 py-1 text-left shadow-card-soft bg-white"
             style={{
               top,
               left: leftPct,
@@ -360,9 +358,7 @@ function DayColumn({
           <button
             key={e.id}
             onClick={() => setEditingTimeEntry(e.id)}
-            className={`day-event absolute mx-[1px] flex overflow-hidden rounded-[4px] px-1.5 py-1 text-left shadow-card-soft ${
-              evtH < 32 ? 'items-center' : 'items-start'
-            }`}
+            className="day-event absolute mx-[1px] flex items-start overflow-hidden rounded-[4px] px-1.5 py-1 text-left shadow-card-soft"
             style={{
               top,
               left: leftPct,
