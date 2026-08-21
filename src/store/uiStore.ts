@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type {
   BoardMode,
   CalendarViewMode,
+  CalendarWeekMode,
   DrawerFilter,
   TabKey,
   TodoViewMode,
@@ -38,6 +39,8 @@ interface UIState {
   /** 分组方式：按时间 / 按 section / 按清单（列表视图用） */
   groupBy: 'time' | 'section' | 'category';
   calendarView: CalendarViewMode;
+  /** 周视图内部子模式：卡片 / 时间轴 */
+  calendarWeekMode: CalendarWeekMode;
   drawerOpen: boolean;
   /** 抽屉拖拽偏移（右滑打开/左滑关闭的跟手值，px） */
   drawerOffset: number;
@@ -77,6 +80,7 @@ interface UIState {
   setBoardMode: (v: BoardMode) => void;
   setGroupBy: (v: 'time' | 'section' | 'category') => void;
   setCalendarView: (v: CalendarViewMode) => void;
+  setCalendarWeekMode: (v: CalendarWeekMode) => void;
   setDrawerOpen: (b: boolean) => void;
   setDrawerOffset: (v: number) => void;
   setFilter: (f: DrawerFilter) => void;
@@ -100,6 +104,7 @@ export const useUIStore = create<UIState>((set) => ({
   boardMode: 'category',
   groupBy: 'time',
   calendarView: 'list',
+  calendarWeekMode: 'cards',
   drawerOpen: false,
   drawerOffset: 0,
   filter: { kind: 'all' },
@@ -132,6 +137,7 @@ export const useUIStore = create<UIState>((set) => ({
   setBoardMode: (boardMode) => set({ boardMode }),
   setGroupBy: (groupBy) => set({ groupBy }),
   setCalendarView: (calendarView) => set({ calendarView }),
+  setCalendarWeekMode: (calendarWeekMode) => set({ calendarWeekMode }),
   setDrawerOpen: (drawerOpen) => set({ drawerOpen, drawerOffset: 0 }),
   setDrawerOffset: (drawerOffset) => set({ drawerOffset }),
   setFilter: (filter) => set({ filter, drawerOpen: false, drawerOffset: 0 }),

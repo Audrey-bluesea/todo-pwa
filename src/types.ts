@@ -67,6 +67,8 @@ export interface Todo {
 export type TabKey = 'todos' | 'calendar';
 export type TodoViewMode = 'list' | 'board';
 export type CalendarViewMode = 'list' | 'day' | 'week' | 'month';
+/** 周视图内部的两种子模式：卡片 / 时间轴 */
+export type CalendarWeekMode = 'cards' | 'timeline';
 
 /** 抽屉里的过滤视图 */
 export type DrawerFilter =

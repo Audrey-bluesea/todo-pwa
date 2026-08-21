@@ -5,11 +5,12 @@ import { addDays, addMonths, startOfDay } from '../lib/date';
 import CalendarListView from './CalendarListView';
 import CalendarDayView from './CalendarDayView';
 import CalendarWeekCards from './CalendarWeekCards';
+import CalendarWeekTimelineView from './CalendarWeekTimelineView';
 import CalendarMonthGrid from './CalendarMonthGrid';
 import TodoListView from './TodoListView';
 import SearchBar from '../components/SearchBar';
 import TimerSearchCard from '../components/TimerSearchCard';
-import { IconCalendar, IconChevronLeft, IconChevronRight, IconGrid, IconList, IconSearch, IconSun, IconWeek } from '../components/Icons';
+import { IconCalendar, IconChevronLeft, IconChevronRight, IconGrid, IconList, IconSearch, IconSun, IconTimeline, IconWeek } from '../components/Icons';
 import ViewDropdown from '../components/ViewDropdown';
 import type { CalendarViewMode } from '../types';
 import { buildCatNameMap, searchTodos, searchTimeEntries } from '../lib/search';
@@ -27,6 +28,8 @@ const CAL_VIEW_OPTIONS = [
 export default function CalendarTab() {
   const view = useUIStore((s) => s.calendarView);
   const setView = useUIStore((s) => s.setCalendarView);
+  const weekMode = useUIStore((s) => s.calendarWeekMode);
+  const setWeekMode = useUIStore((s) => s.setCalendarWeekMode);
   const date = useUIStore((s) => s.viewDate);
   const setDate = useUIStore((s) => s.setViewDate);
   const setSelectedDate = useUIStore((s) => s.setSelectedDate);
@@ -118,6 +121,31 @@ export default function CalendarTab() {
                 <IconCalendar size={13} />
                 今天
               </button>
+              {/* 周视图内部子模式切换：卡片 / 时间轴 */}
+              {view === 'week' && (
+                <div className="mr-1 flex shrink-0 items-center rounded-full bg-primary-100 p-[3px]">
+                  <button
+                    onClick={() => setWeekMode('cards')}
+                    className={`flex h-[26px] w-[26px] items-center justify-center rounded-full press ${
+                      weekMode === 'cards' ? 'bg-white text-primary-600 shadow-card-soft' : 'text-neutral-500'
+                    }`}
+                    aria-label="卡片视图"
+                    title="卡片"
+                  >
+                    <IconGrid size={15} />
+                  </button>
+                  <button
+                    onClick={() => setWeekMode('timeline')}
+                    className={`flex h-[26px] w-[26px] items-center justify-center rounded-full press ${
+                      weekMode === 'timeline' ? 'bg-white text-primary-600 shadow-card-soft' : 'text-neutral-500'
+                    }`}
+                    aria-label="时间轴视图"
+                    title="时间轴"
+                  >
+                    <IconTimeline size={15} />
+                  </button>
+                </div>
+              )}
               <button
                 onClick={() => setSearchActive(true)}
                 className="hit text-primary-700 press"
@@ -157,7 +185,7 @@ export default function CalendarTab() {
         ) : view === 'day' ? (
           <CalendarDayView />
         ) : view === 'week' ? (
-          <CalendarWeekCards />
+          weekMode === 'timeline' ? <CalendarWeekTimelineView /> : <CalendarWeekCards />
         ) : (
           <CalendarMonthGrid />
         )}

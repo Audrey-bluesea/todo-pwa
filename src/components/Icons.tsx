@@ -157,3 +157,13 @@ export const IconDrag = ({ size = 24, className, strokeWidth }: IconProps) => (
     <circle cx="15" cy="18" r="1.3" fill="currentColor" stroke="none" />
   </svg>
 );
+
+export const IconTimeline = ({ size = 24, className, strokeWidth }: IconProps) => (
+  <svg {...base(size, className, strokeWidth)}>
+    <path d="M6 4v16" />
+    <circle cx="6" cy="7" r="1.6" fill="currentColor" stroke="none" />
+    <circle cx="6" cy="12" r="1.6" fill="currentColor" stroke="none" />
+    <circle cx="6" cy="17" r="1.6" fill="currentColor" stroke="none" />
+    <path d="M10 7h10M10 12h7M10 17h10" />
+  </svg>
+);
