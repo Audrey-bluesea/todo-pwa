@@ -18,6 +18,7 @@ import { solarToLunar } from '../lib/lunar';
 import { activeTodosOn, groupByDate, makeCatMap } from '../lib/todoIndex';
 import { assignLanes, hexToRgba, darkenHex } from '../lib/calendarLanes';
 import { stripEmoji } from '../lib/text';
+import SwipePager from '../components/SwipePager';
 
 const HOUR_H = 68;
 const GUTTER = 40;
@@ -26,6 +27,28 @@ const TIME_TEXT_MIN_H = 22;
 
 export default function CalendarWeekTimelineView() {
   const selected = useUIStore((s) => s.viewDate);
+  const setViewDate = useUIStore((s) => s.setViewDate);
+  const setSelected = useUIStore((s) => s.setSelectedDate);
+
+  // 左右滑切换周：左滑=下一周，右滑=上一周（与日/月视图一致，过渡丝滑）
+  const onCommit = (dir: number) => {
+    const nd = addDays(selected, dir * 7);
+    setSelected(nd);
+    setViewDate(nd);
+  };
+
+  return (
+    <SwipePager
+      current={selected}
+      stepFn={(d, n) => addDays(d, n * 7)}
+      onCommit={onCommit}
+      renderPane={(d) => <WeekPane date={d} />}
+      className="h-full w-full"
+    />
+  );
+}
+
+function WeekPane({ date }: { date: Date }) {
   const setViewDate = useUIStore((s) => s.setViewDate);
   const setSelected = useUIStore((s) => s.setSelectedDate);
   const setCalendarView = useUIStore((s) => s.setCalendarView);
@@ -39,7 +62,7 @@ export default function CalendarWeekTimelineView() {
 
   const catMap = useMemo(() => makeCatMap(categories), [categories]);
   const byDate = useMemo(() => groupByDate(todos), [todos]);
-  const days = useMemo(() => weekDays(selected), [selected]);
+  const days = useMemo(() => weekDays(date), [date]);
   const weekStartKey = dateKey(days[0]);
 
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -323,7 +346,6 @@ function DayColumn({
                     </div>
                     <div className="overflow-hidden whitespace-nowrap text-[9px] text-primary-500">
                       {fmtTime(seg.segStart)}
-                      {!(seg.segStart.getTime() === seg.segEnd.getTime()) && ` · ${fmtTime(seg.segEnd)}`}
                     </div>
                   </>
                 ) : (
@@ -387,7 +409,7 @@ function DayColumn({
                     </div>
                     <div className="overflow-hidden whitespace-nowrap text-[9px]" style={{ color: timeColor }}>
                       {fmtTime(seg.segStart)}
-                      {e.end ? `–${fmtTime(seg.segEnd)}` : ' · 进行中'}
+                      {!e.end ? ' · 进行中' : ''}
                     </div>
                   </>
                 ) : (
