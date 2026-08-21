@@ -19,10 +19,10 @@ import { activeTodosOn, groupByDate, makeCatMap } from '../lib/todoIndex';
 import { assignLanes, hexToRgba, darkenHex } from '../lib/calendarLanes';
 import { stripEmoji } from '../lib/text';
 
-const HOUR_H = 56;
+const HOUR_H = 68;
 const GUTTER = 40;
-const TEXT_MIN_H = 16;
-const TIME_TEXT_MIN_H = 28;
+const TEXT_MIN_H = 11;
+const TIME_TEXT_MIN_H = 22;
 
 export default function CalendarWeekTimelineView() {
   const selected = useUIStore((s) => s.viewDate);
@@ -298,7 +298,7 @@ function DayColumn({
           <button
             key={t.id}
             onClick={() => openEditor({ todoId: t.id })}
-            className="day-event absolute mx-[1px] flex items-start overflow-hidden rounded-[4px] px-1.5 py-0.5 text-left shadow-card-soft bg-white"
+            className="day-event absolute mx-[1px] flex items-start overflow-hidden rounded-[4px] px-1 py-0 text-left shadow-card-soft bg-white"
             style={{
               top,
               left: leftPct,
@@ -329,7 +329,7 @@ function DayColumn({
                 ) : (
                   <div
                     className={`overflow-hidden break-words leading-tight ${
-                      evtH < 22 ? 'text-[9px]' : 'text-[10px]'
+                      evtH < 16 ? 'text-[9px]' : 'text-[10px]'
                     } ${t.isCompleted ? 'text-neutral-700 line-through' : 'text-neutral-600'}`}
                   >
                     {running.some((r) => r.todoId === t.id) && (
@@ -365,7 +365,7 @@ function DayColumn({
           <button
             key={e.id}
             onClick={() => setEditingTimeEntry(e.id)}
-            className="day-event absolute mx-[1px] flex items-start overflow-hidden rounded-[4px] px-1.5 py-0.5 text-left shadow-card-soft"
+            className="day-event absolute mx-[1px] flex items-start overflow-hidden rounded-[4px] px-1 py-0 text-left shadow-card-soft"
             style={{
               top,
               left: leftPct,
@@ -392,7 +392,7 @@ function DayColumn({
                   </>
                 ) : (
                   <div
-                    className={`overflow-hidden break-words leading-tight ${evtH < 22 ? 'text-[9px]' : 'text-[10px]'}`}
+                    className={`overflow-hidden break-words leading-tight ${evtH < 16 ? 'text-[9px]' : 'text-[10px]'}`}
                     style={{ color: textColor }}
                   >
                     {e.live && (
