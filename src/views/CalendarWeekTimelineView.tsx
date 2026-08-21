@@ -21,6 +21,8 @@ import { stripEmoji } from '../lib/text';
 
 const HOUR_H = 56;
 const GUTTER = 40;
+const TEXT_MIN_H = 16;
+const TIME_TEXT_MIN_H = 28;
 
 export default function CalendarWeekTimelineView() {
   const selected = useUIStore((s) => s.viewDate);
@@ -123,7 +125,7 @@ export default function CalendarWeekTimelineView() {
                 style={{ width: GUTTER }}
                 className="flex shrink-0 items-start justify-end pr-2 pt-0.5"
               >
-                <span className="text-[11px] font-medium tracking-wide text-neutral-400">全天</span>
+                <span className="text-[10px] font-medium tracking-wide text-neutral-400">全天</span>
               </div>
               <div className="grid flex-1 grid-cols-7 gap-px">
                 {days.map((d) => (
@@ -140,8 +142,8 @@ export default function CalendarWeekTimelineView() {
               <div key={h} className="absolute left-0 right-0" style={{ top: h * HOUR_H, height: HOUR_H }}>
                 <div className="border-t border-primary-200" style={{ marginLeft: GUTTER }} />
                 <span
-                  className="absolute left-0 pr-2 text-[11px] tabular-nums text-neutral-400 leading-none"
-                  style={{ width: GUTTER, textAlign: 'right', top: -6.5 }}
+                  className="absolute left-0 pr-2 text-[10px] tabular-nums text-neutral-400 leading-none"
+                  style={{ width: GUTTER, textAlign: 'right', top: -6 }}
                 >
                   {String(h).padStart(2, '0')}
                 </span>
@@ -151,8 +153,8 @@ export default function CalendarWeekTimelineView() {
             <div className="absolute left-0 right-0" style={{ top: 24 * HOUR_H, height: HOUR_H }}>
               <div className="border-t border-dashed border-primary-300" style={{ marginLeft: GUTTER }} />
               <span
-                className="absolute left-0 pr-2 text-[11px] tabular-nums font-semibold text-primary-500 leading-none"
-                style={{ width: GUTTER, textAlign: 'right', top: -5 }}
+                className="absolute left-0 pr-2 text-[10px] tabular-nums font-semibold text-primary-500 leading-none"
+                style={{ width: GUTTER, textAlign: 'right', top: -5.5 }}
               >
                 00
               </span>
@@ -296,7 +298,7 @@ function DayColumn({
           <button
             key={t.id}
             onClick={() => openEditor({ todoId: t.id })}
-            className="day-event absolute mx-[1px] flex items-start overflow-hidden rounded-[4px] px-1.5 py-1 text-left shadow-card-soft bg-white"
+            className="day-event absolute mx-[1px] flex items-start overflow-hidden rounded-[4px] px-1.5 py-0.5 text-left shadow-card-soft bg-white"
             style={{
               top,
               left: leftPct,
@@ -305,21 +307,21 @@ function DayColumn({
               borderLeft: `3px solid ${color}`,
             }}
           >
-            {evtH >= 24 && (
+            {evtH >= TEXT_MIN_H && (
               <div className="min-w-0 flex-1">
-                {showTimeText && evtH >= 36 ? (
+                {showTimeText && evtH >= TIME_TEXT_MIN_H ? (
                   <>
                     <div
-                      className={`overflow-hidden break-words leading-tight text-[12px] ${
+                      className={`overflow-hidden break-words leading-tight text-[10px] ${
                         t.isCompleted ? 'text-neutral-700 line-through' : 'text-neutral-600'
                       }`}
                     >
                       {running.some((r) => r.todoId === t.id) && (
-                        <span className="mr-1 inline-block h-[6px] w-[6px] animate-pulse rounded-full bg-red-500 align-middle" />
+                        <span className="mr-1 inline-block h-[5px] w-[5px] animate-pulse rounded-full bg-red-500 align-middle" />
                       )}
                       {title}
                     </div>
-                    <div className="overflow-hidden whitespace-nowrap text-[10px] text-primary-500">
+                    <div className="overflow-hidden whitespace-nowrap text-[9px] text-primary-500">
                       {fmtTime(seg.segStart)}
                       {!(seg.segStart.getTime() === seg.segEnd.getTime()) && ` · ${fmtTime(seg.segEnd)}`}
                     </div>
@@ -327,11 +329,11 @@ function DayColumn({
                 ) : (
                   <div
                     className={`overflow-hidden break-words leading-tight ${
-                      evtH < 28 ? 'text-[10px]' : 'text-[12px]'
+                      evtH < 22 ? 'text-[9px]' : 'text-[10px]'
                     } ${t.isCompleted ? 'text-neutral-700 line-through' : 'text-neutral-600'}`}
                   >
                     {running.some((r) => r.todoId === t.id) && (
-                      <span className="mr-1 inline-block h-[6px] w-[6px] animate-pulse rounded-full bg-red-500 align-middle" />
+                      <span className="mr-1 inline-block h-[5px] w-[5px] animate-pulse rounded-full bg-red-500 align-middle" />
                     )}
                     {title}
                   </div>
@@ -363,7 +365,7 @@ function DayColumn({
           <button
             key={e.id}
             onClick={() => setEditingTimeEntry(e.id)}
-            className="day-event absolute mx-[1px] flex items-start overflow-hidden rounded-[4px] px-1.5 py-1 text-left shadow-card-soft"
+            className="day-event absolute mx-[1px] flex items-start overflow-hidden rounded-[4px] px-1.5 py-0.5 text-left shadow-card-soft"
             style={{
               top,
               left: leftPct,
@@ -373,28 +375,28 @@ function DayColumn({
               borderLeft: `3px solid ${accent}`,
             }}
           >
-            {evtH >= 24 && (
+            {evtH >= TEXT_MIN_H && (
               <div className="min-w-0 flex-1">
-                {showTimeText && evtH >= 36 ? (
+                {showTimeText && evtH >= TIME_TEXT_MIN_H ? (
                   <>
-                    <div className="overflow-hidden break-words leading-tight text-[12px]" style={{ color: textColor }}>
+                    <div className="overflow-hidden break-words leading-tight text-[10px]" style={{ color: textColor }}>
                       {e.live && (
-                        <span className="mr-1 inline-block h-[6px] w-[6px] animate-pulse rounded-full bg-red-500 align-middle" />
+                        <span className="mr-1 inline-block h-[5px] w-[5px] animate-pulse rounded-full bg-red-500 align-middle" />
                       )}
                       {title}
                     </div>
-                    <div className="overflow-hidden whitespace-nowrap text-[10px]" style={{ color: timeColor }}>
+                    <div className="overflow-hidden whitespace-nowrap text-[9px]" style={{ color: timeColor }}>
                       {fmtTime(seg.segStart)}
                       {e.end ? `–${fmtTime(seg.segEnd)}` : ' · 进行中'}
                     </div>
                   </>
                 ) : (
                   <div
-                    className={`overflow-hidden break-words leading-tight ${evtH < 28 ? 'text-[10px]' : 'text-[12px]'}`}
+                    className={`overflow-hidden break-words leading-tight ${evtH < 22 ? 'text-[9px]' : 'text-[10px]'}`}
                     style={{ color: textColor }}
                   >
                     {e.live && (
-                      <span className="mr-1 inline-block h-[6px] w-[6px] animate-pulse rounded-full bg-red-500 align-middle" />
+                      <span className="mr-1 inline-block h-[5px] w-[5px] animate-pulse rounded-full bg-red-500 align-middle" />
                     )}
                     {title}
                   </div>
@@ -444,15 +446,15 @@ function AllDayCell({
               >
                 {showFull ? (
                   <>
-                    <span className="min-w-0 flex-1 overflow-hidden break-words text-[10.5px] font-medium text-neutral-700">
+                    <span className="min-w-0 flex-1 overflow-hidden break-words text-[10px] font-medium text-neutral-700">
                       {title}
                     </span>
-                    <span className="shrink-0 text-[9px] tabular-nums text-neutral-500">
+                    <span className="shrink-0 text-[8px] tabular-nums text-neutral-500">
                       {t.dueDate!.getMonth() + 1}/{t.dueDate!.getDate()}–{t.endDate!.getMonth() + 1}/{t.endDate!.getDate()}
                     </span>
                   </>
                 ) : (
-                  <span className="overflow-hidden break-words text-[10px] text-neutral-500">↳ 全天</span>
+                  <span className="overflow-hidden break-words text-[9px] text-neutral-500">↳ 全天</span>
                 )}
               </button>
             );
@@ -472,7 +474,7 @@ function AllDayCell({
                   style={{ backgroundColor: color }}
                 />
                 <span
-                  className={`min-w-0 flex-1 overflow-hidden break-words text-[10.5px] ${
+                  className={`min-w-0 flex-1 overflow-hidden break-words text-[10px] ${
                     t.isCompleted ? 'text-neutral-700 line-through' : 'font-medium text-neutral-700'
                   }`}
                 >
