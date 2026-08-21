@@ -401,7 +401,10 @@ export default function TodoEditorSheet() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [closing, setClosing] = useState(false);
   const sheetRef = useRef<HTMLDivElement>(null);
-  const dragStart = useRef<number | null>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const dragStartY = useRef<number | null>(null);
+  const startScrollTop = useRef(0);
+  const gestureMode = useRef<'none' | 'sheet' | 'content'>('none');
   const [dragY, setDragY] = useState(0);
 
   useEffect(() => {
@@ -443,6 +446,58 @@ export default function TodoEditorSheet() {
   const handleClose = () => {
     setClosing(true);
     setTimeout(close, 240);
+  };
+
+  // 下滑收起手势：整个 sheet 向下滑可跟随手指慢慢收起；内容区未滚动到顶部时优先滚动内容。
+  const onSheetTouchStart = (e: React.TouchEvent) => {
+    if (closing) return;
+    const t = e.touches[0];
+    if (!t) return;
+    dragStartY.current = t.clientY;
+    startScrollTop.current = contentRef.current?.scrollTop ?? 0;
+    gestureMode.current = 'none';
+  };
+
+  const onSheetTouchMove = (e: React.TouchEvent) => {
+    if (dragStartY.current === null) return;
+    const t = e.touches[0];
+    if (!t) return;
+    const dy = t.clientY - dragStartY.current;
+
+    if (gestureMode.current === 'content') return;
+
+    if (gestureMode.current === 'sheet') {
+      e.preventDefault();
+      setDragY(Math.max(0, dy));
+      return;
+    }
+
+    // 方向未定：超过阈值再锁定；内容在顶部且向下滑动 → 收起 sheet，否则交给内容滚动
+    if (Math.abs(dy) <= 6) return;
+    if (dy > 0 && startScrollTop.current <= 0) {
+      gestureMode.current = 'sheet';
+      e.preventDefault();
+      setDragY(dy);
+    } else {
+      gestureMode.current = 'content';
+    }
+  };
+
+  const onSheetTouchEnd = () => {
+    if (gestureMode.current === 'sheet' && dragY > 90) {
+      handleClose();
+    }
+    dragStartY.current = null;
+    startScrollTop.current = 0;
+    gestureMode.current = 'none';
+    setDragY(0);
+  };
+
+  const onSheetTouchCancel = () => {
+    dragStartY.current = null;
+    startScrollTop.current = 0;
+    gestureMode.current = 'none';
+    setDragY(0);
   };
 
   const submit = async () => {
@@ -525,30 +580,20 @@ export default function TodoEditorSheet() {
 
       <div
         ref={sheetRef}
+        onTouchStart={onSheetTouchStart}
+        onTouchMove={onSheetTouchMove}
+        onTouchEnd={onSheetTouchEnd}
+        onTouchCancel={onSheetTouchCancel}
         className={`relative max-h-[90dvh] w-full overflow-hidden rounded-t-[24px] bg-white shadow-sheet ${
           closing ? '' : 'anim-sheet'
         }`}
         style={{
           transform: closing ? 'translate3d(0,100%,0)' : `translate3d(0, ${dragY}px, 0)`,
-          transition: closing || dragStart.current === null ? 'transform 260ms cubic-bezier(0.32,0.72,0,1)' : 'none',
+          transition: closing || dragStartY.current === null ? 'transform 260ms cubic-bezier(0.32,0.72,0,1)' : 'none',
         }}
       >
-        {/* 拖拽把手 */}
-        <div
-          className="flex h-8 w-full items-center justify-center"
-          onTouchStart={(e) => { dragStart.current = e.touches[0].clientY; }}
-          onTouchMove={(e) => {
-            if (dragStart.current === null) return;
-            const dy = e.touches[0].clientY - dragStart.current;
-            if (dy > 0) setDragY(dy);
-          }}
-          onTouchEnd={() => {
-            const should = dragY > 90;
-            dragStart.current = null;
-            setDragY(0);
-            if (should) handleClose();
-          }}
-        >
+        {/* 拖拽把手：视觉指示，整个 sheet 都支持下拉收起 */}
+        <div className="flex h-8 w-full items-center justify-center">
           <span className="h-[5px] w-10 rounded-full bg-primary-200" />
         </div>
 
@@ -569,7 +614,7 @@ export default function TodoEditorSheet() {
           )}
         </div>
 
-        <div className="scroll-y max-h-[calc(90dvh-150px)] px-5 pb-3">
+        <div ref={contentRef} className="scroll-y max-h-[calc(90dvh-150px)] px-5 pb-3">
           {/* ① 清单选择：emoji + name + chevron */}
           <button
             onClick={() => setShowCatPicker(!showCatPicker)}
