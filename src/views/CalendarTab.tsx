@@ -121,38 +121,27 @@ export default function CalendarTab() {
                 <IconCalendar size={13} />
                 今天
               </button>
-              {/* 周视图内部子模式切换：卡片 / 时间轴 */}
+              {/* 周视图内部子模式切换：单图标，点当前视图图标即切到另一视图 */}
               {view === 'week' && (
-                <div className="mr-1 flex shrink-0 items-center rounded-full bg-primary-100 p-[3px]">
-                  <button
-                    onClick={() => setWeekMode('cards')}
-                    className={`flex h-[26px] w-[26px] items-center justify-center rounded-full press ${
-                      weekMode === 'cards' ? 'bg-white text-primary-600 shadow-card-soft' : 'text-neutral-500'
-                    }`}
-                    aria-label="卡片视图"
-                    title="卡片"
-                  >
-                    <IconGrid size={15} />
-                  </button>
-                  <button
-                    onClick={() => setWeekMode('timeline')}
-                    className={`flex h-[26px] w-[26px] items-center justify-center rounded-full press ${
-                      weekMode === 'timeline' ? 'bg-white text-primary-600 shadow-card-soft' : 'text-neutral-500'
-                    }`}
-                    aria-label="时间轴视图"
-                    title="时间轴"
-                  >
-                    <IconTimeline size={15} />
-                  </button>
-                </div>
+                <button
+                  onClick={() => setWeekMode(weekMode === 'cards' ? 'timeline' : 'cards')}
+                  className="mr-1 flex h-[32px] w-[32px] shrink-0 items-center justify-center rounded-full bg-primary-100 text-primary-600 press active:bg-primary-200"
+                  aria-label={weekMode === 'cards' ? '切换到时间轴' : '切换到卡片'}
+                  title={weekMode === 'cards' ? '时间轴' : '卡片'}
+                >
+                  {weekMode === 'cards' ? <IconTimeline size={16} /> : <IconGrid size={16} />}
+                </button>
               )}
-              <button
-                onClick={() => setSearchActive(true)}
-                className="hit text-primary-700 press"
-                aria-label="搜索"
-              >
-                <IconSearch size={20} />
-              </button>
+              {/* 周视图头部不放搜索，避免拥挤；其它视图保留 */}
+              {view !== 'week' && (
+                <button
+                  onClick={() => setSearchActive(true)}
+                  className="hit text-primary-700 press"
+                  aria-label="搜索"
+                >
+                  <IconSearch size={20} />
+                </button>
+              )}
             </div>
           </>
         )}

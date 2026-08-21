@@ -19,7 +19,7 @@ import { activeTodosOn, groupByDate, makeCatMap } from '../lib/todoIndex';
 import { assignLanes, hexToRgba, darkenHex } from '../lib/calendarLanes';
 
 const HOUR_H = 56;
-const GUTTER = 52;
+const GUTTER = 40;
 
 export default function CalendarWeekTimelineView() {
   const selected = useUIStore((s) => s.viewDate);
@@ -74,90 +74,91 @@ export default function CalendarWeekTimelineView() {
   };
 
   return (
-    <div className="grid min-h-0 h-full w-full max-w-full grid-rows-[auto_auto_1fr] overflow-x-hidden">
-      {/* 日期头：7 列，与下方时间轴列对齐；点击进入日视图 */}
-      <div className="day-week-header shrink-0 border-b border-primary-100 px-0 pb-1 pt-1.5">
-        <div className="flex">
-          <div style={{ width: GUTTER }} className="shrink-0" />
-          <div className="grid flex-1 grid-cols-7 pr-2">
-            {days.map((d, i) => {
-              const td = isToday(d);
-              const has = (byDate.get(dateKey(d)) ?? []).length > 0;
-              return (
-                <button
-                  key={+d}
-                  onClick={() => goToDay(d)}
-                  className="flex min-w-0 flex-col items-center justify-center gap-[1px] py-1"
-                  style={{ minHeight: 46 }}
-                >
-                  <span className="text-[10.5px] font-medium text-neutral-400">{WEEK_CN[i]}</span>
-                  <span
-                    className={`flex h-[28px] w-[28px] items-center justify-center rounded-full text-[14px] font-semibold tabular-nums ${
-                      td ? 'bg-primary-500 text-white' : 'text-neutral-600'
-                    }`}
-                  >
-                    {d.getDate()}
-                  </span>
-                  <span className="w-full truncate px-[1px] text-center text-[8.5px] leading-none text-neutral-400">
-                    {solarToLunar(d).label}
-                  </span>
-                  <span
-                    className="h-[3px] w-[3px] rounded-full"
-                    style={{ backgroundColor: has ? 'rgb(var(--c-success))' : 'transparent' }}
-                  />
-                </button>
-              );
-            })}
+    <div className="flex min-h-0 h-full flex-col overflow-hidden">
+      {/* 统一滚动容器：横向给 7 列更宽裕空间，纵向滚动时间轴 */}
+      <div ref={scrollRef} className="scroll-y flex-1 overflow-auto">
+        <div className="min-w-[460px] w-full">
+          {/* 日期头：7 列，与下方时间轴列对齐；点击进入日视图；纵向滚动时 sticky 置顶 */}
+          <div className="day-week-header sticky top-0 z-10 shrink-0 border-b border-primary-100 bg-[rgb(var(--c-appbg))] px-0 pb-1 pt-1.5">
+            <div className="flex">
+              <div style={{ width: GUTTER }} className="shrink-0" />
+              <div className="grid flex-1 grid-cols-7">
+                {days.map((d, i) => {
+                  const td = isToday(d);
+                  const has = (byDate.get(dateKey(d)) ?? []).length > 0;
+                  return (
+                    <button
+                      key={+d}
+                      onClick={() => goToDay(d)}
+                      className="flex min-w-0 flex-col items-center justify-center gap-[1px] py-1"
+                      style={{ minHeight: 46 }}
+                    >
+                      <span className="text-[10.5px] font-medium text-neutral-400">{WEEK_CN[i]}</span>
+                      <span
+                        className={`flex h-[28px] w-[28px] items-center justify-center rounded-full text-[14px] font-semibold tabular-nums ${
+                          td ? 'bg-primary-500 text-white' : 'text-neutral-600'
+                        }`}
+                      >
+                        {d.getDate()}
+                      </span>
+                      <span className="w-full truncate px-[1px] text-center text-[8.5px] leading-none text-neutral-400">
+                        {solarToLunar(d).label}
+                      </span>
+                      <span
+                        className="h-[3px] w-[3px] rounded-full"
+                        style={{ backgroundColor: has ? 'rgb(var(--c-success))' : 'transparent' }}
+                      />
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
 
-      {/* 全天任务行：7 列，每列显示当日全天任务 */}
-      <div className="all-day-section shrink-0 border-b border-primary-100 py-2">
-        <div className="flex">
-          <div
-            style={{ width: GUTTER }}
-            className="flex shrink-0 items-start justify-end pr-2 pt-0.5"
-          >
-            <span className="text-[11px] font-medium tracking-wide text-neutral-400">全天</span>
+          {/* 全天任务行：7 列，每列显示当日全天任务 */}
+          <div className="all-day-section shrink-0 border-b border-primary-100 py-2">
+            <div className="flex">
+              <div
+                style={{ width: GUTTER }}
+                className="flex shrink-0 items-start justify-end pr-2 pt-0.5"
+              >
+                <span className="text-[11px] font-medium tracking-wide text-neutral-400">全天</span>
+              </div>
+              <div className="grid flex-1 grid-cols-7 gap-px">
+                {days.map((d) => (
+                  <AllDayCell key={+d} date={d} todos={todos} catMap={catMap} openEditor={openEditor} />
+                ))}
+              </div>
+            </div>
           </div>
-          <div className="grid flex-1 grid-cols-7 gap-px pr-2">
-            {days.map((d) => (
-              <AllDayCell key={+d} date={d} todos={todos} catMap={catMap} openEditor={openEditor} />
-            ))}
-          </div>
-        </div>
-      </div>
 
-      {/* 时间轴：7 列，样式与日时间轴一致，无实时线 */}
-      <div className="relative min-h-0 w-full max-w-full overflow-hidden">
-        <div ref={scrollRef} className="scroll-y absolute inset-0 w-full overflow-x-hidden pb-[100px] pt-4">
-          <div className="relative w-full max-w-full pb-20" style={{ height: 25 * HOUR_H + 80 }}>
+          {/* 时间轴：7 列，样式与日时间轴一致，无实时线 */}
+          <div className="relative w-full pb-[100px] pt-4" style={{ height: 25 * HOUR_H + 80 }}>
             {/* 小时线（贯穿 7 列） */}
             {Array.from({ length: 24 }, (_, h) => (
               <div key={h} className="absolute left-0 right-0" style={{ top: h * HOUR_H, height: HOUR_H }}>
-                <div className="border-t border-primary-200" style={{ marginLeft: GUTTER, marginRight: 8 }} />
+                <div className="border-t border-primary-200" style={{ marginLeft: GUTTER }} />
                 <span
                   className="absolute left-0 pr-2 text-[11px] tabular-nums text-neutral-400 leading-none"
                   style={{ width: GUTTER, textAlign: 'right', top: -6.5 }}
                 >
-                  {String(h).padStart(2, '0')}:00
+                  {String(h).padStart(2, '0')}
                 </span>
               </div>
             ))}
 
             <div className="absolute left-0 right-0" style={{ top: 24 * HOUR_H, height: HOUR_H }}>
-              <div className="border-t border-dashed border-primary-300" style={{ marginLeft: GUTTER, marginRight: 8 }} />
+              <div className="border-t border-dashed border-primary-300" style={{ marginLeft: GUTTER }} />
               <span
                 className="absolute left-0 pr-2 text-[11px] tabular-nums font-semibold text-primary-500 leading-none"
                 style={{ width: GUTTER, textAlign: 'right', top: -5 }}
               >
-                00:00
+                00
               </span>
             </div>
 
             {/* 7 列事件区 */}
-            <div className="absolute inset-y-0 grid grid-cols-7" style={{ left: GUTTER, right: 8 }}>
+            <div className="absolute inset-y-0 grid grid-cols-7" style={{ left: GUTTER, right: 4 }}>
               {days.map((d) => (
                 <DayColumn
                   key={+d}
