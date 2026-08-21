@@ -17,6 +17,7 @@ import {
 import { solarToLunar } from '../lib/lunar';
 import { activeTodosOn, groupByDate, makeCatMap } from '../lib/todoIndex';
 import { assignLanes, hexToRgba, darkenHex } from '../lib/calendarLanes';
+import { stripEmoji } from '../lib/text';
 
 const HOUR_H = 56;
 const GUTTER = 40;
@@ -282,6 +283,7 @@ function DayColumn({
       {/* 定时任务块 */}
       {timedSegs.map((seg) => {
         const t = seg.todo;
+        const title = stripEmoji(t.title);
         const color = catMap.get(t.categoryId)?.color ?? '#A8D5BA';
         const { top, h: evtH } = pos(seg.segStart, seg.segEnd);
         const lane = lanes.get(t.id) ?? { index: 0, total: 1 };
@@ -315,7 +317,7 @@ function DayColumn({
                       {running.some((r) => r.todoId === t.id) && (
                         <span className="mr-1 inline-block h-[6px] w-[6px] animate-pulse rounded-full bg-red-500 align-middle" />
                       )}
-                      {t.title}
+                      {title}
                     </div>
                     <div className="overflow-hidden whitespace-nowrap text-[10px] text-primary-500">
                       {fmtTime(seg.segStart)}
@@ -331,7 +333,7 @@ function DayColumn({
                     {running.some((r) => r.todoId === t.id) && (
                       <span className="mr-1 inline-block h-[6px] w-[6px] animate-pulse rounded-full bg-red-500 align-middle" />
                     )}
-                    {t.title}
+                    {title}
                   </div>
                 )}
               </div>
@@ -344,6 +346,7 @@ function DayColumn({
       {teSegs.map((seg) => {
         if (seg.entry.todoId && timedTodoIds.has(seg.entry.todoId)) return null;
         const e = seg.entry;
+        const title = stripEmoji(e.title);
         const catColor = e.categoryId ? catMap.get(e.categoryId)?.color : null;
         const accent = catColor || '#6BBF8A';
         const bgLight = catColor ? hexToRgba(catColor, 0.6) : 'rgb(var(--c-primary-100))';
@@ -378,7 +381,7 @@ function DayColumn({
                       {e.live && (
                         <span className="mr-1 inline-block h-[6px] w-[6px] animate-pulse rounded-full bg-red-500 align-middle" />
                       )}
-                      {e.title}
+                      {title}
                     </div>
                     <div className="overflow-hidden whitespace-nowrap text-[10px]" style={{ color: timeColor }}>
                       {fmtTime(seg.segStart)}
@@ -393,7 +396,7 @@ function DayColumn({
                     {e.live && (
                       <span className="mr-1 inline-block h-[6px] w-[6px] animate-pulse rounded-full bg-red-500 align-middle" />
                     )}
-                    {e.title}
+                    {title}
                   </div>
                 )}
               </div>
@@ -431,6 +434,7 @@ function AllDayCell({
           {cross.map((t) => {
             const color = catMap.get(t.categoryId)?.color ?? '#A8D5BA';
             const showFull = isStart(t);
+            const title = stripEmoji(t.title);
             return (
               <button
                 key={t.id}
@@ -441,7 +445,7 @@ function AllDayCell({
                 {showFull ? (
                   <>
                     <span className="min-w-0 flex-1 overflow-hidden break-words text-[10.5px] font-medium text-neutral-700">
-                      {t.title}
+                      {title}
                     </span>
                     <span className="shrink-0 text-[9px] tabular-nums text-neutral-500">
                       {t.dueDate!.getMonth() + 1}/{t.dueDate!.getDate()}–{t.endDate!.getMonth() + 1}/{t.endDate!.getDate()}
@@ -455,6 +459,7 @@ function AllDayCell({
           })}
           {single.map((t) => {
             const color = catMap.get(t.categoryId)?.color ?? '#A8D5BA';
+            const title = stripEmoji(t.title);
             return (
               <button
                 key={t.id}
@@ -471,7 +476,7 @@ function AllDayCell({
                     t.isCompleted ? 'text-neutral-700 line-through' : 'font-medium text-neutral-700'
                   }`}
                 >
-                  {t.title}
+                  {title}
                 </span>
               </button>
             );
