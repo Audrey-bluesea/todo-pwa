@@ -159,8 +159,8 @@ function WeekPane({ date }: { date: Date }) {
 
       {/* 时间轴：占满剩余高度，仅此区域纵向滚动（与日时间轴一致） */}
       <div className="relative min-h-0 w-full max-w-full overflow-hidden">
-        <div ref={scrollRef} className="scroll-y absolute inset-0 w-full overflow-x-hidden pb-[100px] pt-4">
-          <div className="relative w-full min-w-0 pb-20" style={{ height: 25 * HOUR_H + 80 }}>
+        <div ref={scrollRef} className="scroll-y absolute inset-0 w-full overflow-x-hidden pb-8 pt-4">
+          <div className="relative w-full min-w-0 pb-4" style={{ height: 25 * HOUR_H + 80 }}>
             {/* 小时线（贯穿 7 列） */}
             {Array.from({ length: 24 }, (_, h) => (
               <div key={h} className="absolute left-0 right-0" style={{ top: h * HOUR_H, height: HOUR_H }}>
