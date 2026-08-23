@@ -154,7 +154,7 @@ export default function CalendarTab() {
 
       <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
         {searchActive ? (
-          <div className="scroll-y h-full pb-[100px]">
+          <div className="scroll-y h-full pb-8">
             {matchedEntries.length > 0 && (
               <section className="px-3 pt-2">
                 <div className="px-1 pb-1.5 text-[12px] font-medium text-neutral-400">

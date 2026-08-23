@@ -409,7 +409,7 @@ export default function TodoBoardView({
             <div
               key={tab.id}
               ref={(el) => (colRefs.current[i] = el)}
-              className="h-full w-full shrink-0 overflow-y-auto px-4 pb-[100px] pt-2"
+              className="h-full w-full shrink-0 overflow-y-auto px-4 pb-8 pt-2"
               onScroll={(e) => scrollMemory.save(memKey, e.currentTarget.scrollTop, activeTabIdx)}
             >
               {tab.items.map((t) => {
