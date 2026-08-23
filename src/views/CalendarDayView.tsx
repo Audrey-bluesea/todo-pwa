@@ -21,7 +21,7 @@ import { solarToLunar } from '../lib/lunar';
 import { groupByDate, activeTodosOn, makeCatMap } from '../lib/todoIndex';
 import { assignLanes, hexToRgba, darkenHex } from '../lib/calendarLanes';
 
-const HOUR_H = 56;
+const HOUR_H = 68;
 const GUTTER = 52;
 
 export default function CalendarDayView() {
