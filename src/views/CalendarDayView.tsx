@@ -21,7 +21,7 @@ import { solarToLunar } from '../lib/lunar';
 import { groupByDate, activeTodosOn, makeCatMap } from '../lib/todoIndex';
 import { assignLanes, hexToRgba, darkenHex } from '../lib/calendarLanes';
 
-const HOUR_H = 68;
+const HOUR_H = 60;
 const GUTTER = 52;
 
 export default function CalendarDayView() {
@@ -250,7 +250,7 @@ function DayPane({ date }: { date: Date }) {
          避免把 flex item 自身当滚动容器时 iOS WebKit 算不出 scrollHeight 的问题。 */}
       <div className="relative min-h-0 w-full max-w-full overflow-hidden">
         <div ref={scrollRef} className="scroll-y absolute inset-0 w-full overflow-x-hidden pt-4">
-          <div className="relative w-full max-w-full" style={{ height: 25 * HOUR_H }}>
+          <div className="relative w-full max-w-full" style={{ height: 24 * HOUR_H + 68 }}>
           {Array.from({ length: 24 }, (_, h) => (
             <div key={h} className="absolute left-0 right-0" style={{ top: h * HOUR_H, height: HOUR_H }}>
               <div className="border-t border-primary-200" style={{ marginLeft: GUTTER }} />
