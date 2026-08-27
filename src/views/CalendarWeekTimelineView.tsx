@@ -450,8 +450,8 @@ function AllDayCell({
   const single = items.filter((t) => !(t.endDate && !isSameDay(t.dueDate, t.endDate)));
   const isStart = (t: any) => isSameDay(t.dueDate, date);
 
-  // 方案 B：不内嵌滚动，随内容增高；最多显示 3 条，超出显示「+N 更多」
-  const MAX_VISIBLE = 3;
+  // 方案 B：不内嵌滚动，随内容增高；最多显示 2 条，超出显示「+N 更多」
+  const MAX_VISIBLE = 2;
   const rendered = [
     ...cross.map((t) => ({ kind: 'cross' as const, t, showFull: isStart(t) })),
     ...single.map((t) => ({ kind: 'single' as const, t, showFull: false })),
