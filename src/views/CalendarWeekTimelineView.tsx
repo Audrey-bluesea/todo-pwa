@@ -450,52 +450,60 @@ function AllDayCell({
   const single = items.filter((t) => !(t.endDate && !isSameDay(t.dueDate, t.endDate)));
   const isStart = (t: any) => isSameDay(t.dueDate, date);
 
+  // 方案 B：不内嵌滚动，随内容增高；最多显示 3 条，超出显示「+N 更多」
+  const MAX_VISIBLE = 3;
+  const rendered = [
+    ...cross.map((t) => ({ kind: 'cross' as const, t, showFull: isStart(t) })),
+    ...single.map((t) => ({ kind: 'single' as const, t, showFull: false })),
+  ];
+  const visible = rendered.slice(0, MAX_VISIBLE);
+  const overflow = rendered.length - visible.length;
+
   return (
-    <div className="max-h-[72px] min-w-0 overflow-y-auto px-[1px]">
+    <div className="min-w-0 px-[1px]">
       {items.length === 0 ? (
         <div className="py-1 text-center text-[10px] text-neutral-300">—</div>
       ) : (
         <div className="space-y-1">
-          {cross.map((t) => {
-            const color = catMap.get(t.categoryId)?.color ?? '#A8D5BA';
-            const showFull = isStart(t);
-            const title = stripEmoji(t.title);
-            return (
-              <button
-                key={t.id}
-                onClick={() => openEditor({ todoId: t.id })}
-                className="flex w-full items-center gap-1 overflow-hidden rounded-[4px] px-1.5 py-1 text-left"
-                style={{ backgroundColor: color + '2E', borderLeft: `3px solid ${color}`, minHeight: 24 }}
-              >
-                {showFull ? (
-                  <>
-                    <span className="min-w-0 flex-1 overflow-hidden break-words text-[10px] font-medium text-neutral-700">
-                      {title}
-                    </span>
-                    <span className="shrink-0 text-[8px] tabular-nums text-neutral-500">
-                      {t.dueDate!.getMonth() + 1}/{t.dueDate!.getDate()}–{t.endDate!.getMonth() + 1}/{t.endDate!.getDate()}
-                    </span>
-                  </>
-                ) : (
-                  <span className="overflow-hidden break-words text-[9px] text-neutral-500">↳ 全天</span>
-                )}
-              </button>
-            );
-          })}
-          {single.map((t) => {
+          {visible.map(({ kind, t, showFull }) => {
             const color = catMap.get(t.categoryId)?.color ?? '#A8D5BA';
             const title = stripEmoji(t.title);
+            const baseBtn = 'flex w-full items-center gap-1 overflow-hidden rounded-[4px] px-1.5 py-1 text-left';
+            const baseStyle = {
+              backgroundColor: color + '2E',
+              borderLeft: `3px solid ${color}`,
+              minHeight: 24,
+            };
+            if (kind === 'cross' && !showFull) {
+              // 跨天任务的延续日：显示标题 + 结束日，一眼知道是哪件事
+              return (
+                <button key={t.id} onClick={() => openEditor({ todoId: t.id })} className={baseBtn} style={baseStyle}>
+                  <span className="shrink-0 text-[8px] text-neutral-400">↳</span>
+                  <span className="min-w-0 flex-1 overflow-hidden break-words text-[10px] font-medium text-neutral-700">
+                    {title}
+                  </span>
+                  <span className="shrink-0 text-[8px] tabular-nums text-neutral-500">
+                    {t.endDate!.getMonth() + 1}/{t.endDate!.getDate()}
+                  </span>
+                </button>
+              );
+            }
+            if (kind === 'cross' && showFull) {
+              return (
+                <button key={t.id} onClick={() => openEditor({ todoId: t.id })} className={baseBtn} style={baseStyle}>
+                  <span className="min-w-0 flex-1 overflow-hidden break-words text-[10px] font-medium text-neutral-700">
+                    {title}
+                  </span>
+                  <span className="shrink-0 text-[8px] tabular-nums text-neutral-500">
+                    {t.dueDate!.getMonth() + 1}/{t.dueDate!.getDate()}–{t.endDate!.getMonth() + 1}/{t.endDate!.getDate()}
+                  </span>
+                </button>
+              );
+            }
+            // 单日全天
             return (
-              <button
-                key={t.id}
-                onClick={() => openEditor({ todoId: t.id })}
-                className="flex w-full items-center gap-1 overflow-hidden rounded-[4px] px-1.5 py-1 text-left"
-                style={{ backgroundColor: color + '2E', borderLeft: `3px solid ${color}`, minHeight: 24 }}
-              >
-                <span
-                  className="mr-0.5 inline-block h-[6px] w-[6px] shrink-0 rounded-full"
-                  style={{ backgroundColor: color }}
-                />
+              <button key={t.id} onClick={() => openEditor({ todoId: t.id })} className={baseBtn} style={baseStyle}>
+                <span className="mr-0.5 inline-block h-[6px] w-[6px] shrink-0 rounded-full" style={{ backgroundColor: color }} />
                 <span
                   className={`min-w-0 flex-1 overflow-hidden break-words text-[10px] ${
                     t.isCompleted ? 'text-neutral-700 line-through' : 'font-medium text-neutral-700'
@@ -506,6 +514,9 @@ function AllDayCell({
               </button>
             );
           })}
+          {overflow > 0 && (
+            <div className="px-1.5 py-0.5 text-[9px] font-medium text-neutral-400">+{overflow} 更多</div>
+          )}
         </div>
       )}
     </div>
