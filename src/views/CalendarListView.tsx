@@ -263,6 +263,11 @@ export default function CalendarListView() {
                           >
                             {t.title}
                           </div>
+                          {t.description && (
+                            <div className="mt-0.5 line-clamp-2 text-[12px] leading-snug text-neutral-400">
+                              {t.description}
+                            </div>
+                          )}
                           <div className="mt-0.5 flex items-center gap-1 text-[11.5px] text-neutral-400">
                             {catMap.get(t.categoryId) && (
                               <>

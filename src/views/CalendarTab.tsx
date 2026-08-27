@@ -19,7 +19,7 @@ import { useTimerStore } from '../store/timerStore';
 const MONTH_EN = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
 const CAL_VIEW_OPTIONS = [
-  { key: 'list', label: '列表', icon: <IconList size={16} /> },
+  { key: 'list', label: '列', icon: <IconList size={16} /> },
   { key: 'day', label: '日', icon: <IconSun size={16} /> },
   { key: 'week', label: '周', icon: <IconWeek size={16} /> },
   { key: 'month', label: '月', icon: <IconGrid size={16} /> },

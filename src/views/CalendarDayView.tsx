@@ -223,22 +223,21 @@ function DayPane({ date }: { date: Date }) {
             })}
             {singleAllDay.length > 0 && (
               <div className="flex flex-wrap gap-1.5">
-                {singleAllDay.map((t) => (
-                  <button
-                    key={t.id}
-                    onClick={() => openEditor({ todoId: t.id })}
-                    className={`max-w-full truncate rounded-full bg-primary-200 px-2.5 py-1.5 text-[12px] text-primary-800 press ${
-                      t.isCompleted ? 'line-through' : ''
-                    }`}
-                    style={{ minHeight: 36 }}
-                  >
-                    <span
-                      className="mr-1 inline-block h-[6px] w-[6px] rounded-full align-middle"
-                      style={{ backgroundColor: catMap.get(t.categoryId)?.color ?? '#A8D5BA' }}
-                    />
-                    {t.title}
-                  </button>
-                ))}
+                {singleAllDay.map((t) => {
+                  const color = catMap.get(t.categoryId)?.color ?? '#A8D5BA';
+                  return (
+                    <button
+                      key={t.id}
+                      onClick={() => openEditor({ todoId: t.id })}
+                      className={`max-w-full truncate rounded-full px-2.5 py-1.5 text-[12px] press ${
+                        t.isCompleted ? 'line-through text-neutral-600' : 'text-neutral-700'
+                      }`}
+                      style={{ backgroundColor: color + '2E', minHeight: 36 }}
+                    >
+                      {t.title}
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>
