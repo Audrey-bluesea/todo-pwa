@@ -510,6 +510,13 @@ function BoardCard({
         >
           {t.title || 'No Title'}
         </div>
+        {t.description ? (
+          <div
+            className={`mt-1 line-clamp-2 text-[12.5px] leading-snug ${t.isCompleted ? 'text-neutral-300 line-through' : 'text-neutral-400'}`}
+          >
+            {t.description}
+          </div>
+        ) : null}
         <div className="mt-1 flex items-center justify-between gap-2">
           {/* 时间标签：与 TodoCard 逻辑保持一致 */}
           {t.dueDate && t.endDate ? (
