@@ -40,6 +40,8 @@ export interface Todo {
   title: string;
   /** 补充说明（显示在卡片标题下方） */
   description: string;
+  /** 标签（类似滴答清单，用于分类/筛选，自由文本） */
+  tags?: string[];
   /**
    * 开始时间。约定：时分为 00:00 表示「全天任务」，
    * 其它时间点则在日时间轴上定位显示。

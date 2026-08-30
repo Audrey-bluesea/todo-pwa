@@ -49,6 +49,8 @@ interface UIState {
   searchActive: boolean;
   /** 全局搜索：查询词（标题/描述/子任务/清单名） */
   searchQuery: string;
+  /** 标签筛选：选中的标签集合（任一命中即显示，OR 逻辑）；空数组表示不过滤 */
+  tagFilter: string[];
   /** 当前查看的日期（驱动日/周/月视图显示哪段时期；导航只改它） */
   viewDate: Date;
   /** 用户显式选中的日期（仅用于高亮 + 新建任务默认日期；不被导航改变） */
@@ -72,6 +74,8 @@ interface UIState {
   timerSheetOpen: boolean;
   /** 正在编辑的计时记录 id（日时间轴点击触发），null 表示无 */
   editingTimeEntryId: string | null;
+  /** 看板-按分组模式下当前所在分组的 id（用于 FAB 预填；非该模式为 null） */
+  boardSectionId: string | null;
 
   setTab: (t: TabKey) => void;
   setTheme: (t: ThemeKey) => void;
@@ -87,6 +91,10 @@ interface UIState {
   setSearchActive: (b: boolean) => void;
   setSearchQuery: (q: string) => void;
   exitSearch: () => void;
+  /** 切换某个标签的选中态（在 tagFilter 中增删） */
+  toggleTagFilter: (tag: string) => void;
+  /** 清空标签筛选 */
+  clearTagFilter: () => void;
   setViewDate: (d: Date) => void;
   setSelectedDate: (d: Date) => void;
   openEditor: (opts?: { todoId?: string; date?: Date | null; categoryId?: string; sectionId?: string | null }) => void;
@@ -94,6 +102,8 @@ interface UIState {
   showToast: (msg: string, opts?: { actionLabel?: string; onAction?: () => void; duration?: number }) => void;
   setTimerSheetOpen: (b: boolean) => void;
   setEditingTimeEntry: (id: string | null) => void;
+  /** 设置看板当前所在分组（用于 FAB 预填分类+分组） */
+  setBoardSection: (sectionId: string | null) => void;
 }
 
 let toastTimer: ReturnType<typeof setTimeout> | null = null;
@@ -110,6 +120,7 @@ export const useUIStore = create<UIState>((set) => ({
   filter: { kind: 'all' },
   searchActive: false,
   searchQuery: '',
+  tagFilter: [],
   viewDate: startOfDay(new Date()),
   selectedDate: startOfDay(new Date()),
   editorOpen: false,
@@ -123,6 +134,7 @@ export const useUIStore = create<UIState>((set) => ({
   completedView: 'list',
   timerSheetOpen: false,
   editingTimeEntryId: null,
+  boardSectionId: null,
 
   setTab: (tab) => set({ tab }),
   setTheme: (theme) => {
@@ -144,6 +156,13 @@ export const useUIStore = create<UIState>((set) => ({
   setSearchActive: (searchActive) => set({ searchActive }),
   setSearchQuery: (searchQuery) => set({ searchQuery }),
   exitSearch: () => set({ searchActive: false, searchQuery: '' }),
+  toggleTagFilter: (tag) =>
+    set((s) => ({
+      tagFilter: s.tagFilter.includes(tag)
+        ? s.tagFilter.filter((t) => t !== tag)
+        : [...s.tagFilter, tag],
+    })),
+  clearTagFilter: () => set({ tagFilter: [] }),
   setSelectedDate: (selectedDate) => set({ selectedDate: startOfDay(selectedDate) }),
   setViewDate: (viewDate) => set({ viewDate: startOfDay(viewDate) }),
   openEditor: (opts) =>
@@ -162,4 +181,5 @@ export const useUIStore = create<UIState>((set) => ({
   },
   setTimerSheetOpen: (timerSheetOpen) => set({ timerSheetOpen }),
   setEditingTimeEntry: (editingTimeEntryId) => set({ editingTimeEntryId }),
+  setBoardSection: (boardSectionId) => set({ boardSectionId }),
 }));

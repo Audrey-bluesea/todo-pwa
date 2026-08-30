@@ -19,8 +19,14 @@ export default function TabBar() {
   const selectedDate = useUIStore((s) => s.selectedDate);
   const theme = useUIStore((s) => s.theme);
   const drawerOpen = useUIStore((s) => s.drawerOpen);
+  const todoView = useUIStore((s) => s.todoView);
+  const boardSectionId = useUIStore((s) => s.boardSectionId);
 
   const fabEmoji = FAB_EMOJI[theme];
+
+  // 看板-按分组模式下，FAB 预填当前清单 + 当前分组
+  const inBoardSection =
+    tab === 'todos' && todoView === 'board' && boardSectionId !== null && filter.kind === 'category';
 
   // 抽屉打开时，TabBar 与 FAB 整体隐藏，避免底部 TabBar/FAB 压住抽屉内容
   // （抽屉 z-40 < FAB z-50，且 in-flow 的 TabBar 与 fixed 抽屉层级交叉，真机表现不稳定）。
@@ -47,6 +53,7 @@ export default function TabBar() {
         aria-label="添加待办"
         onClick={() => openEditor({
           categoryId: filter.kind === 'category' ? filter.categoryId : undefined,
+          sectionId: inBoardSection ? boardSectionId! : undefined,
           date: tab === 'calendar' ? selectedDate : undefined,
         })}
         className="fab flex h-14 w-14 items-center justify-center press"

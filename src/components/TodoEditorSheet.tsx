@@ -396,6 +396,8 @@ export default function TodoEditorSheet() {
   // 提醒（Web Push）：仅对带 dueDate 的任务生效
   const [reminderEnabled, setReminderEnabled] = useState(false);
   const [reminderLead, setReminderLead] = useState(10);
+  const [tags, setTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState('');
   const [showCatPicker, setShowCatPicker] = useState(false);
   const [showSecPicker, setShowSecPicker] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -426,6 +428,7 @@ export default function TodoEditorSheet() {
       setSubOpen(editing.subTasks.length > 0);
       setReminderEnabled(editing.reminder?.enabled ?? false);
       setReminderLead(editing.reminder?.leadMin ?? 10);
+      setTags(editing.tags ? [...editing.tags] : []);
     } else {
       setCategoryId(presetCategoryId ?? '');
       setSectionId(presetSectionId ?? null);
@@ -438,8 +441,18 @@ export default function TodoEditorSheet() {
       setSubOpen(false);
       setReminderEnabled(false);
       setReminderLead(10);
+      setTags([]);
     }
+    setTagInput('');
   }, [open, editing, presetDate, presetCategoryId, presetSectionId, categories]);
+
+  // 全部已有标签（用于快捷建议）—— 必须在 early return 之前调用，遵守 hooks 规则
+  const allTags = useMemo(() => {
+    const set = new Set<string>();
+    for (const t of todos) for (const tg of t.tags ?? []) if (tg.trim()) set.add(tg.trim());
+    return Array.from(set);
+  }, [todos]);
+  const suggestedTags = allTags.filter((t) => !tags.includes(t)).slice(0, 16);
 
   if (!open) return null;
 
@@ -521,6 +534,7 @@ export default function TodoEditorSheet() {
           subTasks: cleanSubs,
           isCompleted: completed,
           reminder,
+          tags,
         });
         savedId = editing.id;
         showToast('已保存');
@@ -535,6 +549,7 @@ export default function TodoEditorSheet() {
           subTasks: cleanSubs,
           isCompleted: completed,
           reminder,
+          tags,
         });
         savedId = created.id;
         showToast('已添加 ✓');
@@ -560,6 +575,17 @@ export default function TodoEditorSheet() {
   const cat = categories.find((c) => c.id === categoryId);
   // 当前清单的 sections（用于显示分组选择器）
   const catSections = cat?.sections && cat.sections.length > 0 ? cat.sections : null;
+
+  const addTag = (raw?: string) => {
+    const v = (raw ?? tagInput).trim();
+    if (!v || tags.includes(v)) {
+      setTagInput('');
+      return;
+    }
+    setTags([...tags, v]);
+    setTagInput('');
+  };
+  const removeTag = (t: string) => setTags(tags.filter((x) => x !== t));
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col justify-end">
@@ -876,6 +902,65 @@ export default function TodoEditorSheet() {
               placeholder="添加补充说明…"
               className="w-full resize-none rounded-2xl border border-primary-200 bg-white px-4 py-3 text-[14px] leading-relaxed text-neutral-600 outline-none placeholder:text-neutral-350 focus:border-primary-400"
             />
+          </div>
+
+          {/* ④-b 标签（类似滴答清单，自由文本） */}
+          <div className="mb-4">
+            <div className="mb-2 text-[14px] font-medium text-neutral-700">标签</div>
+            <div className="flex flex-wrap items-center gap-2">
+              {tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="flex items-center gap-1 rounded-full bg-primary-100 px-2.5 py-1 text-[13px] font-medium text-primary-700"
+                >
+                  #{tag}
+                  <button
+                    type="button"
+                    onClick={() => removeTag(tag)}
+                    className="flex h-4 w-4 items-center justify-center rounded-full text-primary-500 active:bg-primary-200"
+                    aria-label={`移除标签 ${tag}`}
+                  >
+                    <IconClose size={12} />
+                  </button>
+                </span>
+              ))}
+              <div className="flex items-center gap-1">
+                <input
+                  value={tagInput}
+                  onChange={(e) => setTagInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      addTag();
+                    }
+                  }}
+                  placeholder="添加标签"
+                  className="w-24 rounded-full border border-primary-200 bg-white px-2.5 py-1 text-[13px] outline-none placeholder:text-neutral-400 focus:border-primary-400"
+                />
+                <button
+                  type="button"
+                  onClick={() => addTag()}
+                  className="flex h-7 w-7 items-center justify-center rounded-full bg-primary-500 text-white press active:bg-primary-600"
+                  aria-label="添加标签"
+                >
+                  <IconPlus size={15} />
+                </button>
+              </div>
+            </div>
+            {suggestedTags.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {suggestedTags.map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => addTag(t)}
+                    className="rounded-full bg-neutral-100 px-2 py-0.5 text-[12px] text-neutral-500 press active:bg-neutral-200"
+                  >
+                    #{t}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* ⑤ 子任务（可折叠） */}

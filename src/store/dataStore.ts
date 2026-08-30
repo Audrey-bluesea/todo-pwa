@@ -59,6 +59,7 @@ interface DataState {
     isCompleted?: boolean;
     sectionId?: string | null;
     reminder?: { enabled: boolean; leadMin: number } | null;
+    tags?: string[];
   }) => Promise<Todo>;
   updateTodo: (id: string, patch: Partial<Omit<Todo, 'id'>>) => Promise<void>;
   toggleTodo: (id: string) => Promise<void>;
@@ -196,7 +197,7 @@ export const useDataStore = create<DataState>((set, get) => ({
     await db.putCategory(nextCat);
   },
 
-  async addTodo({ categoryId, title, description, dueDate, endDate, subTasks, isCompleted, sectionId, reminder }) {
+  async addTodo({ categoryId, title, description, dueDate, endDate, subTasks, isCompleted, sectionId, reminder, tags }) {
     const maxOrder = get().todos.reduce((m, t) => Math.max(m, t.sortOrder), 0);
     const t: Todo = {
       id: uid(),
@@ -212,6 +213,7 @@ export const useDataStore = create<DataState>((set, get) => ({
       sortOrder: maxOrder + 1,
       createdAt: new Date(),
       reminder: reminder ?? null,
+      tags: tags ? tags.filter(Boolean) : [],
     };
     await db.putTodo(t);
     set((s) => ({ todos: [...s.todos, t] }));

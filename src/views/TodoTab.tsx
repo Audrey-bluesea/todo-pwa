@@ -19,6 +19,9 @@ export default function TodoTab() {
   const filter = useUIStore((s) => s.filter);
   const searchActive = useUIStore((s) => s.searchActive);
   const searchQuery = useUIStore((s) => s.searchQuery);
+  const tagFilter = useUIStore((s) => s.tagFilter);
+  const toggleTagFilter = useUIStore((s) => s.toggleTagFilter);
+  const clearTagFilter = useUIStore((s) => s.clearTagFilter);
   const setSearchActive = useUIStore((s) => s.setSearchActive);
   const exitSearch = useUIStore((s) => s.exitSearch);
   const view = useUIStore((s) => s.todoView);
@@ -73,14 +76,27 @@ export default function TodoTab() {
     }
   }, [todos, filter]);
 
-  // 全局搜索：激活时跨全部任务匹配（忽略预设筛选），否则沿用 filter 结果
+  // 标签筛选：在 filter 结果之上再按标签收敛（OR 逻辑：任一命中即显示）
+  const tagFiltered = useMemo(() => {
+    if (tagFilter.length === 0) return filtered;
+    return filtered.filter((t) => (t.tags ?? []).some((tg) => tagFilter.includes(tg)));
+  }, [filtered, tagFilter]);
+
+  // 全局搜索：激活时跨全部任务匹配（忽略预设筛选），否则沿用 filter + 标签筛选结果
   const catNameMap = useMemo(() => buildCatNameMap(categories), [categories]);
   const searched = useMemo(() => {
-    if (!searchActive) return filtered;
+    if (!searchActive) return tagFiltered;
     const q = searchQuery.trim().toLowerCase();
     if (!q) return todos;
     return searchTodos(todos, q, catNameMap);
-  }, [searchActive, searchQuery, filtered, todos, catNameMap]);
+  }, [searchActive, searchQuery, tagFiltered, todos, catNameMap]);
+
+  // 全部已有标签（用于筛选栏）
+  const allTags = useMemo(() => {
+    const set = new Set<string>();
+    for (const t of todos) for (const tg of t.tags ?? []) if (tg.trim()) set.add(tg.trim());
+    return Array.from(set);
+  }, [todos]);
 
   // 计时记录搜索：激活时跨全部 TimeEntry 匹配标题/备注（含自由计时）
   const timeEntries = useTimerStore((s) => s.timeEntries);
@@ -261,6 +277,36 @@ export default function TodoTab() {
         )}
       </header>
 
+      {/* 标签筛选栏：存在标签且非搜索态时显示；点击切换选中（OR 逻辑） */}
+      {!searchActive && allTags.length > 0 && (
+        <div className="shrink-0 px-3 pb-2 pt-0.5">
+          <div className="no-scrollbar flex gap-1.5 overflow-x-auto">
+            {allTags.map((tg) => {
+              const active = tagFilter.includes(tg);
+              return (
+                <button
+                  key={tg}
+                  onClick={() => toggleTagFilter(tg)}
+                  className={`press shrink-0 rounded-full px-3 py-1 text-[12px] font-medium ${
+                    active ? 'bg-primary-600 text-white' : 'bg-primary-100 text-primary-700'
+                  }`}
+                >
+                  #{tg}
+                </button>
+              );
+            })}
+            {tagFilter.length > 0 && (
+              <button
+                onClick={clearTagFilter}
+                className="press shrink-0 rounded-full bg-neutral-100 px-3 py-1 text-[12px] text-neutral-500"
+              >
+                清除
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       <div
         key={mountKey}
         ref={scrollRef}
@@ -284,9 +330,9 @@ export default function TodoTab() {
             <TodoListView todos={searched} query={searchQuery} />
           </div>
         ) : effectiveView === 'list' ? (
-          <TodoListView todos={filtered} listGroupKey={isCompletedView ? 'category' : groupBy} />
+          <TodoListView todos={searched} listGroupKey={isCompletedView ? 'category' : groupBy} />
         ) : (
-          <TodoBoardView todos={filtered} mode={isCompletedView ? 'category' : boardMode} filter={filter} />
+          <TodoBoardView todos={searched} mode={isCompletedView ? 'category' : boardMode} filter={filter} />
         )}
       </div>
     </div>

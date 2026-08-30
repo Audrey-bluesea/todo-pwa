@@ -162,6 +162,19 @@ export default function TodoCard({ todo, category, showDate, hideCategory, query
               </div>
             )}
 
+            {todo.tags && todo.tags.length > 0 && (
+              <div className="mt-1 flex flex-wrap gap-1">
+                {todo.tags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="rounded-full bg-primary-50 px-2 py-[1px] text-[11px] font-medium text-primary-600"
+                  >
+                    #{tag}
+                  </span>
+                ))}
+              </div>
+            )}
+
             <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
               {!hideCategory && category && (
                 <span className="flex items-center gap-1 text-[11.5px] text-neutral-400">

@@ -16,6 +16,7 @@ export function todoMatches(todo: Todo, q: string, catNameMap: Map<string, strin
   const hay = [
     todo.title,
     todo.description,
+    ...(todo.tags ?? []).map((t) => `#${t}`),
     ...todo.subTasks.map((s) => s.content),
     catNameMap.get(todo.categoryId) ?? '',
   ]

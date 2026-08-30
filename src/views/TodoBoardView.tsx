@@ -5,6 +5,7 @@ import type { Todo, DrawerFilter, BoardMode, Category } from '../types';
 import { addDays, dayDiff, fmtTime, humanDate, isAllDay, isSameDay, startOfDay } from '../lib/date';
 import { scrollMemory } from '../lib/scrollMemory';
 import EmptyState from '../components/EmptyState';
+import SectionTabBar from '../components/SectionTabBar';
 
 /* ---------- 类型定义 ---------- */
 
@@ -108,9 +109,14 @@ export default function TodoBoardView({
 }) {
   const categories = useDataStore((s) => s.categories);
   const addSection = useDataStore((s) => s.addSection);
+  const updateSection = useDataStore((s) => s.updateSection);
+  const removeSection = useDataStore((s) => s.removeSection);
+  const reorderSections = useDataStore((s) => s.reorderSections);
+  const updateTodo = useDataStore((s) => s.updateTodo);
   const toggleTodo = useDataStore((s) => s.toggleTodo);
   const openEditor = useUIStore((s) => s.openEditor);
   const showToast = useUIStore((s) => s.showToast);
+  const setBoardSection = useUIStore((s) => s.setBoardSection);
   const groupBy = useUIStore((s) => s.groupBy);
   const setGroupBy = useUIStore((s) => s.setGroupBy);
   const catMap = useMemo(() => new Map<string, Category>(categories.map((c) => [c.id, c])), [categories]);
@@ -151,6 +157,23 @@ export default function TodoBoardView({
     if (isCompletedView) return todos;
     return todos.filter((t) => !t.isCompleted || exiting.has(t.id) || collapsing.has(t.id));
   }, [todos, isCompletedView, exiting, collapsing]);
+
+  // 看板-按分组模式：构建分组标签栏数据（重命名/拖拽用真实 section 列表 + 未分组计数）
+  const sectionBar = useMemo(() => {
+    if (filter.kind !== 'category' || groupBy !== 'section' || !cat) return null;
+    const catTodos = visibleTodos.filter((t) => t.categoryId === cat.id);
+    const secs = sortSections(cat.sections ?? []).map((sec) => ({
+      id: sec.id,
+      label: sec.name,
+      count: catTodos.filter((t) => t.sectionId === sec.id).length,
+      editable: true as const,
+    }));
+    const unsectionedCount = catTodos.filter((t) => !t.sectionId).length;
+    return {
+      secs,
+      unsectioned: unsectionedCount > 0 ? { label: '未分组', count: unsectionedCount } : null,
+    };
+  }, [filter, groupBy, cat, visibleTodos]);
 
   // 跟手横滑状态
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -248,6 +271,34 @@ export default function TodoBoardView({
     }
   }, [tabs.length, activeTabIdx]);
 
+  // tabs 的 id 集合变化（增删/重排分组、删除分组）后，保持「当前分组」稳定（按 id 重定位 activeTabIdx）
+  const tabSig = tabs.map((t) => t.id).join('|');
+  const activeIdRef = useRef<string | null>(tabs[activeTabIdx]?.id ?? null);
+  useEffect(() => {
+    activeIdRef.current = tabs[activeTabIdx]?.id ?? null;
+  }, [activeTabIdx, tabSig]);
+  useEffect(() => {
+    const id = activeIdRef.current;
+    if (!id) return;
+    const idx = tabs.findIndex((t) => t.id === id);
+    if (idx === -1) setActiveTabIdxRaw(Math.max(0, Math.min(activeTabIdx, tabs.length - 1)));
+    else if (idx !== activeTabIdx) setActiveTabIdxRaw(idx);
+  }, [tabSig, activeTabIdx, tabs]);
+
+  // 看板-按分组模式下，把当前所在分组 id 发布到全局（供 FAB 预填分类+分组）
+  useEffect(() => {
+    const inSectionMode = filter.kind === 'category' && groupBy === 'section';
+    if (!inSectionMode) {
+      setBoardSection(null);
+      return;
+    }
+    const id = tabs[activeTabIdx]?.id;
+    setBoardSection(id && id.startsWith('sec-') && id !== 'sec-none' ? id.slice(4) : null);
+  }, [activeTabIdx, tabs, filter, groupBy, setBoardSection]);
+
+  // 看板卸载（切到列表/日历）时清空当前分组，避免 FAB 误用旧分组预填
+  useEffect(() => () => setBoardSection(null), [setBoardSection]);
+
   // 重挂载时恢复各列滚动位置（记忆中的当前 tab 已在 useState 初值里）
   useEffect(() => {
     const saved = scrollMemory.get(memKey);
@@ -278,13 +329,79 @@ export default function TodoBoardView({
     setGroupBy('section');
   };
 
+  // 分组标签栏交互（仅看板-按分组模式）
+  const handleSectionSelect = (fullId: string) => {
+    const idx = tabs.findIndex((t) => t.id === fullId);
+    if (idx >= 0) commitTab(idx);
+  };
+  const handleSectionReorder = (orderedIds: string[]) => {
+    if (!cat) return;
+    reorderSections(
+      cat.id,
+      orderedIds.map((id, i) => ({ id, sortOrder: i })),
+    );
+  };
+
+  // —— 长按卡片拖到分组标题 → 切换分组 ——
+  const [taskDrag, setTaskDrag] = useState<{ todo: Todo; x: number; y: number } | null>(null);
+  const [dropTargetId, setDropTargetId] = useState<string | null>(null);
+  const taskDragRef = useRef(false);
+  const dropTargetRef = useRef<string | null>(null);
+  const taskTodoRef = useRef<Todo | null>(null);
+  const taskDragging = !!taskDrag;
+
+  const handleTaskLongPress = useCallback((todo: Todo, x: number, y: number) => {
+    taskTodoRef.current = todo;
+    setTaskDrag({ todo, x, y });
+    setDropTargetId(null);
+    dropTargetRef.current = null;
+    taskDragRef.current = true;
+  }, []);
+
+  useEffect(() => {
+    if (!taskDragging) return;
+    const onMove = (e: PointerEvent) => {
+      const x = e.clientX;
+      const y = e.clientY;
+      setTaskDrag((d) => (d ? { ...d, x, y } : d));
+      const el = document.elementFromPoint(x, y) as HTMLElement | null;
+      const pill = el?.closest('[data-section-id]') as HTMLElement | null;
+      const id = pill ? pill.getAttribute('data-section-id') : null;
+      dropTargetRef.current = id;
+      setDropTargetId(id);
+    };
+    const onUp = () => {
+      const target = dropTargetRef.current;
+      const todo = taskTodoRef.current;
+      if (todo && target) {
+        const sid = target === 'none' ? null : target;
+        if (todo.sectionId !== sid) updateTodo(todo.id, { sectionId: sid });
+      }
+      setTaskDrag(null);
+      setDropTargetId(null);
+      dropTargetRef.current = null;
+      taskDragRef.current = false;
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    window.addEventListener('pointercancel', onUp);
+    return () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', onUp);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [taskDragging, updateTodo]);
+
   // ---- 跟手横滑 ----
   const onTouchStart = (e: React.TouchEvent) => {
+    if (taskDragRef.current) return; // 正在拖拽任务换分组，不触发横滑
     const w = viewportRef.current?.clientWidth ?? window.innerWidth;
     touch.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, t: Date.now(), lock: null, w };
   };
 
   const onTouchMove = (e: React.TouchEvent) => {
+    if (taskDragRef.current) return;
     const t = touch.current;
     const cx = e.touches[0].clientX;
     const cy = e.touches[0].clientY;
@@ -365,28 +482,43 @@ export default function TodoBoardView({
         </div>
       )}
 
-      {/* ====== 横滑 Tab 栏 ====== */}
-      {tabs.length > 1 && (
+      {/* ====== 分组标签栏（看板-按分组模式可重命名/拖拽排序） ====== */}
+      {sectionBar ? (
         <div className="shrink-0 border-b border-primary-100 px-3 pb-2 pt-2">
-          <div className="flex gap-2 overflow-x-auto no-scrollbar" style={{ WebkitOverflowScrolling: 'touch' }}>
-            {tabs.map((tab, i) => (
-              <button
-                key={tab.id}
-                onClick={() => commitTab(i)}
-                className={`shrink-0 rounded-full border-2 px-4 py-1.5 text-[13px] font-medium transition-all press ${
-                  i === activeTabIdx
-                    ? 'border-primary-400 bg-primary-200 text-primary-700'
-                    : 'border-transparent bg-neutral-100 text-neutral-500'
-                }`}
-              >
-                {tab.label}
-                <span className={`ml-1 text-[11px] tabular-nums ${i === activeTabIdx ? 'text-primary-600' : 'text-neutral-400'}`}>
-                  {tab.items.length}
-                </span>
-              </button>
-            ))}
-          </div>
+          <SectionTabBar
+            sections={sectionBar.secs}
+            unsectioned={sectionBar.unsectioned}
+            activeId={tabs[activeTabIdx]?.id ?? null}
+            dropTargetId={dropTargetId}
+            onSelect={handleSectionSelect}
+            onRename={(id, name) => cat && updateSection(cat.id, id, { name })}
+            onDelete={(id) => cat && removeSection(cat.id, id)}
+            onReorder={handleSectionReorder}
+          />
         </div>
+      ) : (
+        tabs.length > 1 && (
+          <div className="shrink-0 border-b border-primary-100 px-3 pb-2 pt-2">
+            <div className="flex gap-2 overflow-x-auto no-scrollbar" style={{ WebkitOverflowScrolling: 'touch' }}>
+              {tabs.map((tab, i) => (
+                <button
+                  key={tab.id}
+                  onClick={() => commitTab(i)}
+                  className={`shrink-0 rounded-full border-2 px-4 py-1.5 text-[13px] font-medium transition-all press ${
+                    i === activeTabIdx
+                      ? 'border-primary-400 bg-primary-200 text-primary-700'
+                      : 'border-transparent bg-neutral-100 text-neutral-500'
+                  }`}
+                >
+                  {tab.label}
+                  <span className={`ml-1 text-[11px] tabular-nums ${i === activeTabIdx ? 'text-primary-600' : 'text-neutral-400'}`}>
+                    {tab.items.length}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )
       )}
 
       {/* ====== 任务列表区（跟手横滑 pager） ====== */}
@@ -409,7 +541,7 @@ export default function TodoBoardView({
             <div
               key={tab.id}
               ref={(el) => (colRefs.current[i] = el)}
-              className="h-full w-full shrink-0 overflow-y-auto px-4 pb-8 pt-2"
+              className={`h-full w-full shrink-0 px-4 pb-8 pt-2 touch-pan-y ${taskDragging ? 'overflow-hidden' : 'overflow-y-auto'}`}
               onScroll={(e) => scrollMemory.save(memKey, e.currentTarget.scrollTop, activeTabIdx)}
             >
               {tab.items.map((t) => {
@@ -429,6 +561,7 @@ export default function TodoBoardView({
                       onOpen={() => openEditor({ todoId: t.id })}
                       onCheck={handleCheck}
                       hideCategory={filter.kind === 'category'}
+                      onLongPress={sectionBar ? handleTaskLongPress : undefined}
                     />
                   </div>
                 );
@@ -438,6 +571,23 @@ export default function TodoBoardView({
           ))}
         </div>
       </div>
+
+      {/* 长按拖拽任务的浮层克隆（pointer-events:none，不挡住下方分组标题的命中检测） */}
+      {taskDrag && (
+        <div
+          className="pointer-events-none fixed left-0 top-0 z-[60]"
+          style={{
+            transform: `translate(${taskDrag.x}px, ${taskDrag.y}px) translate(-50%, -50%) rotate(-2deg)`,
+          }}
+        >
+          <div className="max-w-[220px] rounded-xl bg-white px-3 py-2 shadow-[0_10px_28px_rgba(80,120,90,0.35)] ring-2 ring-primary-400">
+            <div className="text-[14px] font-medium leading-snug text-neutral-700">{taskDrag.todo.title || 'No Title'}</div>
+            {taskDrag.todo.description && (
+              <div className="mt-0.5 line-clamp-1 text-[12px] text-neutral-400">{taskDrag.todo.description}</div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -452,6 +602,7 @@ function BoardCard({
   onOpen,
   onCheck,
   hideCategory,
+  onLongPress,
 }: {
   t: Todo;
   cat?: Category;
@@ -460,9 +611,50 @@ function BoardCard({
   onOpen: () => void;
   onCheck: (id: string) => void;
   hideCategory?: boolean;
+  /** 长按卡片：进入「拖到分组标题」模式（仅看板-按分组模式传入） */
+  onLongPress?: (todo: Todo, clientX: number, clientY: number) => void;
 }) {
   const hasTime = t.dueDate && !isAllDay(t.dueDate);
   const isCrossDay = !!(t.dueDate && t.endDate && !isSameDay(t.dueDate, t.endDate));
+
+  // 长按 → 拖拽换分组：检测长按（移动/滚动则取消），松手若曾长按则吞掉随后的 click
+  const lp = useRef<{ timer: number | null; startX: number; startY: number; moved: boolean; fired: boolean } | null>(null);
+  const suppressClick = useRef(false);
+  const clearLp = () => {
+    if (lp.current?.timer) {
+      window.clearTimeout(lp.current.timer);
+      lp.current = null;
+    }
+  };
+  const onCardPointerDown = (e: React.PointerEvent) => {
+    if (!onLongPress) return;
+    lp.current = { timer: null, startX: e.clientX, startY: e.clientY, moved: false, fired: false };
+    const timer = window.setTimeout(() => {
+      if (lp.current && !lp.current.moved && !lp.current.fired) {
+        lp.current.fired = true;
+        try {
+          (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+        } catch {
+          /* ignore */
+        }
+        onLongPress(t, e.clientX, e.clientY);
+      }
+    }, 380);
+    lp.current.timer = timer;
+  };
+  const onCardPointerMove = (e: React.PointerEvent) => {
+    if (!lp.current) return;
+    const dx = e.clientX - lp.current.startX;
+    const dy = e.clientY - lp.current.startY;
+    if (Math.abs(dx) > 8 || Math.abs(dy) > 8) {
+      lp.current.moved = true;
+      if (!lp.current.fired) clearLp();
+    }
+  };
+  const onCardPointerUp = () => {
+    if (lp.current?.fired) suppressClick.current = true;
+    clearLp();
+  };
 
   // 时间标签统一成与 TodoCard 一致：未完成主色浅底，已完成中性浅灰底
   const timeChipCls = t.isCompleted
@@ -471,7 +663,19 @@ function BoardCard({
 
   return (
     <div
-      onClick={onOpen}
+      onClick={(e) => {
+        if (suppressClick.current) {
+          suppressClick.current = false;
+          e.preventDefault();
+          e.stopPropagation();
+          return;
+        }
+        onOpen();
+      }}
+      onPointerDown={onCardPointerDown}
+      onPointerMove={onCardPointerMove}
+      onPointerUp={onCardPointerUp}
+      onPointerCancel={onCardPointerUp}
       className={`mb-2 flex items-start gap-3 rounded-xl bg-white p-3 shadow-card-soft press ${
         isOverdueCol && !t.isCompleted ? 'border-l-[3px] border-l-red-300' : ''
       }`}
@@ -517,6 +721,20 @@ function BoardCard({
             {t.description}
           </div>
         ) : null}
+        {t.tags && t.tags.length > 0 && (
+          <div className="mt-1 flex flex-wrap gap-1">
+            {t.tags.map((tag) => (
+              <span
+                key={tag}
+                className={`rounded-full px-2 py-[1px] text-[11px] font-medium ${
+                  t.isCompleted ? 'bg-neutral-100 text-neutral-400' : 'bg-primary-50 text-primary-600'
+                }`}
+              >
+                #{tag}
+              </span>
+            ))}
+          </div>
+        )}
         <div className="mt-1 flex items-center justify-between gap-2">
           {/* 时间标签：与 TodoCard 逻辑保持一致 */}
           {t.dueDate && t.endDate ? (
