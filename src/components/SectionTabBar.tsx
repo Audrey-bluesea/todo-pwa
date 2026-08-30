@@ -96,6 +96,22 @@ export default function SectionTabBar({
     [],
   );
 
+  // 当前激活分组若靠近可视区边缘（含被切掉一部分），选中后自动滚入中间，露出其前后的分组
+  useEffect(() => {
+    if (!activeId) return;
+    const id = activeId === 'sec-none' ? '__unsec__' : activeId.replace('sec-', '');
+    const el = itemRefs.current.get(id);
+    const container = containerRef.current;
+    if (!el || !container) return;
+    const cr = container.getBoundingClientRect();
+    const er = el.getBoundingClientRect();
+    const edge = 24; // 距边缘 24px 内即视为「靠边」，需要滚出来
+    // 在边缘（被切到或贴近边缘）时才滚动；整排能放下时不滚
+    if (er.right > cr.right - edge || er.left < cr.left + edge) {
+      el.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
+    }
+  }, [activeId]);
+
   const startDrag = (id: string) => {
     const el = itemRefs.current.get(id);
     if (!el) return;
