@@ -40,14 +40,13 @@ const DOUBLE_TAP = 300; // 双击改名间隔
  * - 双击 → 内联重命名
  * - 长按 → 进入拖拽排序（实时让位式：其余 pill 跟随手指方向被挤开、留出空位，松手嵌入）
  *
- * iOS 手势的关键约束：
- *  - 浏览器在 touchstart 时就决定了手势类型，事后设置 touch-action 已无效；
- *  - 一旦 iOS 进入「滚动」，touchmove 的 e.cancelable 变 false，preventDefault 再也拦不住。
- * 因此本组件：
- *  1. 容器静态 touch-action: pan-y —— 横向手势从落下起就不归浏览器，事件能完整派发；
- *  2. 横滑浏览改为 JS 1:1 跟手滚动（scrollLeft -= dx）；
- *  3. 长按进入拖拽时，touchmove 里 e.preventDefault() 真正掐断竖向滚动，纯 JS 接管让位重排；
- *  4. 桌面无触摸时回退到 Pointer 事件（桌面无滚动 cancel 问题）。
+ * 交互策略（iOS / 桌面统一的 Pointer 事件）：
+ *  - 容器保持原生顺滑横向滚动（overflow-x-auto，touch-action 默认），浏览最顺滑；
+ *  - 长按 350ms 且手指基本不动 → 进入拖拽：此刻锁定容器 touch-action:none + 指针捕获，
+ *    后续移动由 JS 接管让位重排，原生滚动被彻底掐断；
+ *  - 若长按触发前手指已产生「真实横向滚动」（容器的 scroll 事件 / pointercancel），
+ *    判定为用户在浏览，取消长按——避免误触拖拽；
+ *  - 只在「按住不动」时进入拖拽，因此分组多少都不影响拖拽可靠性。
  */
 export default function SectionTabBar({
   sections,
@@ -81,12 +80,11 @@ export default function SectionTabBar({
     id: string;
     startX: number;
     startY: number;
-    lastX: number;
-    lastY: number;
     longTimer: number | null;
     moved: boolean;
     dragging: boolean;
-    startTime: number;
+    el: HTMLElement | null;
+    pointerId: number | null;
   } | null>(null);
   const editingIdRef = useRef<string | null>(null);
   const sectionsRef = useRef(sections);
@@ -137,6 +135,16 @@ export default function SectionTabBar({
     const originIdx = sectionsRef.current.findIndex((s) => s.id === id);
     insRef.current = originIdx; // 起始时插回原处 → 不产生位移
     setIns(originIdx);
+    // 进入拖拽：锁定容器手势（不再原生滚动），并捕获指针，后续移动纯 JS 接管
+    if (containerRef.current) containerRef.current.style.touchAction = 'none';
+    const p = pressRef.current;
+    if (p?.el && p.pointerId != null) {
+      try {
+        p.el.setPointerCapture(p.pointerId);
+      } catch {
+        /* ignore */
+      }
+    }
   };
 
   const finishDrag = () => {
@@ -157,6 +165,7 @@ export default function SectionTabBar({
       window.clearTimeout(p.longTimer);
     }
     document.body.classList.remove(BODY_CLASS);
+    if (containerRef.current) containerRef.current.style.touchAction = '';
     if (scrollRafRef.current) {
       cancelAnimationFrame(scrollRafRef.current);
       scrollRafRef.current = null;
@@ -196,25 +205,25 @@ export default function SectionTabBar({
   };
 
   // —— 核心交互逻辑（触摸 / 指针通用）——
-  const coreStart = (x: number, y: number, id: string) => {
+  const coreStart = (x: number, y: number, id: string, el?: HTMLElement | null, pointerId?: number | null) => {
     if (editingIdRef.current) return; // 编辑状态不响应拖拽/选择
-    const now = Date.now();
     pressRef.current = {
       id,
       startX: x,
       startY: y,
-      lastX: x,
-      lastY: y,
       longTimer: null,
       moved: false,
       dragging: false,
-      startTime: now,
+      el: el ?? null,
+      pointerId: pointerId ?? null,
     };
     // 按下瞬间即全局禁止选中，阻止 iOS 长按选中附近任务卡片文字
     document.body.classList.add(BODY_CLASS);
     pressRef.current.longTimer = window.setTimeout(() => {
       const p = pressRef.current;
       if (p && p.id === id && !p.moved && !p.dragging) {
+        const it = sectionsRef.current.find((s) => s.id === id);
+        if (!it || !it.editable) return; // 未分组等不可拖拽项不进入拖拽
         p.dragging = true;
         if ('vibrate' in navigator) navigator.vibrate(12);
         startDrag(id);
@@ -224,27 +233,9 @@ export default function SectionTabBar({
 
   const coreMove = (x: number, y: number) => {
     const p = pressRef.current;
-    if (!p) return;
+    if (!p || !p.dragging) return;
     const dx = x - p.startX;
     const dy = y - p.startY;
-    if (!p.dragging) {
-      // 横滑浏览：JS 1:1 跟手滚动（pan-y 下横向手势归我们）
-      const container = containerRef.current;
-      if (container) {
-        const movedX = x - p.lastX;
-        if (movedX !== 0) container.scrollLeft -= movedX;
-      }
-      p.lastX = x;
-      p.lastY = y;
-      if (Math.abs(dx) > MOVE_TOLERANCE || Math.abs(dy) > MOVE_TOLERANCE) {
-        p.moved = true;
-        if (p.longTimer) {
-          window.clearTimeout(p.longTimer);
-          p.longTimer = null;
-        }
-      }
-      return;
-    }
     // 拖拽模式：纯 JS 接管让位重排 + 边缘自动滚动
     setDragX(dx);
     setDragY(dy);
@@ -269,113 +260,98 @@ export default function SectionTabBar({
     setIns(at);
   };
 
-  const coreEnd = () => {
-    const p = pressRef.current;
-    if (!p) return;
-    if (p.dragging) {
-      finishDrag();
-      return;
-    }
-    if (p.longTimer) {
-      window.clearTimeout(p.longTimer);
-      p.longTimer = null;
-    }
-    if (!p.moved) {
-      // 单击 → 选中；两次快速单击 → 改名
-      const now = Date.now();
-      if (lastTapIdRef.current === p.id && now - lastTapTimeRef.current < DOUBLE_TAP) {
-        lastTapIdRef.current = '';
-        lastTapTimeRef.current = 0;
-        const it = sectionsRef.current.find((s) => s.id === p.id);
-        if (it && it.editable) {
-          setEditingId(p.id);
-          setEditValue(it.label);
-        }
-      } else {
-        lastTapIdRef.current = p.id;
-        lastTapTimeRef.current = now;
-        onSelectRef.current(FULL(p.id));
-      }
-    }
-    cleanupDrag();
-  };
-
-  // —— 原生事件绑定（触摸优先，桌面回退指针）——
+  // —— 统一交互（Pointer 事件，iOS / 桌面通用）——
+  // 容器保持原生顺滑横向滚动；仅在「长按且按住不动」时进入拖拽，此刻才锁手势 + 捕获指针。
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
-    const isTouch = 'ontouchstart' in window || (navigator as any).maxTouchPoints > 0;
 
-    if (isTouch) {
-      const onTouchStart = (e: TouchEvent) => {
-        const target = e.target as HTMLElement;
-        const pill = target.closest('button[data-section-id]') as HTMLButtonElement | null;
-        if (!pill || pill.dataset.sectionId === '__unsec__') {
-          // 未分组项仅响应单击选中，不走长按/拖拽
-          if (pill) {
-            pressRef.current = {
-              id: '__unsec__',
-              startX: e.touches[0].clientX,
-              startY: e.touches[0].clientY,
-              lastX: e.touches[0].clientX,
-              lastY: e.touches[0].clientY,
-              longTimer: null,
-              moved: false,
-              dragging: false,
-              startTime: Date.now(),
-            };
-            document.body.classList.add(BODY_CLASS);
-          }
-          return;
-        }
-        if (editingIdRef.current) return;
-        coreStart(e.touches[0].clientX, e.touches[0].clientY, pill.dataset.sectionId!);
-      };
-      const onTouchMove = (e: TouchEvent) => {
-        const p = pressRef.current;
-        if (!p || p.id === '__unsec__') return;
-        if (p.dragging && e.cancelable) e.preventDefault(); // 掐断竖向滚动
-        coreMove(e.touches[0].clientX, e.touches[0].clientY);
-      };
-      const onTouchEnd = () => coreEnd();
-      container.addEventListener('touchstart', onTouchStart, { passive: true });
-      container.addEventListener('touchmove', onTouchMove, { passive: false });
-      container.addEventListener('touchend', onTouchEnd, { passive: true });
-      container.addEventListener('touchcancel', onTouchEnd, { passive: true });
-      return () => {
-        container.removeEventListener('touchstart', onTouchStart);
-        container.removeEventListener('touchmove', onTouchMove);
-        container.removeEventListener('touchend', onTouchEnd);
-        container.removeEventListener('touchcancel', onTouchEnd);
-        cleanupDrag();
-      };
-    }
-
-    // 桌面回退：Pointer 事件（桌面无滚动 cancel 问题，preventDefault 有效）
     const onPointerDown = (e: PointerEvent) => {
       const target = e.target as HTMLElement;
       const pill = target.closest('button[data-section-id]') as HTMLButtonElement | null;
       if (!pill) return;
       if (editingIdRef.current) return;
-      // 未分组项不给 pointercapture 复杂化，直接走单击
-      coreStart(e.clientX, e.clientY, pill.dataset.sectionId!);
+      coreStart(e.clientX, e.clientY, pill.dataset.sectionId!, pill, e.pointerId);
     };
     const onPointerMove = (e: PointerEvent) => {
       const p = pressRef.current;
       if (!p) return;
-      if (p.dragging) e.preventDefault();
-      coreMove(e.clientX, e.clientY);
+      if (p.dragging) {
+        e.preventDefault(); // 拖拽中：阻止任何残留滚动
+        coreMove(e.clientX, e.clientY);
+        return;
+      }
+      // 未进入拖拽：仅记录位移用于「是否算点击」判定；不取消长按（交由 scroll 事件判定）
+      const dx = e.clientX - p.startX;
+      const dy = e.clientY - p.startY;
+      if (Math.abs(dx) > MOVE_TOLERANCE || Math.abs(dy) > MOVE_TOLERANCE) {
+        p.moved = true;
+      }
     };
-    const onPointerUp = () => coreEnd();
+    const onPointerUp = () => {
+      const p = pressRef.current;
+      if (!p) return;
+      if (p.dragging) {
+        finishDrag();
+        return;
+      }
+      if (p.longTimer) {
+        window.clearTimeout(p.longTimer);
+        p.longTimer = null;
+      }
+      if (!p.moved) {
+        // 单击 → 选中；两次快速单击 → 改名
+        const now = Date.now();
+        if (lastTapIdRef.current === p.id && now - lastTapTimeRef.current < DOUBLE_TAP) {
+          lastTapIdRef.current = '';
+          lastTapTimeRef.current = 0;
+          const it = sectionsRef.current.find((s) => s.id === p.id);
+          if (it && it.editable) {
+            setEditingId(p.id);
+            setEditValue(it.label);
+          }
+        } else {
+          lastTapIdRef.current = p.id;
+          lastTapTimeRef.current = now;
+          onSelectRef.current(FULL(p.id));
+        }
+      }
+      cleanupDrag();
+    };
+    const onPointerCancel = () => {
+      const p = pressRef.current;
+      if (!p) return;
+      if (p.dragging) {
+        finishDrag();
+        return;
+      }
+      if (p.longTimer) {
+        window.clearTimeout(p.longTimer);
+        p.longTimer = null;
+      }
+      cleanupDrag();
+    };
+    // 真实横向滚动发生（用户在浏览）→ 取消长按，避免误触拖拽
+    const onScroll = () => {
+      const p = pressRef.current;
+      if (p && !p.dragging && p.longTimer) {
+        window.clearTimeout(p.longTimer);
+        p.longTimer = null;
+        p.moved = true; // 滚动过的，不算点击
+      }
+    };
+
     container.addEventListener('pointerdown', onPointerDown);
-    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointermove', onPointerMove, { passive: false });
     window.addEventListener('pointerup', onPointerUp);
-    window.addEventListener('pointercancel', onPointerUp);
+    window.addEventListener('pointercancel', onPointerCancel);
+    container.addEventListener('scroll', onScroll, { passive: true });
     return () => {
       container.removeEventListener('pointerdown', onPointerDown);
       window.removeEventListener('pointermove', onPointerMove);
       window.removeEventListener('pointerup', onPointerUp);
-      window.removeEventListener('pointercancel', onPointerUp);
+      window.removeEventListener('pointercancel', onPointerCancel);
+      container.removeEventListener('scroll', onScroll);
       cleanupDrag();
     };
   }, []);
@@ -479,7 +455,7 @@ export default function SectionTabBar({
     <div
       ref={containerRef}
       data-section-bar
-      className="flex items-center gap-2 no-scrollbar overflow-x-auto touch-pan-y"
+      className="flex items-center gap-2 no-scrollbar overflow-x-auto"
       style={{ WebkitOverflowScrolling: 'touch' }}
     >
       {sections.map((s) => (
