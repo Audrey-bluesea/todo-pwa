@@ -30,16 +30,24 @@ interface Props {
 const FULL = (id: string) => (id === '__unsec__' ? 'sec-none' : `sec-${id}`);
 const GAP = 8; // 与 className 中的 gap-2 对应（0.5rem）
 const BODY_CLASS = 'section-reordering';
+const LONG_PRESS = 380; // 长按触发拖拽的毫秒数
+const MOVE_TOLERANCE = 6; // 超过该位移视为「滑动」而非长按
+const DOUBLE_TAP = 300; // 双击改名间隔
 
 /**
  * 看板-按分组模式下的分组标签栏：
- * - 点击 → 切换当前分组
+ * - 单击 → 切换当前分组
  * - 双击 → 内联重命名
  * - 长按 → 进入拖拽排序（实时让位式：其余 pill 跟随手指方向被挤开、留出空位，松手嵌入）
  *
- * 为了同时保留「横向滑动滚动标签栏」：
- *  1. pill 默认 touch-action:auto，让短促横滑交给浏览器去滚标签栏；
- *  2. 只有长按 380ms 后才进入拖拽模式，之后 preventDefault 阻止滚动，改由 JS 平移 pill。
+ * iOS 手势的关键约束：
+ *  - 浏览器在 touchstart 时就决定了手势类型，事后设置 touch-action 已无效；
+ *  - 一旦 iOS 进入「滚动」，touchmove 的 e.cancelable 变 false，preventDefault 再也拦不住。
+ * 因此本组件：
+ *  1. 容器静态 touch-action: pan-y —— 横向手势从落下起就不归浏览器，事件能完整派发；
+ *  2. 横滑浏览改为 JS 1:1 跟手滚动（scrollLeft -= dx）；
+ *  3. 长按进入拖拽时，touchmove 里 e.preventDefault() 真正掐断竖向滚动，纯 JS 接管让位重排；
+ *  4. 桌面无触摸时回退到 Pointer 事件（桌面无滚动 cancel 问题）。
  */
 export default function SectionTabBar({
   sections,
@@ -62,21 +70,38 @@ export default function SectionTabBar({
   const [ins, setIns] = useState(-1);
 
   const itemRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
-  const press = useRef<{
-    id: string;
-    startX: number;
-    startY: number;
-    longTimer: number | null;
-    moved: boolean;
-    dragging: boolean;
-  } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  // ref 镜像，供 window 监听器读取最新值（避免闭包捕获旧 state）
+  // ref 镜像，供原生监听器读取最新值（避免闭包捕获旧 props）
   const dragIdRef = useRef<string | null>(null);
   const insRef = useRef(-1);
   const scrollRafRef = useRef<number | null>(null);
   const pointerXRef = useRef<number | null>(null);
+  const pressRef = useRef<{
+    id: string;
+    startX: number;
+    startY: number;
+    lastX: number;
+    lastY: number;
+    longTimer: number | null;
+    moved: boolean;
+    dragging: boolean;
+    startTime: number;
+  } | null>(null);
+  const editingIdRef = useRef<string | null>(null);
+  const sectionsRef = useRef(sections);
+  const onSelectRef = useRef(onSelect);
+  const onRenameRef = useRef(onRename);
+  const onDeleteRef = useRef(onDelete);
+  const lastTapIdRef = useRef('');
+  const lastTapTimeRef = useRef(0);
+
+  // 同步最新 props/state 到 ref
+  sectionsRef.current = sections;
+  editingIdRef.current = editingId;
+  onSelectRef.current = onSelect;
+  onRenameRef.current = onRename;
+  onDeleteRef.current = onDelete;
 
   useEffect(() => {
     if (editingId && inputRef.current) {
@@ -84,18 +109,6 @@ export default function SectionTabBar({
       inputRef.current.select();
     }
   }, [editingId]);
-
-  useEffect(
-    () => () => {
-      if (press.current?.longTimer) window.clearTimeout(press.current.longTimer);
-      window.removeEventListener('pointermove', handleWindowMove);
-      window.removeEventListener('pointerup', handleWindowUp);
-      window.removeEventListener('pointercancel', handleWindowUp);
-      window.removeEventListener('touchmove', handleTouchMove);
-      document.body.classList.remove(BODY_CLASS);
-    },
-    [],
-  );
 
   // 当前激活分组若靠近可视区边缘（含被切掉一部分），选中后自动滚入中间，露出其前后的分组
   useEffect(() => {
@@ -121,7 +134,7 @@ export default function SectionTabBar({
     setDragId(id);
     setOriginRect({ left: r.left, top: r.top, width: r.width });
     setDragW(r.width + GAP);
-    const originIdx = sections.findIndex((s) => s.id === id);
+    const originIdx = sectionsRef.current.findIndex((s) => s.id === id);
     insRef.current = originIdx; // 起始时插回原处 → 不产生位移
     setIns(originIdx);
   };
@@ -129,7 +142,7 @@ export default function SectionTabBar({
   const finishDrag = () => {
     const dragId = dragIdRef.current;
     if (dragId) {
-      const rem = sections.filter((s) => s.id !== dragId);
+      const rem = sectionsRef.current.filter((s) => s.id !== dragId);
       let at = insRef.current;
       at = Math.max(0, Math.min(at < 0 ? rem.length : at, rem.length));
       const order = [...rem.slice(0, at).map((s) => s.id), dragId, ...rem.slice(at).map((s) => s.id)];
@@ -139,12 +152,11 @@ export default function SectionTabBar({
   };
 
   const cleanupDrag = () => {
-    if (press.current?.longTimer) {
-      window.clearTimeout(press.current.longTimer);
-      press.current.longTimer = null;
+    const p = pressRef.current;
+    if (p?.longTimer) {
+      window.clearTimeout(p.longTimer);
     }
     document.body.classList.remove(BODY_CLASS);
-    window.removeEventListener('touchmove', handleTouchMove);
     if (scrollRafRef.current) {
       cancelAnimationFrame(scrollRafRef.current);
       scrollRafRef.current = null;
@@ -158,7 +170,7 @@ export default function SectionTabBar({
     setOriginRect(null);
     setDragW(0);
     setIns(-1);
-    press.current = null;
+    pressRef.current = null;
   };
 
   const tickAutoScroll = () => {
@@ -183,16 +195,49 @@ export default function SectionTabBar({
     scrollRafRef.current = requestAnimationFrame(tickAutoScroll);
   };
 
-  const handleWindowMove = (e: PointerEvent) => {
-    const p = press.current;
-    if (!p) return;
-    const dx = e.clientX - p.startX;
-    const dy = e.clientY - p.startY;
+  // —— 核心交互逻辑（触摸 / 指针通用）——
+  const coreStart = (x: number, y: number, id: string) => {
+    if (editingIdRef.current) return; // 编辑状态不响应拖拽/选择
+    const now = Date.now();
+    pressRef.current = {
+      id,
+      startX: x,
+      startY: y,
+      lastX: x,
+      lastY: y,
+      longTimer: null,
+      moved: false,
+      dragging: false,
+      startTime: now,
+    };
+    // 按下瞬间即全局禁止选中，阻止 iOS 长按选中附近任务卡片文字
+    document.body.classList.add(BODY_CLASS);
+    pressRef.current.longTimer = window.setTimeout(() => {
+      const p = pressRef.current;
+      if (p && p.id === id && !p.moved && !p.dragging) {
+        p.dragging = true;
+        if ('vibrate' in navigator) navigator.vibrate(12);
+        startDrag(id);
+      }
+    }, LONG_PRESS);
+  };
 
+  const coreMove = (x: number, y: number) => {
+    const p = pressRef.current;
+    if (!p) return;
+    const dx = x - p.startX;
+    const dy = y - p.startY;
     if (!p.dragging) {
-      if (!p.moved && (Math.abs(dx) > 6 || Math.abs(dy) > 6)) {
+      // 横滑浏览：JS 1:1 跟手滚动（pan-y 下横向手势归我们）
+      const container = containerRef.current;
+      if (container) {
+        const movedX = x - p.lastX;
+        if (movedX !== 0) container.scrollLeft -= movedX;
+      }
+      p.lastX = x;
+      p.lastY = y;
+      if (Math.abs(dx) > MOVE_TOLERANCE || Math.abs(dy) > MOVE_TOLERANCE) {
         p.moved = true;
-        // 用户提前滑动 → 取消长按计时（交给原生横滑滚动标签栏）
         if (p.longTimer) {
           window.clearTimeout(p.longTimer);
           p.longTimer = null;
@@ -200,26 +245,22 @@ export default function SectionTabBar({
       }
       return;
     }
-
-    // 拖拽模式下阻止浏览器滚动，由 JS 控制 pill 让位 + 边缘自动滚动
-    e.preventDefault();
+    // 拖拽模式：纯 JS 接管让位重排 + 边缘自动滚动
     setDragX(dx);
     setDragY(dy);
-    pointerXRef.current = e.clientX;
+    pointerXRef.current = x;
     if (!scrollRafRef.current) {
       scrollRafRef.current = requestAnimationFrame(tickAutoScroll);
     }
-
     const dragId = dragIdRef.current;
     if (!dragId) return;
-    const rem = sections.filter((s) => s.id !== dragId);
-    // 用其余 pill 的实时位置判断落点（已含让位产生的位移，手指跟手更准确）
+    const rem = sectionsRef.current.filter((s) => s.id !== dragId);
     let at = rem.length;
     for (let i = 0; i < rem.length; i++) {
       const el = itemRefs.current.get(rem[i].id);
       if (!el) continue;
       const c = el.getBoundingClientRect().left + el.getBoundingClientRect().width / 2;
-      if (e.clientX < c) {
+      if (x < c) {
         at = i;
         break;
       }
@@ -228,8 +269,8 @@ export default function SectionTabBar({
     setIns(at);
   };
 
-  const handleWindowUp = () => {
-    const p = press.current;
+  const coreEnd = () => {
+    const p = pressRef.current;
     if (!p) return;
     if (p.dragging) {
       finishDrag();
@@ -239,61 +280,118 @@ export default function SectionTabBar({
       window.clearTimeout(p.longTimer);
       p.longTimer = null;
     }
-    if (!p.moved) onSelect(FULL(p.id));
+    if (!p.moved) {
+      // 单击 → 选中；两次快速单击 → 改名
+      const now = Date.now();
+      if (lastTapIdRef.current === p.id && now - lastTapTimeRef.current < DOUBLE_TAP) {
+        lastTapIdRef.current = '';
+        lastTapTimeRef.current = 0;
+        const it = sectionsRef.current.find((s) => s.id === p.id);
+        if (it && it.editable) {
+          setEditingId(p.id);
+          setEditValue(it.label);
+        }
+      } else {
+        lastTapIdRef.current = p.id;
+        lastTapTimeRef.current = now;
+        onSelectRef.current(FULL(p.id));
+      }
+    }
     cleanupDrag();
   };
 
-  // 拖拽进行中时阻止原生横滚（iOS 关键：必须 touchmove.preventDefault，
-  // 且监听须为 passive:false 才能调用 preventDefault）。
-  const handleTouchMove = (e: TouchEvent) => {
-    if (dragIdRef.current) e.preventDefault();
-  };
+  // —— 原生事件绑定（触摸优先，桌面回退指针）——
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const isTouch = 'ontouchstart' in window || (navigator as any).maxTouchPoints > 0;
 
-  const onPointerDown = (e: React.PointerEvent, it: SectionTabItem) => {
-    if (editingId || !it.editable) return;
-    press.current = {
-      id: it.id,
-      startX: e.clientX,
-      startY: e.clientY,
-      longTimer: null,
-      moved: false,
-      dragging: false,
+    if (isTouch) {
+      const onTouchStart = (e: TouchEvent) => {
+        const target = e.target as HTMLElement;
+        const pill = target.closest('button[data-section-id]') as HTMLButtonElement | null;
+        if (!pill || pill.dataset.sectionId === '__unsec__') {
+          // 未分组项仅响应单击选中，不走长按/拖拽
+          if (pill) {
+            pressRef.current = {
+              id: '__unsec__',
+              startX: e.touches[0].clientX,
+              startY: e.touches[0].clientY,
+              lastX: e.touches[0].clientX,
+              lastY: e.touches[0].clientY,
+              longTimer: null,
+              moved: false,
+              dragging: false,
+              startTime: Date.now(),
+            };
+            document.body.classList.add(BODY_CLASS);
+          }
+          return;
+        }
+        if (editingIdRef.current) return;
+        coreStart(e.touches[0].clientX, e.touches[0].clientY, pill.dataset.sectionId!);
+      };
+      const onTouchMove = (e: TouchEvent) => {
+        const p = pressRef.current;
+        if (!p || p.id === '__unsec__') return;
+        if (p.dragging && e.cancelable) e.preventDefault(); // 掐断竖向滚动
+        coreMove(e.touches[0].clientX, e.touches[0].clientY);
+      };
+      const onTouchEnd = () => coreEnd();
+      container.addEventListener('touchstart', onTouchStart, { passive: true });
+      container.addEventListener('touchmove', onTouchMove, { passive: false });
+      container.addEventListener('touchend', onTouchEnd, { passive: true });
+      container.addEventListener('touchcancel', onTouchEnd, { passive: true });
+      return () => {
+        container.removeEventListener('touchstart', onTouchStart);
+        container.removeEventListener('touchmove', onTouchMove);
+        container.removeEventListener('touchend', onTouchEnd);
+        container.removeEventListener('touchcancel', onTouchEnd);
+        cleanupDrag();
+      };
+    }
+
+    // 桌面回退：Pointer 事件（桌面无滚动 cancel 问题，preventDefault 有效）
+    const onPointerDown = (e: PointerEvent) => {
+      const target = e.target as HTMLElement;
+      const pill = target.closest('button[data-section-id]') as HTMLButtonElement | null;
+      if (!pill) return;
+      if (editingIdRef.current) return;
+      // 未分组项不给 pointercapture 复杂化，直接走单击
+      coreStart(e.clientX, e.clientY, pill.dataset.sectionId!);
     };
-
-    // 按下瞬间即全局禁止选中，阻止 iOS 长按选中附近任务卡片文字
-    document.body.classList.add(BODY_CLASS);
-
-    // 注册非 passive 的 touchmove 监听：拖拽进行中时 preventDefault，
-    // 才能真正在 iOS 上掐断原生横滚（Pointer 事件的 preventDefault 拦不住滚动，
-    // 只有 touchmove.preventDefault 在手势中途有效）。
-    window.addEventListener('touchmove', handleTouchMove, { passive: false });
-
-    window.addEventListener('pointermove', handleWindowMove);
-    window.addEventListener('pointerup', handleWindowUp, { once: true });
-    window.addEventListener('pointercancel', handleWindowUp, { once: true });
-
-    const t = window.setTimeout(() => {
-      if (press.current && press.current.id === it.id && !press.current.moved && !press.current.dragging) {
-        press.current.dragging = true;
-        if ('vibrate' in navigator) navigator.vibrate(12);
-        startDrag(it.id);
-      }
-    }, 380);
-    press.current.longTimer = t;
-  };
+    const onPointerMove = (e: PointerEvent) => {
+      const p = pressRef.current;
+      if (!p) return;
+      if (p.dragging) e.preventDefault();
+      coreMove(e.clientX, e.clientY);
+    };
+    const onPointerUp = () => coreEnd();
+    container.addEventListener('pointerdown', onPointerDown);
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp);
+    window.addEventListener('pointercancel', onPointerUp);
+    return () => {
+      container.removeEventListener('pointerdown', onPointerDown);
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+      window.removeEventListener('pointercancel', onPointerUp);
+      cleanupDrag();
+    };
+  }, []);
 
   const commitRename = () => {
     const id = editingId;
     const name = editValue.trim();
     setEditingId(null);
-    if (id && name) onRename(id, name);
+    if (id && name) onRenameRef.current(id, name);
   };
 
   const cancelRename = () => setEditingId(null);
 
   const handleDelete = (id: string) => {
     setEditingId(null);
-    if (window.confirm('删除该分组？分组内的任务会移到「未分组」。')) onDelete(id);
+    if (window.confirm('删除该分组？分组内的任务会移到「未分组」。')) onDeleteRef.current(id);
   };
 
   // 计算某个 pill（基础索引 baseIdx）在拖拽时的水平位移
@@ -317,13 +415,6 @@ export default function SectionTabBar({
           else itemRefs.current.delete(it.id);
         }}
         data-section-id={dropId}
-        onPointerDown={(e) => onPointerDown(e, it)}
-        onDoubleClick={() => {
-          if (it.editable && !editingId) {
-            setEditingId(it.id);
-            setEditValue(sections.find((s) => s.id === it.id)?.label ?? '');
-          }
-        }}
         className={`relative shrink-0 rounded-full border-2 px-4 py-1.5 text-[13px] font-medium transition-colors press ${
           isDrop
             ? 'border-primary-500 bg-primary-500 text-white ring-2 ring-primary-300'
@@ -360,7 +451,7 @@ export default function SectionTabBar({
             <span
               role="button"
               aria-label="删除分组"
-              onPointerDown={(e) => e.preventDefault()}
+              data-no-drag
               onClick={(e) => {
                 e.stopPropagation();
                 handleDelete(it.id);
@@ -388,7 +479,7 @@ export default function SectionTabBar({
     <div
       ref={containerRef}
       data-section-bar
-      className="flex items-center gap-2 no-scrollbar overflow-x-auto"
+      className="flex items-center gap-2 no-scrollbar overflow-x-auto touch-pan-y"
       style={{ WebkitOverflowScrolling: 'touch' }}
     >
       {sections.map((s) => (
