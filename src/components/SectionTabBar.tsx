@@ -29,6 +29,7 @@ interface Props {
 
 const FULL = (id: string) => (id === '__unsec__' ? 'sec-none' : `sec-${id}`);
 const GAP = 8; // 与 className 中的 gap-2 对应（0.5rem）
+const BODY_CLASS = 'section-reordering';
 
 /**
  * 看板-按分组模式下的分组标签栏：
@@ -87,6 +88,7 @@ export default function SectionTabBar({
       window.removeEventListener('pointermove', handleWindowMove);
       window.removeEventListener('pointerup', handleWindowUp);
       window.removeEventListener('pointercancel', handleWindowUp);
+      document.body.classList.remove(BODY_CLASS);
     },
     [],
   );
@@ -121,6 +123,7 @@ export default function SectionTabBar({
       window.clearTimeout(press.current.longTimer);
       press.current.longTimer = null;
     }
+    document.body.classList.remove(BODY_CLASS);
     dragIdRef.current = null;
     insRef.current = -1;
     setDragId(null);
@@ -198,6 +201,9 @@ export default function SectionTabBar({
       moved: false,
       dragging: false,
     };
+
+    // 按下瞬间即全局禁止选中，阻止 iOS 长按选中附近任务卡片文字
+    document.body.classList.add(BODY_CLASS);
 
     window.addEventListener('pointermove', handleWindowMove);
     window.addEventListener('pointerup', handleWindowUp, { once: true });

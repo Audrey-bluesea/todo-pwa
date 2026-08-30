@@ -412,6 +412,14 @@ body,
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
+
+  /* 长按分组标签栏拖拽排序时，全局禁止 iOS 选中附近文字 */
+  body.section-reordering,
+  body.section-reordering * {
+    user-select: none !important;
+    -webkit-user-select: none !important;
+    -webkit-touch-callout: none !important;
+  }
 }
 
 /* 弹层动画 */
