@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { IconClose } from './Icons';
 
 export interface SectionTabItem {
@@ -27,12 +28,13 @@ interface Props {
 }
 
 const FULL = (id: string) => (id === '__unsec__' ? 'sec-none' : `sec-${id}`);
+const GAP = 8; // 与 className 中的 gap-2 对应（0.5rem）
 
 /**
  * 看板-按分组模式下的分组标签栏：
  * - 点击 → 切换当前分组
  * - 双击 → 内联重命名
- * - 长按 → 进入拖拽排序，松手落定（落点以竖线提示）
+ * - 长按 → 进入拖拽排序（实时让位式：其余 pill 跟随手指方向被挤开、留出空位，松手嵌入）
  *
  * 为了同时保留「横向滑动滚动标签栏」：
  *  1. pill 默认 touch-action:auto，让短促横滑交给浏览器去滚标签栏；
@@ -52,10 +54,13 @@ export default function SectionTabBar({
   const [editValue, setEditValue] = useState('');
   const [dragId, setDragId] = useState<string | null>(null);
   const [dragX, setDragX] = useState(0);
-  const [overIdx, setOverIdx] = useState(-1);
+  const [dragY, setDragY] = useState(0);
+  const [originRect, setOriginRect] = useState<{ left: number; top: number; width: number } | null>(null);
+  const [dragW, setDragW] = useState(0);
+  // 拖拽时，被拖动项在「其余项数组」中的插入位置（落点）；-1 表示尚未进入拖拽
+  const [ins, setIns] = useState(-1);
 
   const itemRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
-  const rectsRef = useRef<{ id: string; centerX: number }[]>([]);
   const press = useRef<{
     id: string;
     startX: number;
@@ -65,10 +70,9 @@ export default function SectionTabBar({
     dragging: boolean;
   } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  // 用 ref 镜像 dragId / overIdx：window 监听器在 onPointerDown 时挂载，闭包会捕获到旧值，
-  // 若直接读 state 则 finishDrag 永远拿不到最新的 dragId / overIdx（导致排序失效）。
+  // ref 镜像，供 window 监听器读取最新值（避免闭包捕获旧 state）
   const dragIdRef = useRef<string | null>(null);
-  const overIdxRef = useRef(-1);
+  const insRef = useRef(-1);
 
   useEffect(() => {
     if (editingId && inputRef.current) {
@@ -88,28 +92,26 @@ export default function SectionTabBar({
   );
 
   const startDrag = (id: string) => {
+    const el = itemRefs.current.get(id);
+    if (!el) return;
+    const r = el.getBoundingClientRect();
     dragIdRef.current = id;
     setDragId(id);
-    rectsRef.current = sections.map((s) => {
-      const el = itemRefs.current.get(s.id);
-      const r = el ? el.getBoundingClientRect() : { left: 0, width: 0 };
-      return { id: s.id, centerX: r.left + r.width / 2 };
-    });
+    setOriginRect({ left: r.left, top: r.top, width: r.width });
+    setDragW(r.width + GAP);
+    const originIdx = sections.findIndex((s) => s.id === id);
+    insRef.current = originIdx; // 起始时插回原处 → 不产生位移
+    setIns(originIdx);
   };
 
   const finishDrag = () => {
     const dragId = dragIdRef.current;
-    const overIdx = overIdxRef.current;
     if (dragId) {
-      const order = sections.map((s) => s.id);
-      const from = order.indexOf(dragId);
-      if (from !== -1) {
-        order.splice(from, 1);
-        let insertAt = overIdx === -1 ? order.length : overIdx;
-        insertAt = Math.max(0, Math.min(insertAt, order.length));
-        order.splice(insertAt, 0, dragId);
-        onReorder(order);
-      }
+      const rem = sections.filter((s) => s.id !== dragId);
+      let at = insRef.current;
+      at = Math.max(0, Math.min(at < 0 ? rem.length : at, rem.length));
+      const order = [...rem.slice(0, at).map((s) => s.id), dragId, ...rem.slice(at).map((s) => s.id)];
+      onReorder(order);
     }
     cleanupDrag();
   };
@@ -120,10 +122,13 @@ export default function SectionTabBar({
       press.current.longTimer = null;
     }
     dragIdRef.current = null;
-    overIdxRef.current = -1;
+    insRef.current = -1;
     setDragId(null);
     setDragX(0);
-    setOverIdx(-1);
+    setDragY(0);
+    setOriginRect(null);
+    setDragW(0);
+    setIns(-1);
     press.current = null;
   };
 
@@ -145,21 +150,27 @@ export default function SectionTabBar({
       return;
     }
 
-    // 拖拽模式下阻止浏览器滚动，改由 JS 移动 pill
+    // 拖拽模式下阻止浏览器滚动，由 JS 控制 pill 让位
     e.preventDefault();
     setDragX(dx);
-    const px = e.clientX;
-    let over = rectsRef.current.length;
-    for (let i = 0; i < rectsRef.current.length; i++) {
-      if (px < rectsRef.current[i].centerX) {
-        over = i;
+    setDragY(dy);
+
+    const dragId = dragIdRef.current;
+    if (!dragId) return;
+    const rem = sections.filter((s) => s.id !== dragId);
+    // 用其余 pill 的实时位置判断落点（已含让位产生的位移，手指跟手更准确）
+    let at = rem.length;
+    for (let i = 0; i < rem.length; i++) {
+      const el = itemRefs.current.get(rem[i].id);
+      if (!el) continue;
+      const c = el.getBoundingClientRect().left + el.getBoundingClientRect().width / 2;
+      if (e.clientX < c) {
+        at = i;
         break;
       }
     }
-    const dragVisualIdx = sections.findIndex((s) => s.id === dragIdRef.current);
-    if (dragVisualIdx !== -1 && over > dragVisualIdx) over -= 1;
-    overIdxRef.current = over;
-    setOverIdx(over);
+    insRef.current = at;
+    setIns(at);
   };
 
   const handleWindowUp = () => {
@@ -216,9 +227,19 @@ export default function SectionTabBar({
     if (window.confirm('删除该分组？分组内的任务会移到「未分组」。')) onDelete(id);
   };
 
-  const renderPill = (it: SectionTabItem, isActive: boolean, isDragging: boolean) => {
+  // 计算某个 pill（基础索引 baseIdx）在拖拽时的水平位移
+  const shiftFor = (baseIdx: number): number => {
+    if (!dragId || ins < 0) return 0;
+    const originIdx = sections.findIndex((s) => s.id === dragId);
+    if (baseIdx === originIdx) return 0;
+    const r = baseIdx < originIdx ? baseIdx : baseIdx - 1; // 在「其余项数组」中的位置
+    return r >= ins ? dragW : 0;
+  };
+
+  const renderPill = (it: SectionTabItem, isActive: boolean) => {
     const dropId = it.id === '__unsec__' ? 'none' : it.id;
     const isDrop = dropTargetId != null && dropTargetId === dropId;
+    const isDragging = dragId === it.id;
     return (
       <button
         key={it.id}
@@ -242,11 +263,8 @@ export default function SectionTabBar({
               : 'border-transparent bg-neutral-100 text-neutral-500'
         }`}
         style={{
-          transform: isDragging ? `translateX(${dragX}px) scale(1.05)` : undefined,
-          transition: isDragging ? 'none' : undefined,
-          zIndex: isDragging ? 50 : undefined,
-          boxShadow: isDragging ? '0 8px 20px rgba(80,120,90,0.3)' : undefined,
-          opacity: isDragging ? 0.98 : 1,
+          transform: isDragging ? undefined : `translateX(${shiftFor(sections.findIndex((s) => s.id === it.id))}px)`,
+          transition: dragId && !isDragging ? 'transform .18s ease' : undefined,
           userSelect: 'none',
           WebkitUserSelect: 'none',
           WebkitTouchCallout: 'none',
@@ -302,18 +320,45 @@ export default function SectionTabBar({
       className={`flex items-center gap-2 no-scrollbar ${dragId ? 'overflow-x-hidden' : 'overflow-x-auto'}`}
       style={{ WebkitOverflowScrolling: 'touch' }}
     >
-      {sections.map((s, i) => (
-        <Fragment key={s.id}>
-          {dragId && overIdx === i && <div className="mx-0.5 w-[3px] self-stretch rounded bg-primary-500" />}
-          {renderPill(s, FULL(s.id) === activeId, dragId === s.id)}
-        </Fragment>
+      {sections.map((s) => (
+        // 拖拽中的项从流中移除（用 portal 浮层代替），让其余 pill 自然左移补位
+        dragId === s.id ? (
+          <span key={s.id} className="hidden" aria-hidden />
+        ) : (
+          <Fragment key={s.id}>{renderPill(s, FULL(s.id) === activeId)}</Fragment>
+        )
       ))}
-      {dragId && overIdx === sections.length && <div className="mx-0.5 w-[3px] self-stretch rounded bg-primary-500" />}
       {unsectioned &&
-        renderPill(
-          { id: '__unsec__', label: unsectioned.label, count: unsectioned.count, editable: false },
-          activeId === 'sec-none',
-          false,
+        (dragId === '__unsec__' ? (
+          <span key="__unsec__" className="hidden" aria-hidden />
+        ) : (
+          renderPill(
+            { id: '__unsec__', label: unsectioned.label, count: unsectioned.count, editable: false },
+            activeId === 'sec-none',
+          )
+        ))}
+
+      {/* 被拖动的 pill：用 portal 浮在视口上跟随手指，避免被父级 overflow 裁剪 */}
+      {dragId &&
+        originRect &&
+        createPortal(
+          <div
+            className="pointer-events-none fixed z-[60] rounded-full border-2 border-primary-400 bg-white px-4 py-1.5 text-[13px] font-medium text-primary-700"
+            style={{
+              left: originRect.left,
+              top: originRect.top,
+              width: originRect.width,
+              transform: `translate(${dragX}px, ${dragY}px) scale(1.05)`,
+              boxShadow: '0 12px 26px rgba(80,120,90,0.38)',
+              opacity: 0.98,
+            }}
+          >
+            {sections.find((s) => s.id === dragId)?.label}
+            <span className="ml-1 text-[11px] tabular-nums text-primary-500">
+              {sections.find((s) => s.id === dragId)?.count}
+            </span>
+          </div>,
+          document.body,
         )}
     </div>
   );

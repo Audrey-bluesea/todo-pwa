@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useCallback } from 'react';
+import { useEffect, useMemo, useRef, useCallback, useState } from 'react';
 import { useDataStore } from '../store/dataStore';
 import { useUIStore } from '../store/uiStore';
 import { dayDiff, startOfDay } from '../lib/date';
@@ -22,6 +22,7 @@ export default function TodoTab() {
   const tagFilter = useUIStore((s) => s.tagFilter);
   const toggleTagFilter = useUIStore((s) => s.toggleTagFilter);
   const clearTagFilter = useUIStore((s) => s.clearTagFilter);
+  const [tagOpen, setTagOpen] = useState(false);
   const setSearchActive = useUIStore((s) => s.setSearchActive);
   const exitSearch = useUIStore((s) => s.exitSearch);
   const view = useUIStore((s) => s.todoView);
@@ -277,33 +278,63 @@ export default function TodoTab() {
         )}
       </header>
 
-      {/* 标签筛选栏：存在标签且非搜索态时显示；点击切换选中（OR 逻辑） */}
+      {/* 标签筛选：默认收起为一个紧凑按钮，避免标签多时堆满顶部；点击展开 chip 行；
+          已选筛选时自动展开并显示清除。 */}
       {!searchActive && allTags.length > 0 && (
         <div className="shrink-0 px-3 pb-2 pt-0.5">
-          <div className="no-scrollbar flex gap-1.5 overflow-x-auto">
-            {allTags.map((tg) => {
-              const active = tagFilter.includes(tg);
-              return (
-                <button
-                  key={tg}
-                  onClick={() => toggleTagFilter(tg)}
-                  className={`press shrink-0 rounded-full px-3 py-1 text-[12px] font-medium ${
-                    active ? 'bg-primary-600 text-white' : 'bg-primary-100 text-primary-700'
-                  }`}
-                >
-                  #{tg}
-                </button>
-              );
-            })}
+          <button
+            onClick={() => setTagOpen((o) => !o)}
+            className={`press inline-flex items-center gap-1 rounded-full px-3 py-1 text-[12px] font-medium ${
+              tagFilter.length > 0 ? 'bg-primary-600 text-white' : 'bg-primary-100 text-primary-700'
+            }`}
+          >
+            <svg
+              width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"
+            >
+              <path d="M3 5h18l-7 8v6l-4 2v-8z" />
+            </svg>
+            标签筛选
             {tagFilter.length > 0 && (
-              <button
-                onClick={clearTagFilter}
-                className="press shrink-0 rounded-full bg-neutral-100 px-3 py-1 text-[12px] text-neutral-500"
-              >
-                清除
-              </button>
+              <span className="ml-0.5 rounded-full bg-white/25 px-1.5 text-[11px] tabular-nums">
+                {tagFilter.length}
+              </span>
             )}
-          </div>
+            <svg
+              width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"
+              style={{ transform: tagOpen || tagFilter.length > 0 ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }}
+            >
+              <path d="M6 9l6 6 6-6" />
+            </svg>
+          </button>
+
+          {(tagOpen || tagFilter.length > 0) && (
+            <div className="no-scrollbar mt-2 flex gap-1.5 overflow-x-auto">
+              {allTags.map((tg) => {
+                const active = tagFilter.includes(tg);
+                return (
+                  <button
+                    key={tg}
+                    onClick={() => toggleTagFilter(tg)}
+                    className={`press shrink-0 rounded-full px-3 py-1 text-[12px] font-medium ${
+                      active ? 'bg-primary-600 text-white' : 'bg-primary-100 text-primary-700'
+                    }`}
+                  >
+                    #{tg}
+                  </button>
+                );
+              })}
+              {tagFilter.length > 0 && (
+                <button
+                  onClick={clearTagFilter}
+                  className="press shrink-0 rounded-full bg-neutral-100 px-3 py-1 text-[12px] text-neutral-500"
+                >
+                  清除
+                </button>
+              )}
+            </div>
+          )}
         </div>
       )}
 
