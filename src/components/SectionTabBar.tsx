@@ -31,7 +31,10 @@ const FULL = (id: string) => (id === '__unsec__' ? 'sec-none' : `sec-${id}`);
 const GAP = 8; // 与 className 中的 gap-2 对应（0.5rem）
 const BODY_CLASS = 'section-reordering';
 const LONG_PRESS = 380; // 长按触发拖拽的毫秒数
-const MOVE_TOLERANCE = 6; // 超过该位移视为「滑动」而非长按
+/** 长按「等待期」内，横向移动超过此值（且大于纵向）→ 判定用户想浏览，取消长按 */
+const SCROLL_CANCEL = 14;
+/** 超过该位移视为「已移动」，抬手时不再算单击 */
+const TAP_MOVE = 8;
 const DOUBLE_TAP = 300; // 双击改名间隔
 
 /**
@@ -40,13 +43,21 @@ const DOUBLE_TAP = 300; // 双击改名间隔
  * - 双击 → 内联重命名
  * - 长按 → 进入拖拽排序（实时让位式：其余 pill 跟随手指方向被挤开、留出空位，松手嵌入）
  *
- * 交互策略（iOS / 桌面统一的 Pointer 事件）：
- *  - 容器保持原生顺滑横向滚动（overflow-x-auto，touch-action 默认），浏览最顺滑；
- *  - 长按 350ms 且手指基本不动 → 进入拖拽：此刻锁定容器 touch-action:none + 指针捕获，
- *    后续移动由 JS 接管让位重排，原生滚动被彻底掐断；
- *  - 若长按触发前手指已产生「真实横向滚动」（容器的 scroll 事件 / pointercancel），
- *    判定为用户在浏览，取消长按——避免误触拖拽；
- *  - 只在「按住不动」时进入拖拽，因此分组多少都不影响拖拽可靠性。
+ * 交互策略（iOS/安卓 用原生 Touch，桌面回退 Pointer）：
+ *
+ *   iOS 的关键事实：
+ *   - 容器是 overflow-x-auto；一旦 iOS 判定为「滚动」，会派发 pointercancel 并且
+ *     之后 touchmove 的 cancelable 变 false —— Pointer 事件在这种容器里做长按拖拽必死。
+ *   - 但只要手指「按住不动」，浏览器就还没开始滚动，此时 touchmove 仍然 cancelable，
+ *     preventDefault() 才能真正掐断滚动。
+ *
+ *   因此：
+ *   1. touchstart 时立刻挂上 touchmove 监听（passive:false），保证第一个 move 就被我们拿到；
+ *   2. 手指按住不动满 LONG_PRESS → 进入拖拽；之后每个 touchmove 都 preventDefault，
+ *      原生滚动被掐断，纯 JS 接管让位式重排；
+ *   3. 等待期内若发生明显横滑（>SCROLL_CANCEL 且横向大于纵向）→ 判定用户想浏览，
+ *      取消长按且不 preventDefault，原生顺滑横滑照常发生；
+ *   4. 桌面无滚动 cancel 问题，用 Pointer 事件回退即可。
  */
 export default function SectionTabBar({
   sections,
@@ -91,6 +102,7 @@ export default function SectionTabBar({
   const onSelectRef = useRef(onSelect);
   const onRenameRef = useRef(onRename);
   const onDeleteRef = useRef(onDelete);
+  const onReorderRef = useRef(onReorder);
   const lastTapIdRef = useRef('');
   const lastTapTimeRef = useRef(0);
 
@@ -100,6 +112,7 @@ export default function SectionTabBar({
   onSelectRef.current = onSelect;
   onRenameRef.current = onRename;
   onDeleteRef.current = onDelete;
+  onReorderRef.current = onReorder;
 
   useEffect(() => {
     if (editingId && inputRef.current) {
@@ -108,7 +121,8 @@ export default function SectionTabBar({
     }
   }, [editingId]);
 
-  // 当前激活分组若靠近可视区边缘（含被切掉一部分），选中后自动滚入中间，露出其前后的分组
+  // 当前激活分组若被左右边缘切掉一部分（部分不可见），选中后自动滚入中间，露出其前后的分组。
+  // 注意：仅「真被切到」时才滚；完全可见时不滚，避免点一下就无谓晃动的观感。
   useEffect(() => {
     if (!activeId) return;
     const id = activeId === 'sec-none' ? '__unsec__' : activeId.replace('sec-', '');
@@ -117,9 +131,7 @@ export default function SectionTabBar({
     if (!el || !container) return;
     const cr = container.getBoundingClientRect();
     const er = el.getBoundingClientRect();
-    const edge = 24; // 距边缘 24px 内即视为「靠边」，需要滚出来
-    // 在边缘（被切到或贴近边缘）时才滚动；整排能放下时不滚
-    if (er.right > cr.right - edge || er.left < cr.left + edge) {
+    if (er.left < cr.left - 0.5 || er.right > cr.right + 0.5) {
       el.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
     }
   }, [activeId]);
@@ -135,8 +147,7 @@ export default function SectionTabBar({
     const originIdx = sectionsRef.current.findIndex((s) => s.id === id);
     insRef.current = originIdx; // 起始时插回原处 → 不产生位移
     setIns(originIdx);
-    // 进入拖拽：锁定容器手势（不再原生滚动），并捕获指针，后续移动纯 JS 接管
-    if (containerRef.current) containerRef.current.style.touchAction = 'none';
+    // 进入拖拽：捕获指针（桌面）；iOS 端靠 touchmove 的 preventDefault 掐断原生滚动
     const p = pressRef.current;
     if (p?.el && p.pointerId != null) {
       try {
@@ -154,7 +165,7 @@ export default function SectionTabBar({
       let at = insRef.current;
       at = Math.max(0, Math.min(at < 0 ? rem.length : at, rem.length));
       const order = [...rem.slice(0, at).map((s) => s.id), dragId, ...rem.slice(at).map((s) => s.id)];
-      onReorder(order);
+      onReorderRef.current(order);
     }
     cleanupDrag();
   };
@@ -165,7 +176,6 @@ export default function SectionTabBar({
       window.clearTimeout(p.longTimer);
     }
     document.body.classList.remove(BODY_CLASS);
-    if (containerRef.current) containerRef.current.style.touchAction = '';
     if (scrollRafRef.current) {
       cancelAnimationFrame(scrollRafRef.current);
       scrollRafRef.current = null;
@@ -205,32 +215,6 @@ export default function SectionTabBar({
   };
 
   // —— 核心交互逻辑（触摸 / 指针通用）——
-  const coreStart = (x: number, y: number, id: string, el?: HTMLElement | null, pointerId?: number | null) => {
-    if (editingIdRef.current) return; // 编辑状态不响应拖拽/选择
-    pressRef.current = {
-      id,
-      startX: x,
-      startY: y,
-      longTimer: null,
-      moved: false,
-      dragging: false,
-      el: el ?? null,
-      pointerId: pointerId ?? null,
-    };
-    // 按下瞬间即全局禁止选中，阻止 iOS 长按选中附近任务卡片文字
-    document.body.classList.add(BODY_CLASS);
-    pressRef.current.longTimer = window.setTimeout(() => {
-      const p = pressRef.current;
-      if (p && p.id === id && !p.moved && !p.dragging) {
-        const it = sectionsRef.current.find((s) => s.id === id);
-        if (!it || !it.editable) return; // 未分组等不可拖拽项不进入拖拽
-        p.dragging = true;
-        if ('vibrate' in navigator) navigator.vibrate(12);
-        startDrag(id);
-      }
-    }, LONG_PRESS);
-  };
-
   const coreMove = (x: number, y: number) => {
     const p = pressRef.current;
     if (!p || !p.dragging) return;
@@ -260,35 +244,31 @@ export default function SectionTabBar({
     setIns(at);
   };
 
-  // —— 统一交互（Pointer 事件，iOS / 桌面通用）——
-  // 容器保持原生顺滑横向滚动；仅在「长按且按住不动」时进入拖拽，此刻才锁手势 + 捕获指针。
+  // —— 交互绑定 ——
+  // 触摸设备：原生 Touch 事件（touchmove 用 passive:false 挂上）。
+  // 桌面：Pointer 事件回退（无滚动 cancel 问题）。
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
+    const isTouch = 'ontouchstart' in window || (navigator as any).maxTouchPoints > 0;
 
-    const onPointerDown = (e: PointerEvent) => {
-      const target = e.target as HTMLElement;
-      const pill = target.closest('button[data-section-id]') as HTMLButtonElement | null;
-      if (!pill) return;
-      if (editingIdRef.current) return;
-      coreStart(e.clientX, e.clientY, pill.dataset.sectionId!, pill, e.pointerId);
-    };
-    const onPointerMove = (e: PointerEvent) => {
+    /** 启动长按计时：手指按住不动满 LONG_PRESS 才进入拖拽 */
+    const armLongPress = (id: string) => {
       const p = pressRef.current;
       if (!p) return;
-      if (p.dragging) {
-        e.preventDefault(); // 拖拽中：阻止任何残留滚动
-        coreMove(e.clientX, e.clientY);
-        return;
-      }
-      // 未进入拖拽：仅记录位移用于「是否算点击」判定；不取消长按（交由 scroll 事件判定）
-      const dx = e.clientX - p.startX;
-      const dy = e.clientY - p.startY;
-      if (Math.abs(dx) > MOVE_TOLERANCE || Math.abs(dy) > MOVE_TOLERANCE) {
-        p.moved = true;
-      }
+      p.longTimer = window.setTimeout(() => {
+        const cur = pressRef.current;
+        if (!cur || cur.id !== id || cur.dragging) return;
+        const it = sectionsRef.current.find((s) => s.id === id);
+        if (!it || !it.editable) return; // 未分组等不可拖拽项不进入拖拽
+        cur.dragging = true;
+        if ('vibrate' in navigator) navigator.vibrate(12);
+        startDrag(id);
+      }, LONG_PRESS);
     };
-    const onPointerUp = () => {
+
+    /** 抬手收尾：拖拽落定 / 单击选中 / 双击改名 */
+    const handleRelease = () => {
       const p = pressRef.current;
       if (!p) return;
       if (p.dragging) {
@@ -300,7 +280,6 @@ export default function SectionTabBar({
         p.longTimer = null;
       }
       if (!p.moved) {
-        // 单击 → 选中；两次快速单击 → 改名
         const now = Date.now();
         if (lastTapIdRef.current === p.id && now - lastTapTimeRef.current < DOUBLE_TAP) {
           lastTapIdRef.current = '';
@@ -318,7 +297,9 @@ export default function SectionTabBar({
       }
       cleanupDrag();
     };
-    const onPointerCancel = () => {
+
+    /** 手势被打断（touchcancel / pointercancel） */
+    const cancelPress = () => {
       const p = pressRef.current;
       if (!p) return;
       if (p.dragging) {
@@ -331,27 +312,110 @@ export default function SectionTabBar({
       }
       cleanupDrag();
     };
-    // 真实横向滚动发生（用户在浏览）→ 取消长按，避免误触拖拽
-    const onScroll = () => {
+
+    // ---------- 触摸设备（iOS / 安卓）----------
+    if (isTouch) {
+      const onTouchStart = (e: TouchEvent) => {
+        if (editingIdRef.current) return; // 编辑状态不响应拖拽/选择
+        const target = e.target as HTMLElement;
+        const pill = target.closest('button[data-section-id]') as HTMLButtonElement | null;
+        if (!pill) return;
+        const id = pill.dataset.sectionId!;
+        const t = e.touches[0];
+        // 按下瞬间即全局禁止选中，阻止 iOS 长按选中附近任务卡片文字
+        document.body.classList.add(BODY_CLASS);
+        pressRef.current = {
+          id,
+          startX: t.clientX,
+          startY: t.clientY,
+          longTimer: null,
+          moved: false,
+          dragging: false,
+          el: pill,
+          pointerId: null,
+        };
+        armLongPress(id);
+      };
+      const onTouchMove = (e: TouchEvent) => {
+        const p = pressRef.current;
+        if (!p) return;
+        const t = e.touches[0];
+        const dx = t.clientX - p.startX;
+        const dy = t.clientY - p.startY;
+        if (p.dragging) {
+          // 拖拽中：掐断原生滚动，纯 JS 接管让位重排
+          // （手指按住不动期间浏览器尚未开始滚动，此刻 preventDefault 才真正有效）
+          if (e.cancelable) e.preventDefault();
+          coreMove(t.clientX, t.clientY);
+          return;
+        }
+        // 等待期内：记录是否已移动（用于单击判定）
+        if (Math.abs(dx) > TAP_MOVE || Math.abs(dy) > TAP_MOVE) p.moved = true;
+        // 明显横向滑动 → 用户在浏览，取消长按；
+        // 此处不 preventDefault，原生顺滑横滑照常发生（不卡顿）。
+        if (Math.abs(dx) > SCROLL_CANCEL && Math.abs(dx) > Math.abs(dy)) {
+          if (p.longTimer) {
+            window.clearTimeout(p.longTimer);
+            p.longTimer = null;
+          }
+        }
+      };
+
+      container.addEventListener('touchstart', onTouchStart, { passive: true });
+      container.addEventListener('touchmove', onTouchMove, { passive: false });
+      container.addEventListener('touchend', handleRelease, { passive: true });
+      container.addEventListener('touchcancel', cancelPress, { passive: true });
+      return () => {
+        container.removeEventListener('touchstart', onTouchStart);
+        container.removeEventListener('touchmove', onTouchMove);
+        container.removeEventListener('touchend', handleRelease);
+        container.removeEventListener('touchcancel', cancelPress);
+        cleanupDrag();
+      };
+    }
+
+    // ---------- 桌面（Pointer 事件回退）----------
+    const onPointerDown = (e: PointerEvent) => {
+      if (editingIdRef.current) return;
+      const target = e.target as HTMLElement;
+      const pill = target.closest('button[data-section-id]') as HTMLButtonElement | null;
+      if (!pill) return;
+      const id = pill.dataset.sectionId!;
+      document.body.classList.add(BODY_CLASS);
+      pressRef.current = {
+        id,
+        startX: e.clientX,
+        startY: e.clientY,
+        longTimer: null,
+        moved: false,
+        dragging: false,
+        el: pill,
+        pointerId: e.pointerId,
+      };
+      armLongPress(id);
+    };
+    const onPointerMove = (e: PointerEvent) => {
       const p = pressRef.current;
-      if (p && !p.dragging && p.longTimer) {
-        window.clearTimeout(p.longTimer);
-        p.longTimer = null;
-        p.moved = true; // 滚动过的，不算点击
+      if (!p) return;
+      const dx = e.clientX - p.startX;
+      const dy = e.clientY - p.startY;
+      if (p.dragging) {
+        e.preventDefault();
+        coreMove(e.clientX, e.clientY);
+        return;
       }
+      if (Math.abs(dx) > TAP_MOVE || Math.abs(dy) > TAP_MOVE) p.moved = true;
     };
 
     container.addEventListener('pointerdown', onPointerDown);
     window.addEventListener('pointermove', onPointerMove, { passive: false });
-    window.addEventListener('pointerup', onPointerUp);
-    window.addEventListener('pointercancel', onPointerCancel);
-    container.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('pointerup', handleRelease);
+    window.addEventListener('pointercancel', cancelPress);
     return () => {
       container.removeEventListener('pointerdown', onPointerDown);
       window.removeEventListener('pointermove', onPointerMove);
-      window.removeEventListener('pointerup', onPointerUp);
-      window.removeEventListener('pointercancel', onPointerCancel);
-      container.removeEventListener('scroll', onScroll);
+      window.removeEventListener('pointerup', handleRelease);
+      window.removeEventListener('pointercancel', cancelPress);
       cleanupDrag();
     };
   }, []);
@@ -379,7 +443,15 @@ export default function SectionTabBar({
     return r >= ins ? dragW : 0;
   };
 
-  const renderPill = (it: SectionTabItem, isActive: boolean) => {
+  /**
+   * 渲染单个 pill。
+   * ghost=true 表示「正在被拖动的那一项」：
+   *  —— 必须保留 DOM 节点！它是这次触摸序列的原始 target，一旦卸载，
+   *     iOS 就不再给它派发 touchmove/touchend（表现为「长按后卡住、拖不动」）。
+   *     因此这里不卸载，而是用 CSS 让它脱离布局流（absolute）+ 完全透明，
+   *     这样其余 pill 的让位几何效果与「卸载」时完全一致，但触摸链路不断。
+   */
+  const renderPill = (it: SectionTabItem, isActive: boolean, ghost = false) => {
     const dropId = it.id === '__unsec__' ? 'none' : it.id;
     const isDrop = dropTargetId != null && dropTargetId === dropId;
     const isDragging = dragId === it.id;
@@ -404,6 +476,9 @@ export default function SectionTabBar({
           userSelect: 'none',
           WebkitUserSelect: 'none',
           WebkitTouchCallout: 'none',
+          ...(ghost
+            ? { position: 'absolute' as const, left: 0, top: 0, opacity: 0, pointerEvents: 'none' as const }
+            : null),
         }}
       >
         {editingId === it.id ? (
@@ -455,26 +530,19 @@ export default function SectionTabBar({
     <div
       ref={containerRef}
       data-section-bar
-      className="flex items-center gap-2 no-scrollbar overflow-x-auto"
+      className="relative flex items-center gap-2 no-scrollbar overflow-x-auto"
       style={{ WebkitOverflowScrolling: 'touch' }}
     >
       {sections.map((s) => (
-        // 拖拽中的项从流中移除（用 portal 浮层代替），让其余 pill 自然左移补位
-        dragId === s.id ? (
-          <span key={s.id} className="hidden" aria-hidden />
-        ) : (
-          <Fragment key={s.id}>{renderPill(s, FULL(s.id) === activeId)}</Fragment>
-        )
+        // 注意：正在拖拽的项也必须保留节点（ghost），否则 iOS 会中断触摸事件序列
+        <Fragment key={s.id}>{renderPill(s, FULL(s.id) === activeId, dragId === s.id)}</Fragment>
       ))}
       {unsectioned &&
-        (dragId === '__unsec__' ? (
-          <span key="__unsec__" className="hidden" aria-hidden />
-        ) : (
-          renderPill(
-            { id: '__unsec__', label: unsectioned.label, count: unsectioned.count, editable: false },
-            activeId === 'sec-none',
-          )
-        ))}
+        renderPill(
+          { id: '__unsec__', label: unsectioned.label, count: unsectioned.count, editable: false },
+          activeId === 'sec-none',
+          dragId === '__unsec__',
+        )}
 
       {/* 被拖动的 pill：用 portal 浮在视口上跟随手指，避免被父级 overflow 裁剪 */}
       {dragId &&
