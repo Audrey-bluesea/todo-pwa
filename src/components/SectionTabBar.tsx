@@ -123,6 +123,9 @@ export default function SectionTabBar({
     const originIdx = sections.findIndex((s) => s.id === id);
     insRef.current = originIdx; // 起始时插回原处 → 不产生位移
     setIns(originIdx);
+    // 分组多时容器会 overflow-x-auto；进入拖拽后必须立即禁用浏览器原生滚动，
+    // 否则 iOS Safari 会把手指移动解释为「滚标签栏」而不是拖拽。
+    if (containerRef.current) containerRef.current.style.touchAction = 'none';
   };
 
   const finishDrag = () => {
@@ -143,6 +146,7 @@ export default function SectionTabBar({
       press.current.longTimer = null;
     }
     document.body.classList.remove(BODY_CLASS);
+    if (containerRef.current) containerRef.current.style.touchAction = '';
     if (scrollRafRef.current) {
       cancelAnimationFrame(scrollRafRef.current);
       scrollRafRef.current = null;
@@ -254,6 +258,13 @@ export default function SectionTabBar({
 
     // 按下瞬间即全局禁止选中，阻止 iOS 长按选中附近任务卡片文字
     document.body.classList.add(BODY_CLASS);
+
+    // 捕获指针，防止手指滑出 pill 或被浏览器滚动打断
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+      /* ignore */
+    }
 
     window.addEventListener('pointermove', handleWindowMove);
     window.addEventListener('pointerup', handleWindowUp, { once: true });
@@ -375,7 +386,7 @@ export default function SectionTabBar({
     <div
       ref={containerRef}
       data-section-bar
-      className="flex items-center gap-2 no-scrollbar overflow-x-auto"
+      className={`flex items-center gap-2 no-scrollbar overflow-x-auto ${dragId ? 'touch-none' : ''}`}
       style={{ WebkitOverflowScrolling: 'touch' }}
     >
       {sections.map((s) => (
