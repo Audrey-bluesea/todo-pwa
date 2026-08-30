@@ -370,57 +370,21 @@ function CategoryEditSheet({
   category,
   onClose,
 }: {
-  category: { id: string; name: string; icon: string; color?: string; sections?: { id: string; name: string; sortOrder: number }[] };
+  category: { id: string; name: string; icon: string; color?: string };
   onClose: () => void;
 }) {
   const [name, setName] = useState(category.name);
   const [icon, setIcon] = useState(category.icon);
   const [color, setColor] = useState(category.color ?? '#6BAA7A');
-  const [sections, setSections] = useState<{ id: string; name: string; sortOrder: number }[]>(category.sections ?? []);
-  const [newSecName, setNewSecName] = useState('');
-  const [addingSec, setAddingSec] = useState(false);
 
   const updateCategory = useDataStore((s) => s.updateCategory);
-  const addSection = useDataStore((s) => s.addSection);
-  const removeSection = useDataStore((s) => s.removeSection);
-  const reorderSections = useDataStore((s) => s.reorderSections);
 
+  // 分组管理已收敛到清单/看板界面（双击改名、长按拖拽排序、删除按钮），
+  // 此处不再重复提供，避免重复区块与「点不动的排序箭头」造成的困惑。
   const save = async () => {
     if (!name.trim()) return;
-    await updateCategory(category.id, { name: name.trim(), icon, color, sections });
+    await updateCategory(category.id, { name: name.trim(), icon, color });
     onClose();
-  };
-
-  const handleAddSection = async () => {
-    if (!newSecName.trim()) return;
-    const sec = await addSection(category.id, newSecName.trim());
-    setSections((prev) => [...prev, sec]);
-    setNewSecName('');
-    setAddingSec(false);
-  };
-
-  const handleRemoveSection = async (secId: string) => {
-    if (!confirm(`删除分组「${sections.find((s) => s.id === secId)?.name}」？该分组下的任务将变为未分组。`)) return;
-    await removeSection(category.id, secId);
-    setSections((prev) => prev.filter((s) => s.id !== secId));
-  };
-
-  // 上/下移动分组：交换相邻两项的 sortOrder，立即落盘
-  const handleMoveSection = async (idx: number, dir: -1 | 1) => {
-    const target = idx + dir;
-    if (target < 0 || target >= sections.length) return;
-    const next = [...sections];
-    const a = next[idx];
-    const b = next[target];
-    const oa = a.sortOrder;
-    const ob = b.sortOrder;
-    next[idx] = { ...a, sortOrder: ob };
-    next[target] = { ...b, sortOrder: oa };
-    setSections(next);
-    await reorderSections(category.id, [
-      { id: a.id, sortOrder: ob },
-      { id: b.id, sortOrder: oa },
-    ]);
   };
 
   // 抽屉 aside 带 backdrop-filter，会成为 fixed 的包含块 → 必须 Portal 到 body
@@ -488,77 +452,6 @@ function CategoryEditSheet({
             </div>
           </div>
 
-          {/* Section 分组管理 */}
-          <div className="border-t border-primary-100 pt-4">
-            <div className="mb-2 flex items-center justify-between">
-              <label className="text-[12px] font-semibold text-neutral-500">分组 (Section)</label>
-              {!addingSec && (
-                <button
-                  onClick={() => setAddingSec(true)}
-                  className="hit text-[12px] font-medium text-primary-600"
-                >
-                  + 新建
-                </button>
-              )}
-            </div>
-
-            {addingSec && (
-              <div className="mb-3 flex items-center gap-2 rounded-xl bg-primary-50 p-2 anim-pop">
-                <input
-                  value={newSecName}
-                  onChange={(e) => setNewSecName(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleAddSection()}
-                  placeholder="分组名称"
-                  autoFocus
-                  className="min-w-0 flex-1 rounded-lg border border-primary-200 bg-white px-2.5 py-1.5 text-[14px] outline-none placeholder:text-neutral-400 focus:border-primary-400"
-                />
-                <button onClick={handleAddSection} className="shrink-0 rounded-lg bg-primary-500 px-3 py-1.5 text-[13px] font-medium text-white press active:bg-primary-600">
-                  加
-                </button>
-                <button onClick={() => { setAddingSec(false); setNewSecName(''); }} className="shrink-0 text-[13px] text-neutral-400 press">
-                  取消
-                </button>
-              </div>
-            )}
-
-            {sections.length > 0 ? (
-              <div className="space-y-1">
-                {sections.map((sec, idx) => (
-                  <div key={sec.id} className="flex items-center gap-2 rounded-lg px-3 py-2 bg-neutral-50">
-                    <span className="min-w-0 flex-1 truncate text-[14px] text-neutral-700">{sec.name}</span>
-                    <div className="flex shrink-0 items-center gap-1">
-                      <button
-                        onClick={() => handleMoveSection(idx, -1)}
-                        disabled={idx === 0}
-                        className="flex h-7 w-7 items-center justify-center rounded-md text-neutral-400 press active:bg-primary-100 disabled:opacity-25"
-                        aria-label="上移分组"
-                      >
-                        ↑
-                      </button>
-                      <button
-                        onClick={() => handleMoveSection(idx, 1)}
-                        disabled={idx === sections.length - 1}
-                        className="flex h-7 w-7 items-center justify-center rounded-md text-neutral-400 press active:bg-primary-100 disabled:opacity-25"
-                        aria-label="下移分组"
-                      >
-                        ↓
-                      </button>
-                      <button
-                        onClick={() => handleRemoveSection(sec.id)}
-                        className="shrink-0 px-1 text-[12px] text-red-400 press"
-                      >
-                        删除
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              !addingSec && (
-                <p className="py-3 text-center text-[13px] text-neutral-400">暂无分组，点击上方「+ 新建」添加</p>
-              )
-            )}
-          </div>
         </div>
 
         <div className="shrink-0 px-5 pb-safe pt-2">
