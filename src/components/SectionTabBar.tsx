@@ -71,9 +71,12 @@ export default function SectionTabBar({
     dragging: boolean;
   } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   // ref 镜像，供 window 监听器读取最新值（避免闭包捕获旧 state）
   const dragIdRef = useRef<string | null>(null);
   const insRef = useRef(-1);
+  const scrollRafRef = useRef<number | null>(null);
+  const pointerXRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (editingId && inputRef.current) {
@@ -124,6 +127,11 @@ export default function SectionTabBar({
       press.current.longTimer = null;
     }
     document.body.classList.remove(BODY_CLASS);
+    if (scrollRafRef.current) {
+      cancelAnimationFrame(scrollRafRef.current);
+      scrollRafRef.current = null;
+    }
+    pointerXRef.current = null;
     dragIdRef.current = null;
     insRef.current = -1;
     setDragId(null);
@@ -133,6 +141,28 @@ export default function SectionTabBar({
     setDragW(0);
     setIns(-1);
     press.current = null;
+  };
+
+  const tickAutoScroll = () => {
+    const container = containerRef.current;
+    const x = pointerXRef.current;
+    if (!container || !dragIdRef.current || x == null) {
+      if (scrollRafRef.current) {
+        cancelAnimationFrame(scrollRafRef.current);
+        scrollRafRef.current = null;
+      }
+      return;
+    }
+    const cr = container.getBoundingClientRect();
+    const threshold = 48; // 距离边缘多远开始自动滚
+    const distLeft = x - cr.left;
+    const distRight = cr.right - x;
+    if (distLeft < threshold) {
+      container.scrollLeft -= Math.max(2, (threshold - distLeft) * 0.25);
+    } else if (distRight < threshold) {
+      container.scrollLeft += Math.max(2, (threshold - distRight) * 0.25);
+    }
+    scrollRafRef.current = requestAnimationFrame(tickAutoScroll);
   };
 
   const handleWindowMove = (e: PointerEvent) => {
@@ -153,10 +183,14 @@ export default function SectionTabBar({
       return;
     }
 
-    // 拖拽模式下阻止浏览器滚动，由 JS 控制 pill 让位
+    // 拖拽模式下阻止浏览器滚动，由 JS 控制 pill 让位 + 边缘自动滚动
     e.preventDefault();
     setDragX(dx);
     setDragY(dy);
+    pointerXRef.current = e.clientX;
+    if (!scrollRafRef.current) {
+      scrollRafRef.current = requestAnimationFrame(tickAutoScroll);
+    }
 
     const dragId = dragIdRef.current;
     if (!dragId) return;
@@ -323,7 +357,9 @@ export default function SectionTabBar({
 
   return (
     <div
-      className={`flex items-center gap-2 no-scrollbar ${dragId ? 'overflow-x-hidden' : 'overflow-x-auto'}`}
+      ref={containerRef}
+      data-section-bar
+      className="flex items-center gap-2 no-scrollbar overflow-x-auto"
       style={{ WebkitOverflowScrolling: 'touch' }}
     >
       {sections.map((s) => (
