@@ -472,11 +472,11 @@ function BoardCard({
   return (
     <div
       onClick={onOpen}
-      className={`mb-2 flex items-center gap-3 rounded-xl bg-white p-3 shadow-card-soft press ${
+      className={`mb-2 flex items-start gap-3 rounded-xl bg-white p-3 shadow-card-soft press ${
         isOverdueCol && !t.isCompleted ? 'border-l-[3px] border-l-red-300' : ''
       }`}
     >
-      {/* Checkbox（用 span 镜像 TodoCard，绕开全局 button{border:none} 覆盖） */}
+      {/* Checkbox（用 span 镜像 TodoCard，绕开全局 button{border:none} 覆盖；self-start 使其对齐标题首行） */}
       <span
         role="button"
         tabIndex={0}
@@ -492,7 +492,7 @@ function BoardCard({
             onCheck(t.id);
           }
         }}
-        className={`flex h-[17px] w-[17px] shrink-0 cursor-pointer items-center justify-center rounded-[2px] border-[1.5px] transition-colors ${
+        className={`mt-[1px] flex h-[17px] w-[17px] shrink-0 cursor-pointer items-center justify-center self-start rounded-[2px] border-[1.5px] transition-colors ${
           t.isCompleted ? 'border-primary-500 bg-primary-500' : 'border-primary-300 bg-white'
         }`}
       >
