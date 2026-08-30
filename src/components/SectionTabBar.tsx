@@ -66,7 +66,6 @@ export default function SectionTabBar({
     id: string;
     startX: number;
     startY: number;
-    lastX: number;
     longTimer: number | null;
     moved: boolean;
     dragging: boolean;
@@ -92,6 +91,7 @@ export default function SectionTabBar({
       window.removeEventListener('pointermove', handleWindowMove);
       window.removeEventListener('pointerup', handleWindowUp);
       window.removeEventListener('pointercancel', handleWindowUp);
+      window.removeEventListener('touchmove', handleTouchMove);
       document.body.classList.remove(BODY_CLASS);
     },
     [],
@@ -124,8 +124,6 @@ export default function SectionTabBar({
     const originIdx = sections.findIndex((s) => s.id === id);
     insRef.current = originIdx; // 起始时插回原处 → 不产生位移
     setIns(originIdx);
-    // 进入拖拽后彻底禁止一切浏览器手势（含竖向页面滚动），保证纯 JS 接管
-    if (containerRef.current) containerRef.current.style.touchAction = 'none';
   };
 
   const finishDrag = () => {
@@ -146,7 +144,7 @@ export default function SectionTabBar({
       press.current.longTimer = null;
     }
     document.body.classList.remove(BODY_CLASS);
-    if (containerRef.current) containerRef.current.style.touchAction = '';
+    window.removeEventListener('touchmove', handleTouchMove);
     if (scrollRafRef.current) {
       cancelAnimationFrame(scrollRafRef.current);
       scrollRafRef.current = null;
@@ -192,18 +190,9 @@ export default function SectionTabBar({
     const dy = e.clientY - p.startY;
 
     if (!p.dragging) {
-      // 未进入拖拽：touch-action 已是 pan-y，浏览器不会原生横滚，
-      // 这里用 JS 1:1 跟随手指手动滚动标签栏（横滑浏览分组）。
-      const container = containerRef.current;
-      const movedX = e.clientX - p.lastX;
-      if (container && movedX !== 0) {
-        const next = container.scrollLeft - movedX;
-        if (next !== container.scrollLeft) container.scrollLeft = next;
-      }
-      p.lastX = e.clientX;
       if (!p.moved && (Math.abs(dx) > 6 || Math.abs(dy) > 6)) {
         p.moved = true;
-        // 用户提前滑动 → 取消长按计时（避免被误判为拖拽）
+        // 用户提前滑动 → 取消长按计时（交给原生横滑滚动标签栏）
         if (p.longTimer) {
           window.clearTimeout(p.longTimer);
           p.longTimer = null;
@@ -254,13 +243,18 @@ export default function SectionTabBar({
     cleanupDrag();
   };
 
+  // 拖拽进行中时阻止原生横滚（iOS 关键：必须 touchmove.preventDefault，
+  // 且监听须为 passive:false 才能调用 preventDefault）。
+  const handleTouchMove = (e: TouchEvent) => {
+    if (dragIdRef.current) e.preventDefault();
+  };
+
   const onPointerDown = (e: React.PointerEvent, it: SectionTabItem) => {
     if (editingId || !it.editable) return;
     press.current = {
       id: it.id,
       startX: e.clientX,
       startY: e.clientY,
-      lastX: e.clientX,
       longTimer: null,
       moved: false,
       dragging: false,
@@ -269,11 +263,10 @@ export default function SectionTabBar({
     // 按下瞬间即全局禁止选中，阻止 iOS 长按选中附近任务卡片文字
     document.body.classList.add(BODY_CLASS);
 
-    // 关键：从手指按下这一刻起，就把容器 touch-action 设为 pan-y，
-    // 让浏览器只处理「竖向页面滚动」，横向手势完全交给我们 JS 处理
-    // （iOS Safari 在 touchstart 时就决定手势类型，必须此刻定下，
-    //  否则事后设置 touch-action:none 已来不及，横滑会被当成滚 bar）。
-    if (containerRef.current) containerRef.current.style.touchAction = 'pan-y';
+    // 注册非 passive 的 touchmove 监听：拖拽进行中时 preventDefault，
+    // 才能真正在 iOS 上掐断原生横滚（Pointer 事件的 preventDefault 拦不住滚动，
+    // 只有 touchmove.preventDefault 在手势中途有效）。
+    window.addEventListener('touchmove', handleTouchMove, { passive: false });
 
     window.addEventListener('pointermove', handleWindowMove);
     window.addEventListener('pointerup', handleWindowUp, { once: true });
@@ -395,7 +388,7 @@ export default function SectionTabBar({
     <div
       ref={containerRef}
       data-section-bar
-      className="flex items-center gap-2 no-scrollbar overflow-x-auto touch-pan-y"
+      className="flex items-center gap-2 no-scrollbar overflow-x-auto"
       style={{ WebkitOverflowScrolling: 'touch' }}
     >
       {sections.map((s) => (
