@@ -7,6 +7,7 @@ import { dayDiff, startOfDay } from '../lib/date';
 import { IconCheck, IconChecklist, IconGrid, IconInbox, IconPlus, IconSun } from './Icons';
 import SettingsSheet from './SettingsSheet';
 import { downloadBackup, parseBackupFile, restoreBackup, type BackupData } from '../lib/backup';
+import { useAxisLock } from '../lib/useAxisLock';
 
 /* ---------- 我的清单：左滑操作 + 长按拖拽排序 ---------- */
 const ROW_H = 52;
@@ -33,9 +34,10 @@ function CategoryRow({
   onGripLongPress: (id: string, clientY: number) => void;
 }) {
   const [swipe, setSwipe] = useState(0);
-  const startX = useRef(0);
   const touching = useRef(false);
   const isDragging = draggingId === cat.id;
+  // 横滑锁：判定为横向手势时掐断纵向滚动（原生 passive:false 监听）
+  const { ref: swipeRef, axis, startX } = useAxisLock<HTMLButtonElement>();
 
   const setSwipeSafe = (v: number) => setSwipe(v);
 
@@ -44,12 +46,14 @@ function CategoryRow({
     if (isDragging) return; // 拖拽中禁用左滑
     e.stopPropagation(); // 阻止冒泡到 Drawer aside 的左滑关闭手势
     touching.current = true;
-    startX.current = e.touches[0].clientX;
+    // 起点与主轴判定由 useAxisLock 的原生监听负责（需 passive:false 才能拦滚动）
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
     if (!touching.current || isDragging) return;
     e.stopPropagation();
+    // 纵向手势或尚未判定时不动，交给列表正常上下滚
+    if (axis.current !== 'x') return;
     const dx = e.touches[0].clientX - startX.current;
     if (dx < 0) {
       setSwipeSafe(Math.max(dx, -SWIPE_WIDTH));
@@ -101,6 +105,7 @@ function CategoryRow({
     >
       {/* 行主体（可点击进入筛选） —— 占满整行 */}
       <button
+        ref={swipeRef}
         onClick={() => {
           if (swipe !== 0 || isDragging) return;
           onSelect();

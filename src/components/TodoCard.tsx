@@ -4,6 +4,7 @@ import { useDataStore } from '../store/dataStore';
 import { useUIStore } from '../store/uiStore';
 import { useTimerStore } from '../store/timerStore';
 import { fmtTime, humanDate, isAllDay, isSameDay } from '../lib/date';
+import { useAxisLock } from '../lib/useAxisLock';
 import { IconChevronDown, IconClock, IconTrash } from './Icons';
 import Highlight from './Highlight';
 
@@ -29,10 +30,9 @@ export default function TodoCard({ todo, category, showDate, hideCategory, query
 
   const [expanded, setExpanded] = useState(false);
   const [offset, setOffset] = useState(0);
-  const startX = useRef<number | null>(null);
-  const startY = useRef(0);
-  const axis = useRef<'x' | 'y' | null>(null);
   const moved = useRef(false);
+  // 横滑锁：判定为横向手势时掐断纵向滚动（原生 passive:false 监听）
+  const { ref: swipeRef, axis, startX } = useAxisLock<HTMLDivElement>();
 
   const barColor = category?.color ?? '#A8D5BA'; // 默认主色-300
   const subDone = todo.subTasks.filter((s) => s.isCompleted).length;
@@ -46,33 +46,17 @@ export default function TodoCard({ todo, category, showDate, hideCategory, query
     ? 'bg-neutral-100 text-neutral-400'
     : 'bg-primary-100 text-primary-700';
 
-  const onTouchStart = (e: React.TouchEvent) => {
-    startX.current = e.touches[0].clientX;
-    startY.current = e.touches[0].clientY;
-    axis.current = null;
-    moved.current = false;
-  };
-
   const onTouchMove = (e: React.TouchEvent) => {
-    if (startX.current === null) return;
+    // 主轴判定与「掐断纵向滚动」由 useAxisLock 的原生监听完成，这里只负责跟手位移
+    if (axis.current !== 'x') return;
     const dx = e.touches[0].clientX - startX.current;
-    const dy = e.touches[0].clientY - startY.current;
-    if (!axis.current) {
-      if (Math.abs(dx) > 8 || Math.abs(dy) > 8) {
-        axis.current = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
-      }
-    }
-    if (axis.current === 'x') {
-      moved.current = true;
-      const next = Math.max(-88, Math.min(0, (offset < 0 ? -88 : 0) + dx));
-      setOffset(next);
-    }
+    moved.current = true;
+    const next = Math.max(-88, Math.min(0, (offset < 0 ? -88 : 0) + dx));
+    setOffset(next);
   };
 
   const onTouchEnd = () => {
     if (axis.current === 'x') setOffset(offset < -44 ? -88 : 0);
-    startX.current = null;
-    axis.current = null;
   };
 
   return (
@@ -90,13 +74,13 @@ export default function TodoCard({ todo, category, showDate, hideCategory, query
       </button>
 
       <div
-        onTouchStart={onTouchStart}
+        ref={swipeRef}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
         className="relative rounded-card bg-white shadow-card-soft"
         style={{
           transform: `translate3d(${offset}px,0,0)`,
-          transition: startX.current === null ? 'transform 220ms cubic-bezier(0.32,0.72,0,1)' : 'none',
+          transition: axis.current === null ? 'transform 220ms cubic-bezier(0.32,0.72,0,1)' : 'none',
         }}
       >
         <div className="flex items-stretch">
