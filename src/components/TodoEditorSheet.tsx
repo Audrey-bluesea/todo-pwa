@@ -520,6 +520,10 @@ export default function TodoEditorSheet() {
     }
     const cleanSubs = subTasks.filter((s) => s.content.trim());
     const reminder = reminderEnabled && dueDate ? { enabled: true, leadMin: reminderLead } : null;
+    // 保存前 flush 标签输入框里未点击 + 的文字
+    const finalTags = [...tags];
+    const inputTag = tagInput.trim();
+    if (inputTag && !finalTags.includes(inputTag)) finalTags.push(inputTag);
 
     let savedId: string | null = null;
     try {
@@ -534,7 +538,7 @@ export default function TodoEditorSheet() {
           subTasks: cleanSubs,
           isCompleted: completed,
           reminder,
-          tags,
+          tags: finalTags,
         });
         savedId = editing.id;
         showToast('已保存');
@@ -549,7 +553,7 @@ export default function TodoEditorSheet() {
           subTasks: cleanSubs,
           isCompleted: completed,
           reminder,
-          tags,
+          tags: finalTags,
         });
         savedId = created.id;
         showToast('已添加 ✓');
@@ -934,6 +938,7 @@ export default function TodoEditorSheet() {
                       addTag();
                     }
                   }}
+                  onBlur={() => addTag()}
                   placeholder="添加标签"
                   className="w-24 rounded-full border border-primary-200 bg-white px-2.5 py-1 text-[13px] outline-none placeholder:text-neutral-400 focus:border-primary-400"
                 />
@@ -948,17 +953,20 @@ export default function TodoEditorSheet() {
               </div>
             </div>
             {suggestedTags.length > 0 && (
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {suggestedTags.map((t) => (
-                  <button
-                    key={t}
-                    type="button"
-                    onClick={() => addTag(t)}
-                    className="rounded-full bg-neutral-100 px-2 py-0.5 text-[12px] text-neutral-500 press active:bg-neutral-200"
-                  >
-                    #{t}
-                  </button>
-                ))}
+              <div className="mt-2">
+                <div className="mb-1 text-[12px] text-neutral-400">已有标签，点击快速添加</div>
+                <div className="flex flex-wrap gap-1.5">
+                  {suggestedTags.map((t) => (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => addTag(t)}
+                      className="rounded-full bg-primary-50 px-2 py-0.5 text-[12px] font-medium text-primary-600 press active:bg-primary-100"
+                    >
+                      #{t}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
           </div>

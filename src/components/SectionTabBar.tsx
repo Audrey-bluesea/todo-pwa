@@ -31,8 +31,12 @@ const FULL = (id: string) => (id === '__unsec__' ? 'sec-none' : `sec-${id}`);
 /**
  * 看板-按分组模式下的分组标签栏：
  * - 点击 → 切换当前分组
- * - 双击（桌面）或 长按（移动端）→ 内联重命名
- * - 横向前拖 → 重排顺序（松手落定，落点以竖线提示）
+ * - 双击 → 内联重命名
+ * - 长按 → 进入拖拽排序，松手落定（落点以竖线提示）
+ *
+ * 为了同时保留「横向滑动滚动标签栏」：
+ *  1. pill 默认 touch-action:auto，让短促横滑交给浏览器去滚标签栏；
+ *  2. 只有长按 380ms 后才进入拖拽模式，之后 preventDefault 阻止滚动，改由 JS 平移 pill。
  */
 export default function SectionTabBar({
   sections,
@@ -56,14 +60,15 @@ export default function SectionTabBar({
     id: string;
     startX: number;
     startY: number;
-    pointerId: number;
     longTimer: number | null;
     moved: boolean;
     dragging: boolean;
-    didLong: boolean;
-    editable: boolean;
   } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  // 用 ref 镜像 dragId / overIdx：window 监听器在 onPointerDown 时挂载，闭包会捕获到旧值，
+  // 若直接读 state 则 finishDrag 永远拿不到最新的 dragId / overIdx（导致排序失效）。
+  const dragIdRef = useRef<string | null>(null);
+  const overIdxRef = useRef(-1);
 
   useEffect(() => {
     if (editingId && inputRef.current) {
@@ -72,11 +77,18 @@ export default function SectionTabBar({
     }
   }, [editingId]);
 
-  useEffect(() => () => {
-    if (press.current?.longTimer) window.clearTimeout(press.current.longTimer);
-  }, []);
+  useEffect(
+    () => () => {
+      if (press.current?.longTimer) window.clearTimeout(press.current.longTimer);
+      window.removeEventListener('pointermove', handleWindowMove);
+      window.removeEventListener('pointerup', handleWindowUp);
+      window.removeEventListener('pointercancel', handleWindowUp);
+    },
+    [],
+  );
 
   const startDrag = (id: string) => {
+    dragIdRef.current = id;
     setDragId(id);
     rectsRef.current = sections.map((s) => {
       const el = itemRefs.current.get(s.id);
@@ -85,74 +97,10 @@ export default function SectionTabBar({
     });
   };
 
-  const onPointerDown = (e: React.PointerEvent, it: SectionTabItem) => {
-    if (editingId) return;
-    press.current = {
-      id: it.id,
-      startX: e.clientX,
-      startY: e.clientY,
-      pointerId: e.pointerId,
-      longTimer: null,
-      moved: false,
-      dragging: false,
-      didLong: false,
-      editable: it.editable,
-    };
-    if (!it.editable) return; // 未分组：仅点击切换
-    try {
-      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    } catch {
-      /* ignore */
-    }
-    const t = window.setTimeout(() => {
-      const p = press.current;
-      if (p && !p.moved && !p.dragging && !p.didLong && p.editable) {
-        p.didLong = true;
-        setEditingId(p.id);
-        setEditValue(sections.find((s) => s.id === p.id)?.label ?? '');
-      }
-    }, 380);
-    press.current.longTimer = t;
-  };
-
-  const onPointerMove = (e: React.PointerEvent) => {
-    const p = press.current;
-    if (!p) return;
-    const dx = e.clientX - p.startX;
-    const dy = e.clientY - p.startY;
-    if (!p.dragging) {
-      if (!p.moved && (Math.abs(dx) > 6 || Math.abs(dy) > 6)) p.moved = true;
-      if (p.editable && Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy) && !p.didLong) {
-        if (p.longTimer) {
-          window.clearTimeout(p.longTimer);
-          p.longTimer = null;
-        }
-        p.dragging = true;
-        startDrag(p.id);
-      }
-      return;
-    }
-    setDragX(dx);
-    const px = e.clientX;
-    let over = rectsRef.current.length;
-    for (let i = 0; i < rectsRef.current.length; i++) {
-      if (px < rectsRef.current[i].centerX) {
-        over = i;
-        break;
-      }
-    }
-    const dragVisualIdx = sections.findIndex((s) => s.id === dragId);
-    if (dragVisualIdx !== -1 && over > dragVisualIdx) over -= 1; // 跳过自身占位
-    setOverIdx(over);
-  };
-
   const finishDrag = () => {
-    const p = press.current;
-    if (p?.longTimer) {
-      window.clearTimeout(p.longTimer);
-      p.longTimer = null;
-    }
-    if (p?.dragging && dragId) {
+    const dragId = dragIdRef.current;
+    const overIdx = overIdxRef.current;
+    if (dragId) {
       const order = sections.map((s) => s.id);
       const from = order.indexOf(dragId);
       if (from !== -1) {
@@ -163,13 +111,58 @@ export default function SectionTabBar({
         onReorder(order);
       }
     }
+    cleanupDrag();
+  };
+
+  const cleanupDrag = () => {
+    if (press.current?.longTimer) {
+      window.clearTimeout(press.current.longTimer);
+      press.current.longTimer = null;
+    }
+    dragIdRef.current = null;
+    overIdxRef.current = -1;
     setDragId(null);
     setDragX(0);
     setOverIdx(-1);
     press.current = null;
   };
 
-  const onPointerUp = () => {
+  const handleWindowMove = (e: PointerEvent) => {
+    const p = press.current;
+    if (!p) return;
+    const dx = e.clientX - p.startX;
+    const dy = e.clientY - p.startY;
+
+    if (!p.dragging) {
+      if (!p.moved && (Math.abs(dx) > 6 || Math.abs(dy) > 6)) {
+        p.moved = true;
+        // 用户提前滑动 → 把动作交还给浏览器（横向滚动标签栏）
+        if (p.longTimer) {
+          window.clearTimeout(p.longTimer);
+          p.longTimer = null;
+        }
+      }
+      return;
+    }
+
+    // 拖拽模式下阻止浏览器滚动，改由 JS 移动 pill
+    e.preventDefault();
+    setDragX(dx);
+    const px = e.clientX;
+    let over = rectsRef.current.length;
+    for (let i = 0; i < rectsRef.current.length; i++) {
+      if (px < rectsRef.current[i].centerX) {
+        over = i;
+        break;
+      }
+    }
+    const dragVisualIdx = sections.findIndex((s) => s.id === dragIdRef.current);
+    if (dragVisualIdx !== -1 && over > dragVisualIdx) over -= 1;
+    overIdxRef.current = over;
+    setOverIdx(over);
+  };
+
+  const handleWindowUp = () => {
     const p = press.current;
     if (!p) return;
     if (p.dragging) {
@@ -180,8 +173,33 @@ export default function SectionTabBar({
       window.clearTimeout(p.longTimer);
       p.longTimer = null;
     }
-    if (!p.moved && !p.didLong) onSelect(FULL(p.id));
-    press.current = null;
+    if (!p.moved) onSelect(FULL(p.id));
+    cleanupDrag();
+  };
+
+  const onPointerDown = (e: React.PointerEvent, it: SectionTabItem) => {
+    if (editingId || !it.editable) return;
+    press.current = {
+      id: it.id,
+      startX: e.clientX,
+      startY: e.clientY,
+      longTimer: null,
+      moved: false,
+      dragging: false,
+    };
+
+    window.addEventListener('pointermove', handleWindowMove);
+    window.addEventListener('pointerup', handleWindowUp, { once: true });
+    window.addEventListener('pointercancel', handleWindowUp, { once: true });
+
+    const t = window.setTimeout(() => {
+      if (press.current && press.current.id === it.id && !press.current.moved && !press.current.dragging) {
+        press.current.dragging = true;
+        if ('vibrate' in navigator) navigator.vibrate(12);
+        startDrag(it.id);
+      }
+    }, 380);
+    press.current.longTimer = t;
   };
 
   const commitRename = () => {
@@ -202,103 +220,101 @@ export default function SectionTabBar({
     const dropId = it.id === '__unsec__' ? 'none' : it.id;
     const isDrop = dropTargetId != null && dropTargetId === dropId;
     return (
-    <button
-      key={it.id}
-      ref={(el) => {
-        if (el) itemRefs.current.set(it.id, el);
-        else itemRefs.current.delete(it.id);
-      }}
-      data-section-id={dropId}
-      onPointerDown={(e) => onPointerDown(e, it)}
-      onPointerMove={onPointerMove}
-      onPointerUp={onPointerUp}
-      onPointerCancel={onPointerUp}
-      onDoubleClick={() => {
-        if (it.editable && !editingId) {
-          setEditingId(it.id);
-          setEditValue(sections.find((s) => s.id === it.id)?.label ?? '');
-        }
-      }}
-      className={`relative shrink-0 rounded-full border-2 px-4 py-1.5 text-[13px] font-medium transition-colors press ${
-        isDrop
-          ? 'border-primary-500 bg-primary-500 text-white ring-2 ring-primary-300'
-          : isActive
-            ? 'border-primary-400 bg-primary-200 text-primary-700'
-            : 'border-transparent bg-neutral-100 text-neutral-500'
-      }`}
-      style={{
-        touchAction: 'pan-y',
-        transform: isDragging ? `translateX(${dragX}px)` : undefined,
-        transition: isDragging ? 'none' : undefined,
-        zIndex: isDragging ? 50 : undefined,
-        position: isDragging ? 'relative' : undefined,
-        boxShadow: isDragging ? '0 6px 16px rgba(80,120,90,0.28)' : undefined,
-        opacity: isDragging ? 0.96 : 1,
-      }}
-    >
-      {editingId === it.id ? (
-        <span className="flex items-center gap-1">
-          <input
-            ref={inputRef}
-            value={editValue}
-            onChange={(e) => setEditValue(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                commitRename();
-              } else if (e.key === 'Escape') {
-                e.preventDefault();
-                cancelRename();
-              }
-            }}
-            onBlur={commitRename}
-            className="w-16 bg-transparent text-center text-[13px] font-medium text-primary-700 outline-none"
-          />
-          <span
-            role="button"
-            aria-label="删除分组"
-            onPointerDown={(e) => e.preventDefault()}
-            onClick={(e) => {
-              e.stopPropagation();
-              handleDelete(it.id);
-            }}
-            className="flex h-4 w-4 items-center justify-center rounded-full bg-neutral-300 text-white active:bg-red-400"
-          >
-            <IconClose size={11} />
+      <button
+        key={it.id}
+        ref={(el) => {
+          if (el) itemRefs.current.set(it.id, el);
+          else itemRefs.current.delete(it.id);
+        }}
+        data-section-id={dropId}
+        onPointerDown={(e) => onPointerDown(e, it)}
+        onDoubleClick={() => {
+          if (it.editable && !editingId) {
+            setEditingId(it.id);
+            setEditValue(sections.find((s) => s.id === it.id)?.label ?? '');
+          }
+        }}
+        className={`relative shrink-0 rounded-full border-2 px-4 py-1.5 text-[13px] font-medium transition-colors press ${
+          isDrop
+            ? 'border-primary-500 bg-primary-500 text-white ring-2 ring-primary-300'
+            : isActive
+              ? 'border-primary-400 bg-primary-200 text-primary-700'
+              : 'border-transparent bg-neutral-100 text-neutral-500'
+        }`}
+        style={{
+          transform: isDragging ? `translateX(${dragX}px) scale(1.05)` : undefined,
+          transition: isDragging ? 'none' : undefined,
+          zIndex: isDragging ? 50 : undefined,
+          boxShadow: isDragging ? '0 8px 20px rgba(80,120,90,0.3)' : undefined,
+          opacity: isDragging ? 0.98 : 1,
+          userSelect: 'none',
+          WebkitUserSelect: 'none',
+          WebkitTouchCallout: 'none',
+        }}
+      >
+        {editingId === it.id ? (
+          <span className="flex items-center gap-1">
+            <input
+              ref={inputRef}
+              value={editValue}
+              onChange={(e) => setEditValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  commitRename();
+                } else if (e.key === 'Escape') {
+                  e.preventDefault();
+                  cancelRename();
+                }
+              }}
+              onBlur={commitRename}
+              className="w-16 bg-transparent text-center text-[13px] font-medium text-primary-700 outline-none"
+            />
+            <span
+              role="button"
+              aria-label="删除分组"
+              onPointerDown={(e) => e.preventDefault()}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDelete(it.id);
+              }}
+              className="flex h-4 w-4 items-center justify-center rounded-full bg-neutral-300 text-white active:bg-red-400"
+            >
+              <IconClose size={11} />
+            </span>
           </span>
-        </span>
-      ) : (
-        <>
-          {it.label}
-          <span
-            className={`ml-1 text-[11px] tabular-nums ${isActive ? 'text-primary-600' : 'text-neutral-400'}`}
-          >
-            {it.count}
-          </span>
-        </>
-      )}
-    </button>
-  );
+        ) : (
+          <>
+            {it.label}
+            <span
+              className={`ml-1 text-[11px] tabular-nums ${isActive ? 'text-primary-600' : 'text-neutral-400'}`}
+            >
+              {it.count}
+            </span>
+          </>
+        )}
+      </button>
+    );
   };
 
   return (
-    <div className="flex items-center gap-2 overflow-x-auto no-scrollbar" style={{ WebkitOverflowScrolling: 'touch' }}>
+    <div
+      className={`flex items-center gap-2 no-scrollbar ${dragId ? 'overflow-x-hidden' : 'overflow-x-auto'}`}
+      style={{ WebkitOverflowScrolling: 'touch' }}
+    >
       {sections.map((s, i) => (
         <Fragment key={s.id}>
-          {dragId && overIdx === i && (
-            <div className="mx-0.5 w-[3px] self-stretch rounded bg-primary-500" />
-          )}
+          {dragId && overIdx === i && <div className="mx-0.5 w-[3px] self-stretch rounded bg-primary-500" />}
           {renderPill(s, FULL(s.id) === activeId, dragId === s.id)}
         </Fragment>
       ))}
-      {dragId && overIdx === sections.length && (
-        <div className="mx-0.5 w-[3px] self-stretch rounded bg-primary-500" />
-      )}
-      {unsectioned && renderPill(
-        { id: '__unsec__', label: unsectioned.label, count: unsectioned.count, editable: false },
-        activeId === 'sec-none',
-        false,
-      )}
+      {dragId && overIdx === sections.length && <div className="mx-0.5 w-[3px] self-stretch rounded bg-primary-500" />}
+      {unsectioned &&
+        renderPill(
+          { id: '__unsec__', label: unsectioned.label, count: unsectioned.count, editable: false },
+          activeId === 'sec-none',
+          false,
+        )}
     </div>
   );
 }

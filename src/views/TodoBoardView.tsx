@@ -180,7 +180,13 @@ export default function TodoBoardView({
   const colRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [dragX, setDragX] = useState(0);
   const [dragging, setDragging] = useState(false);
-  const touch = useRef({ x: 0, y: 0, t: 0, lock: null as null | 'h' | 'v', w: 0 });
+  // 横滑手势用原生非 passive 监听，靠 ref 读取最新 activeTabIdx / tabs 长度，避免重渲染时重挂监听打断手势
+  const swipeRef = useRef({ x: 0, y: 0, t: 0, lock: null as null | 'h' | 'v', w: 0 });
+  const activeIdxRef = useRef(activeTabIdx);
+  activeIdxRef.current = activeTabIdx;
+  const tabsLenRef = useRef(0);
+  const memKeyRef = useRef(memKey);
+  memKeyRef.current = memKey;
 
   // 构建所有 tab
   const tabs = useMemo<SwipeTab[]>(() => {
@@ -254,6 +260,7 @@ export default function TodoBoardView({
       }))
       .filter((tab) => tab.items.length > 0);
   }, [mode, categories, todos, visibleTodos, filter, today, groupBy, cat, hasSections]);
+  tabsLenRef.current = tabs.length;
 
   // 切到新 tab 并记忆；越界时钳制
   const commitTab = (next: number) => {
@@ -393,52 +400,81 @@ export default function TodoBoardView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [taskDragging, updateTodo]);
 
-  // ---- 跟手横滑 ----
-  const onTouchStart = (e: React.TouchEvent) => {
-    if (taskDragRef.current) return; // 正在拖拽任务换分组，不触发横滑
-    const w = viewportRef.current?.clientWidth ?? window.innerWidth;
-    touch.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, t: Date.now(), lock: null, w };
-  };
-
-  const onTouchMove = (e: React.TouchEvent) => {
-    if (taskDragRef.current) return;
-    const t = touch.current;
-    const cx = e.touches[0].clientX;
-    const cy = e.touches[0].clientY;
-    const dx = cx - t.x;
-    const dy = cy - t.y;
-    if (t.lock === null) {
-      if (Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy)) t.lock = 'h';
-      else if (Math.abs(dy) > 8) t.lock = 'v';
-    }
-    if (t.lock === 'h') {
-      // 边缘橡皮筋
-      let nx = dx;
-      if ((activeTabIdx === 0 && dx > 0) || (activeTabIdx === tabs.length - 1 && dx < 0)) nx = dx * 0.35;
-      setDragX(nx);
-      setDragging(true);
-    }
-  };
-
-  const onTouchEnd = (e: React.TouchEvent) => {
-    const t = touch.current;
-    if (t.lock === 'h') {
-      const dx = e.changedTouches[0].clientX - t.x;
-      const dt = Date.now() - t.t || 1;
-      const w = t.w;
-      const threshold = w * 0.22;
+  // ---- 跟手横滑（iOS 可靠版：原生非 passive 监听，横滑时 preventDefault 阻止 Safari 干扰）----
+  useEffect(() => {
+    const vp = viewportRef.current;
+    if (!vp) return;
+    const onStart = (e: TouchEvent) => {
+      if (taskDragRef.current) return; // 正在拖拽任务换分组，不触发横滑
+      const t = e.touches[0];
+      if (!t) return;
+      swipeRef.current = {
+        x: t.clientX,
+        y: t.clientY,
+        t: Date.now(),
+        lock: null,
+        w: vp.clientWidth || window.innerWidth,
+      };
+    };
+    const onMove = (e: TouchEvent) => {
+      if (taskDragRef.current) return;
+      const s = swipeRef.current;
+      const t = e.touches[0];
+      if (!t) return;
+      const dx = t.clientX - s.x;
+      const dy = t.clientY - s.y;
+      if (s.lock === null) {
+        if (Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy)) s.lock = 'h';
+        else if (Math.abs(dy) > 8) s.lock = 'v';
+      }
+      if (s.lock === 'h') {
+        // 关键：阻止 Safari 的横向回退/滚动默认行为，确保横滑被 JS 接管
+        e.preventDefault();
+        let nx = dx;
+        const idx = activeIdxRef.current;
+        const len = tabsLenRef.current;
+        if ((idx === 0 && dx > 0) || (idx === len - 1 && dx < 0)) nx = dx * 0.35; // 边缘橡皮筋
+        setDragX(nx);
+        setDragging(true);
+      }
+    };
+    const onEnd = (e: TouchEvent) => {
+      const s = swipeRef.current;
+      if (s.lock !== 'h') {
+        setDragging(false);
+        setDragX(0);
+        return;
+      }
+      const ch = e.changedTouches[0];
+      const dx = ch ? ch.clientX - s.x : 0;
+      const dt = Date.now() - s.t || 1;
+      const threshold = s.w * 0.22;
       const velocity = dx / dt;
-      let next = activeTabIdx;
-      if ((dx < -threshold || velocity < -0.4) && activeTabIdx < tabs.length - 1) next = activeTabIdx + 1;
-      else if ((dx > threshold || velocity > 0.4) && activeTabIdx > 0) next = activeTabIdx - 1;
+      const idx = activeIdxRef.current;
+      const len = tabsLenRef.current;
+      let next = idx;
+      if ((dx < -threshold || velocity < -0.4) && idx < len - 1) next = idx + 1;
+      else if ((dx > threshold || velocity > 0.4) && idx > 0) next = idx - 1;
+      const clamped = Math.max(0, Math.min(next, len - 1));
+      setActiveTabIdxRaw(clamped);
+      const el = colRefs.current[clamped];
+      const scroll = el ? el.scrollTop : 0;
+      scrollMemory.save(memKeyRef.current, scroll, clamped);
       setDragging(false);
       setDragX(0);
-      commitTab(next);
-    } else {
-      setDragging(false);
-      setDragX(0);
-    }
-  };
+    };
+    vp.addEventListener('touchstart', onStart, { passive: true });
+    vp.addEventListener('touchmove', onMove, { passive: false });
+    vp.addEventListener('touchend', onEnd, { passive: true });
+    vp.addEventListener('touchcancel', onEnd, { passive: true });
+    return () => {
+      vp.removeEventListener('touchstart', onStart);
+      vp.removeEventListener('touchmove', onMove);
+      vp.removeEventListener('touchend', onEnd);
+      vp.removeEventListener('touchcancel', onEnd);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
@@ -526,9 +562,6 @@ export default function TodoBoardView({
         ref={viewportRef}
         className="relative min-h-0 flex-1 overflow-hidden"
         style={{ touchAction: 'pan-y' }}
-        onTouchStart={onTouchStart}
-        onTouchMove={onTouchMove}
-        onTouchEnd={onTouchEnd}
       >
         <div
           className="flex min-h-0 flex-1"
@@ -541,7 +574,8 @@ export default function TodoBoardView({
             <div
               key={tab.id}
               ref={(el) => (colRefs.current[i] = el)}
-              className={`h-full w-full shrink-0 px-4 pb-8 pt-2 touch-pan-y ${taskDragging ? 'overflow-hidden' : 'overflow-y-auto'}`}
+              className={`h-full w-full shrink-0 px-4 pb-8 pt-2 ${taskDragging ? 'overflow-hidden' : 'overflow-y-auto'}`}
+              style={{ touchAction: 'pan-y', WebkitUserSelect: taskDragging ? 'none' : undefined }}
               onScroll={(e) => scrollMemory.save(memKey, e.currentTarget.scrollTop, activeTabIdx)}
             >
               {tab.items.map((t) => {
@@ -558,6 +592,7 @@ export default function TodoBoardView({
                       cat={t.categoryId ? catMap.get(t.categoryId) : undefined}
                       isInbox={!t.categoryId || t.categoryId === ''}
                       isOverdueCol={!!tab.isOverdueCol}
+                      isDragging={taskDrag?.todo.id === t.id}
                       onOpen={() => openEditor({ todoId: t.id })}
                       onCheck={handleCheck}
                       hideCategory={filter.kind === 'category'}
@@ -577,14 +612,15 @@ export default function TodoBoardView({
         <div
           className="pointer-events-none fixed left-0 top-0 z-[60]"
           style={{
-            transform: `translate(${taskDrag.x}px, ${taskDrag.y}px) translate(-50%, -50%) rotate(-2deg)`,
+            transform: `translate(${taskDrag.x}px, ${taskDrag.y}px) translate(-50%, -50%) scale(1.05) rotate(-1deg)`,
           }}
         >
-          <div className="max-w-[220px] rounded-xl bg-white px-3 py-2 shadow-[0_10px_28px_rgba(80,120,90,0.35)] ring-2 ring-primary-400">
-            <div className="text-[14px] font-medium leading-snug text-neutral-700">{taskDrag.todo.title || 'No Title'}</div>
+          <div className="max-w-[260px] rounded-2xl bg-white px-4 py-3 shadow-[0_16px_40px_rgba(80,120,90,0.42)] ring-[3px] ring-primary-400/80">
+            <div className="text-[15px] font-medium leading-snug text-neutral-700">{taskDrag.todo.title || 'No Title'}</div>
             {taskDrag.todo.description && (
-              <div className="mt-0.5 line-clamp-1 text-[12px] text-neutral-400">{taskDrag.todo.description}</div>
+              <div className="mt-1 line-clamp-1 text-[12px] text-neutral-400">{taskDrag.todo.description}</div>
             )}
+            <div className="mt-1.5 text-[10px] font-medium text-primary-500">拖到分组标题以移动</div>
           </div>
         </div>
       )}
@@ -599,6 +635,7 @@ function BoardCard({
   cat,
   isInbox,
   isOverdueCol,
+  isDragging,
   onOpen,
   onCheck,
   hideCategory,
@@ -608,6 +645,7 @@ function BoardCard({
   cat?: Category;
   isInbox: boolean;
   isOverdueCol: boolean;
+  isDragging?: boolean;
   onOpen: () => void;
   onCheck: (id: string) => void;
   hideCategory?: boolean;
@@ -618,16 +656,33 @@ function BoardCard({
   const isCrossDay = !!(t.dueDate && t.endDate && !isSameDay(t.dueDate, t.endDate));
 
   // 长按 → 拖拽换分组：检测长按（移动/滚动则取消），松手若曾长按则吞掉随后的 click
+  const cardRef = useRef<HTMLDivElement>(null);
   const lp = useRef<{ timer: number | null; startX: number; startY: number; moved: boolean; fired: boolean } | null>(null);
   const suppressClick = useRef(false);
+  const setSelectLock = (lock: boolean) => {
+    const el = cardRef.current;
+    if (!el) return;
+    const s = el.style as CSSStyleDeclaration & { webkitTouchCallout?: string; WebkitTouchCallout?: string };
+    if (lock) {
+      s.userSelect = 'none';
+      s.webkitUserSelect = 'none';
+      s.webkitTouchCallout = 'none';
+    } else {
+      s.userSelect = '';
+      s.webkitUserSelect = '';
+      s.webkitTouchCallout = '';
+    }
+  };
   const clearLp = () => {
     if (lp.current?.timer) {
       window.clearTimeout(lp.current.timer);
       lp.current = null;
     }
+    setSelectLock(false);
   };
   const onCardPointerDown = (e: React.PointerEvent) => {
     if (!onLongPress) return;
+    setSelectLock(true);
     lp.current = { timer: null, startX: e.clientX, startY: e.clientY, moved: false, fired: false };
     const timer = window.setTimeout(() => {
       if (lp.current && !lp.current.moved && !lp.current.fired) {
@@ -637,6 +692,8 @@ function BoardCard({
         } catch {
           /* ignore */
         }
+        // 震动反馈（若支持）
+        if (typeof navigator !== 'undefined' && 'vibrate' in navigator) navigator.vibrate(15);
         onLongPress(t, e.clientX, e.clientY);
       }
     }, 380);
@@ -663,6 +720,7 @@ function BoardCard({
 
   return (
     <div
+      ref={cardRef}
       onClick={(e) => {
         if (suppressClick.current) {
           suppressClick.current = false;
@@ -678,7 +736,12 @@ function BoardCard({
       onPointerCancel={onCardPointerUp}
       className={`mb-2 flex items-start gap-3 rounded-xl bg-white p-3 shadow-card-soft press ${
         isOverdueCol && !t.isCompleted ? 'border-l-[3px] border-l-red-300' : ''
-      }`}
+      } ${isDragging ? 'opacity-50' : ''}`}
+      style={{
+        WebkitTouchCallout: 'none',
+        userSelect: isDragging ? 'none' : undefined,
+        WebkitUserSelect: isDragging ? 'none' : undefined,
+      }}
     >
       {/* Checkbox（用 span 镜像 TodoCard，绕开全局 button{border:none} 覆盖；self-start 使其对齐标题首行） */}
       <span
