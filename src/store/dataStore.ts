@@ -51,6 +51,8 @@ interface DataState {
   addTagToPool: (tags: string[]) => Promise<void>;
   /** 从全局池彻底删除标签（仅用于将来显式的「删除标签」入口） */
   removeTagFromPool: (tag: string) => Promise<void>;
+  /** 彻底删除标签：从标签池移除，并从所有用到它的任务上移除（避免下次启动被任务标签重新填充） */
+  deleteTag: (tag: string) => Promise<void>;
 
   addCategory: (name: string, icon: string, color?: string) => Promise<Category>;
   updateCategory: (id: string, patch: Partial<Omit<Category, 'id'>>) => Promise<void>;
@@ -115,6 +117,20 @@ export const useDataStore = create<DataState>((set, get) => ({
     if (next.length === get().tagPool.length) return;
     set({ tagPool: next });
     await db.setMeta(TAG_POOL_KEY, next);
+  },
+
+  /** 彻底删除标签：从池子移除，并从所有用到它的任务上剥离（否则下次启动由任务标签重新填充池子） */
+  async deleteTag(tag) {
+    const t = (tag ?? '').trim();
+    if (!t) return;
+    const pool = get().tagPool.filter((x) => x !== t);
+    set({ tagPool: pool });
+    await db.setMeta(TAG_POOL_KEY, pool);
+    for (const todo of get().todos) {
+      if (todo.tags && todo.tags.includes(t)) {
+        await get().updateTodo(todo.id, { tags: todo.tags.filter((x) => x !== t) });
+      }
+    }
   },
 
   async init() {

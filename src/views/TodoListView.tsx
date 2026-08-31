@@ -205,8 +205,7 @@ export default function TodoListView({ todos, query, listGroupKey }: { todos: To
       }
       catBuckets.get(cid)!.items.push(t);
     }
-    const completedGroups = [];
-    // 先排有分类的（按 categories 原序），再 Inbox
+    const completedGroups: { key: string; label: string; items: Todo[] }[] = [];
     for (const c of categories) {
       const bucket = catBuckets.get(c.id);
       if (bucket && bucket.items.length > 0) {
@@ -217,6 +216,11 @@ export default function TodoListView({ todos, query, listGroupKey }: { todos: To
     if (inboxBucket && inboxBucket.items.length > 0) {
       completedGroups.push({ key: 'cat-inbox', label: '📥 Inbox', items: inboxBucket.items });
     }
+    // 区块按「组内最新打卡时间」倒序：最近被勾掉任务的清单排最前，最近打卡的任务自然落在最顶上
+    completedGroups.sort((a, b) => {
+      const maxAt = (g: { items: Todo[] }) => g.items.reduce((m, t) => Math.max(m, t.completedAt ? +t.completedAt : 0), 0);
+      return maxAt(b) - maxAt(a);
+    });
 
     return (
       <div className="px-4 pb-40 pt-1">

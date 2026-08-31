@@ -17,6 +17,7 @@ export default function TodoTab() {
   const todos = useDataStore((s) => s.todos);
   const categories = useDataStore((s) => s.categories);
   const tagPool = useDataStore((s) => s.tagPool);
+  const deleteTag = useDataStore((s) => s.deleteTag);
   const filter = useUIStore((s) => s.filter);
   const searchActive = useUIStore((s) => s.searchActive);
   const searchQuery = useUIStore((s) => s.searchQuery);
@@ -318,15 +319,31 @@ export default function TodoTab() {
               {allTags.map((tg) => {
                 const active = tagFilter.includes(tg);
                 return (
-                  <button
+                  <span
                     key={tg}
-                    onClick={() => toggleTagFilter(tg)}
-                    className={`press shrink-0 rounded-full px-3 py-1 text-[12px] font-medium ${
+                    className={`inline-flex shrink-0 items-center rounded-full ${
                       active ? 'bg-primary-600 text-white' : 'bg-primary-100 text-primary-700'
                     }`}
                   >
-                    #{tg}
-                  </button>
+                    <button
+                      onClick={() => toggleTagFilter(tg)}
+                      className="press rounded-full px-3 py-1 text-[12px] font-medium"
+                    >
+                      #{tg}
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (window.confirm(`删除标签「${tg}」？\n将从标签池及所有用到它的任务上移除。`)) {
+                          deleteTag(tg);
+                          if (tagFilter.includes(tg)) clearTagFilter();
+                        }
+                      }}
+                      aria-label={`删除标签 ${tg}`}
+                      className="press flex h-5 w-5 items-center justify-center rounded-full text-[14px] leading-none opacity-60 hover:opacity-100"
+                    >
+                      ×
+                    </button>
+                  </span>
                 );
               })}
               {tagFilter.length > 0 && (
