@@ -167,6 +167,26 @@ export const useDataStore = create<DataState>((set, get) => ({
     if (legacy.length) {
       set({ categories: categories.map((c) => (legacy.some((l) => l.id === c.id) ? { ...c, name: 'Inbox' } : c)) });
     }
+
+    // 一次性迁移：把「已完成但 completedAt 为 null」的历史任务补上打卡时间。
+    // 这类任务包括：① completedAt 功能上线前就完成的；② 在编辑页勾选完成（旧 updateTodo 没写 completedAt）。
+    // 没有真实打卡时间可用，用「截止日期」兜底（与用户看到的日期一致、符合"越晚截止越晚完成"的直觉），
+    // 没有截止日期则退回 createdAt。回填后 completedAt 非 null，下次 init 不会再触发，天然幂等。
+    const needBackfill = todos.filter((t) => t.isCompleted && !t.completedAt);
+    if (needBackfill.length > 0) {
+      const fixed = todos.map((t) => {
+        if (!t.isCompleted || t.completedAt) return t;
+        const proxy = t.dueDate
+          ? new Date(t.dueDate)
+          : t.createdAt
+          ? new Date(t.createdAt)
+          : new Date(0);
+        const patched: Todo = { ...t, completedAt: proxy };
+        void db.putTodo(patched);
+        return patched;
+      });
+      set({ todos: fixed });
+    }
   },
 
   async addCategory(name, icon, color) {
@@ -295,6 +315,11 @@ export const useDataStore = create<DataState>((set, get) => ({
     const cur = get().todos.find((t) => t.id === id);
     if (!cur) return;
     const next = { ...cur, ...patch } as Todo;
+    // 在编辑页勾选/取消完成时，必须同步 completedAt，否则已完成排序会乱
+    if ('isCompleted' in patch) {
+      if (patch.isCompleted && !cur.isCompleted) next.completedAt = new Date();
+      else if (!patch.isCompleted && cur.isCompleted) next.completedAt = null;
+    }
     await db.putTodo(next);
     set((s) => ({ todos: s.todos.map((t) => (t.id === id ? next : t)) }));
     // 标签进池：只增不减，任务里删掉标签不影响以后复用
