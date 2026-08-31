@@ -4,6 +4,7 @@ import { useUIStore } from '../store/uiStore';
 import type { Todo } from '../types';
 import type { GroupKey } from '../components/ViewSegment';
 import { dayDiff, startOfDay } from '../lib/date';
+import { effCompletedAt } from '../lib/sort';
 import TodoCard from '../components/TodoCard';
 import EmptyState from '../components/EmptyState';
 import { IconChevronDown, IconChevronRight } from '../components/Icons';
@@ -64,12 +65,8 @@ export default function TodoListView({ todos, query, listGroupKey }: { todos: To
       return av - bv || a.sortOrder - b.sortOrder;
     };
     const bySort = (a: Todo, b: Todo) => a.sortOrder - b.sortOrder;
-    // 已完成：按「打卡时间」倒序（最近勾选的排最前）；无 completedAt 的旧数据兜底到 0
-    const byCompletedDesc = (a: Todo, b: Todo) => {
-      const av = a.completedAt ? +a.completedAt : 0;
-      const bv = b.completedAt ? +b.completedAt : 0;
-      return bv - av || a.sortOrder - b.sortOrder;
-    };
+    // 已完成排序：按「有效完成时间」倒序（见模块级 effCompletedAt，保证刚勾掉的总在最上）
+    const byCompletedDesc = (a: Todo, b: Todo) => effCompletedAt(b) - effCompletedAt(a) || a.sortOrder - b.sortOrder;
 
     // ── 按时间分桶（默认）──
     if (activeGroup === 'time') {
@@ -189,12 +186,8 @@ export default function TodoListView({ todos, query, listGroupKey }: { todos: To
     if (completed.length === 0) {
       return <EmptyState title="还没有已完成的任务" desc="勾掉一件小事，它就会出现在这里 🍵" />;
     }
-    // 已完成板块单独排序：按「打卡时间」倒序（最近勾选的排最上面）
-    const byCompletedDesc = (a: Todo, b: Todo) => {
-      const av = a.completedAt ? +a.completedAt : 0;
-      const bv = b.completedAt ? +b.completedAt : 0;
-      return bv - av || a.sortOrder - b.sortOrder;
-    };
+    // 已完成板块单独排序：按「有效完成时间」倒序（最近勾选的排最上面）
+    const byCompletedDesc = (a: Todo, b: Todo) => effCompletedAt(b) - effCompletedAt(a) || a.sortOrder - b.sortOrder;
     // 按清单分桶
     const catBuckets = new Map<string, { label: string; items: Todo[]; icon?: string }>();
     for (const t of [...completed].sort(byCompletedDesc)) {
@@ -218,7 +211,7 @@ export default function TodoListView({ todos, query, listGroupKey }: { todos: To
     }
     // 区块按「组内最新打卡时间」倒序：最近被勾掉任务的清单排最前，最近打卡的任务自然落在最顶上
     completedGroups.sort((a, b) => {
-      const maxAt = (g: { items: Todo[] }) => g.items.reduce((m, t) => Math.max(m, t.completedAt ? +t.completedAt : 0), 0);
+      const maxAt = (g: { items: Todo[] }) => g.items.reduce((m, t) => Math.max(m, effCompletedAt(t)), 0);
       return maxAt(b) - maxAt(a);
     });
 

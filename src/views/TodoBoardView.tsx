@@ -3,6 +3,7 @@ import { useDataStore } from '../store/dataStore';
 import { useUIStore } from '../store/uiStore';
 import type { Todo, DrawerFilter, BoardMode, Category } from '../types';
 import { addDays, dayDiff, fmtTime, humanDate, isAllDay, isSameDay, startOfDay } from '../lib/date';
+import { effCompletedAt } from '../lib/sort';
 import { scrollMemory } from '../lib/scrollMemory';
 import EmptyState from '../components/EmptyState';
 import SectionTabBar from '../components/SectionTabBar';
@@ -85,11 +86,9 @@ function sortDefault(a: Todo, b: Todo): number {
   return Number(a.isCompleted) - Number(b.isCompleted) || a.sortOrder - b.sortOrder;
 }
 
-/** 已完成视图排序：按到期时间倒序（最晚到期在最上面），与活动任务正序相反 */
+/** 已完成视图排序：按「有效完成时间」倒序（最近勾选的在最上面），与活动任务正序相反 */
 function sortCompletedDesc(a: Todo, b: Todo): number {
-  const av = a.dueDate ? +a.dueDate : 0;
-  const bv = b.dueDate ? +b.dueDate : 0;
-  return bv - av || a.sortOrder - b.sortOrder;
+  return effCompletedAt(b) - effCompletedAt(a) || a.sortOrder - b.sortOrder;
 }
 
 function sortSections<T extends { sortOrder: number }>(arr: T[]): T[] {
