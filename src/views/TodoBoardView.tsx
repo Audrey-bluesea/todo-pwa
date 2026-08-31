@@ -563,7 +563,7 @@ export default function TodoBoardView({
         style={{ touchAction: 'pan-y' }}
       >
         <div
-          className="flex min-h-0 flex-1"
+          className="flex h-full min-h-0"
           style={{
             transform: `translateX(calc(${-activeTabIdx * 100}% + ${dragX}px))`,
             transition: dragging ? 'none' : 'transform 0.3s cubic-bezier(0.22, 0.61, 0.36, 1)',
