@@ -16,6 +16,7 @@ import { useTimerStore } from '../store/timerStore';
 export default function TodoTab() {
   const todos = useDataStore((s) => s.todos);
   const categories = useDataStore((s) => s.categories);
+  const tagPool = useDataStore((s) => s.tagPool);
   const filter = useUIStore((s) => s.filter);
   const searchActive = useUIStore((s) => s.searchActive);
   const searchQuery = useUIStore((s) => s.searchQuery);
@@ -92,12 +93,15 @@ export default function TodoTab() {
     return searchTodos(todos, q, catNameMap);
   }, [searchActive, searchQuery, tagFiltered, todos, catNameMap]);
 
-  // 全部已有标签（用于筛选栏）
+  // 全部标签（用于筛选栏）：取「持久化标签池 ∪ 当前任务身上的标签」。
+  // 只取标签池，是因为标签一旦用过就应能一直复用，
+  // 即使没有任何任务再用它（从任务里删掉标签不会让它消失）。
   const allTags = useMemo(() => {
     const set = new Set<string>();
-    for (const t of todos) for (const tg of t.tags ?? []) if (tg.trim()) set.add(tg.trim());
+    for (const tg of tagPool) if (tg && tg.trim()) set.add(tg.trim());
+    for (const t of todos) for (const tg of t.tags ?? []) if (tg && tg.trim()) set.add(tg.trim());
     return Array.from(set);
-  }, [todos]);
+  }, [tagPool, todos]);
 
   // 计时记录搜索：激活时跨全部 TimeEntry 匹配标题/备注（含自由计时）
   const timeEntries = useTimerStore((s) => s.timeEntries);

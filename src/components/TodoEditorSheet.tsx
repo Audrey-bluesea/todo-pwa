@@ -375,6 +375,7 @@ export default function TodoEditorSheet() {
 
   const categories = useDataStore((s) => s.categories);
   const todos = useDataStore((s) => s.todos);
+  const tagPool = useDataStore((s) => s.tagPool);
   const addTodo = useDataStore((s) => s.addTodo);
   const updateTodo = useDataStore((s) => s.updateTodo);
   const removeTodo = useDataStore((s) => s.removeTodo);
@@ -446,12 +447,15 @@ export default function TodoEditorSheet() {
     setTagInput('');
   }, [open, editing, presetDate, presetCategoryId, presetSectionId, categories]);
 
-  // 全部已有标签（用于快捷建议）—— 必须在 early return 之前调用，遵守 hooks 规则
+  // 全部标签（用于快捷建议）—— 必须在 early return 之前调用，遵守 hooks 规则。
+  // 取「持久化标签池 ∪ 任务身上的标签」：标签用过一次就应能一直复用，
+  // 从某个任务里删掉它不会让它从建议里消失。
   const allTags = useMemo(() => {
     const set = new Set<string>();
-    for (const t of todos) for (const tg of t.tags ?? []) if (tg.trim()) set.add(tg.trim());
+    for (const tg of tagPool) if (tg && tg.trim()) set.add(tg.trim());
+    for (const t of todos) for (const tg of t.tags ?? []) if (tg && tg.trim()) set.add(tg.trim());
     return Array.from(set);
-  }, [todos]);
+  }, [tagPool, todos]);
   const suggestedTags = allTags.filter((t) => !tags.includes(t)).slice(0, 16);
 
   if (!open) return null;

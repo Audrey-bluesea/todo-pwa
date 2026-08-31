@@ -32,6 +32,73 @@ function saveTheme(t: ThemeKey) {
   }
 }
 
+/* ---------- 视图记忆 ---------- */
+/**
+ * 记住「上一次停留的视图」，刷新/重开后自动回到那里。
+ * 只记忆视图形态本身；日期、抽屉开合、搜索态、编辑器态一律不记忆
+ * （这些属于临时上下文，恢复反而会造成困惑）。
+ */
+const VIEW_KEY = 'xingshilu.view';
+
+type PersistedView = Pick<
+  UIState,
+  | 'tab'
+  | 'todoView'
+  | 'boardMode'
+  | 'groupBy'
+  | 'calendarView'
+  | 'calendarWeekMode'
+  | 'completedView'
+  | 'filter'
+>;
+
+const VALID_TABS: TabKey[] = ['todos', 'calendar'];
+const VALID_TODO_VIEW: TodoViewMode[] = ['list', 'board'];
+const VALID_BOARD_MODE: BoardMode[] = ['category', 'time'];
+const VALID_GROUP_BY = ['time', 'section', 'category'] as const;
+const VALID_CAL_VIEW: CalendarViewMode[] = ['list', 'day', 'week', 'month'];
+const VALID_CAL_WEEK: CalendarWeekMode[] = ['cards', 'timeline'];
+const VALID_FILTER_KINDS = ['all', 'today', 'next7', 'inbox', 'completed', 'category'];
+
+function isValidFilter(v: unknown): v is DrawerFilter {
+  if (!v || typeof v !== 'object') return false;
+  const f = v as { kind?: unknown; categoryId?: unknown };
+  if (typeof f.kind !== 'string' || !VALID_FILTER_KINDS.includes(f.kind)) return false;
+  if (f.kind === 'category') return typeof f.categoryId === 'string' && f.categoryId.length > 0;
+  return true;
+}
+
+function loadView(): Partial<PersistedView> {
+  try {
+    const raw = localStorage.getItem(VIEW_KEY);
+    if (!raw) return {};
+    const v = JSON.parse(raw);
+    if (!v || typeof v !== 'object') return {};
+    const out: Partial<PersistedView> = {};
+    if (VALID_TABS.includes(v.tab)) out.tab = v.tab;
+    if (VALID_TODO_VIEW.includes(v.todoView)) out.todoView = v.todoView;
+    if (VALID_TODO_VIEW.includes(v.completedView)) out.completedView = v.completedView;
+    if (VALID_BOARD_MODE.includes(v.boardMode)) out.boardMode = v.boardMode;
+    if (VALID_GROUP_BY.includes(v.groupBy)) out.groupBy = v.groupBy;
+    if (VALID_CAL_VIEW.includes(v.calendarView)) out.calendarView = v.calendarView;
+    if (VALID_CAL_WEEK.includes(v.calendarWeekMode)) out.calendarWeekMode = v.calendarWeekMode;
+    if (isValidFilter(v.filter)) out.filter = v.filter;
+    return out;
+  } catch {
+    return {};
+  }
+}
+
+function saveView(v: PersistedView) {
+  try {
+    localStorage.setItem(VIEW_KEY, JSON.stringify(v));
+  } catch {
+    /* 忽略存储失败 */
+  }
+}
+
+const rememberedView = loadView();
+
 interface UIState {
   tab: TabKey;
   todoView: TodoViewMode;
@@ -109,15 +176,16 @@ interface UIState {
 let toastTimer: ReturnType<typeof setTimeout> | null = null;
 
 export const useUIStore = create<UIState>((set) => ({
-  tab: 'todos',
-  todoView: 'list',
-  boardMode: 'category',
-  groupBy: 'time',
-  calendarView: 'list',
-  calendarWeekMode: 'cards',
+  // 视图形态类字段：有记忆则恢复，否则用默认值
+  tab: rememberedView.tab ?? 'todos',
+  todoView: rememberedView.todoView ?? 'list',
+  boardMode: rememberedView.boardMode ?? 'category',
+  groupBy: rememberedView.groupBy ?? 'time',
+  calendarView: rememberedView.calendarView ?? 'list',
+  calendarWeekMode: rememberedView.calendarWeekMode ?? 'cards',
   drawerOpen: false,
   drawerOffset: 0,
-  filter: { kind: 'all' },
+  filter: rememberedView.filter ?? { kind: 'all' },
   searchActive: false,
   searchQuery: '',
   tagFilter: [],
@@ -131,7 +199,7 @@ export const useUIStore = create<UIState>((set) => ({
   toast: null,
   toastAction: null,
   theme: loadTheme(),
-  completedView: 'list',
+  completedView: rememberedView.completedView ?? 'list',
   timerSheetOpen: false,
   editingTimeEntryId: null,
   boardSectionId: null,
@@ -183,3 +251,25 @@ export const useUIStore = create<UIState>((set) => ({
   setEditingTimeEntry: (editingTimeEntryId) => set({ editingTimeEntryId }),
   setBoardSection: (boardSectionId) => set({ boardSectionId }),
 }));
+
+/* ---------- 视图记忆：视图形态变化时落盘 ---------- */
+function pickView(s: UIState): PersistedView {
+  return {
+    tab: s.tab,
+    todoView: s.todoView,
+    boardMode: s.boardMode,
+    groupBy: s.groupBy,
+    calendarView: s.calendarView,
+    calendarWeekMode: s.calendarWeekMode,
+    completedView: s.completedView,
+    filter: s.filter,
+  };
+}
+
+let lastViewJSON = JSON.stringify(pickView(useUIStore.getState()));
+useUIStore.subscribe((s) => {
+  const json = JSON.stringify(pickView(s));
+  if (json === lastViewJSON) return; // 只有视图形态真的变了才写盘
+  lastViewJSON = json;
+  saveView(pickView(s));
+});

@@ -31,12 +31,26 @@ export function randomCategoryColor() {
   return CATEGORY_COLORS[Math.floor(Math.random() * CATEGORY_COLORS.length)];
 }
 
+/** 全局标签池在 IndexedDB meta 里的键 */
+const TAG_POOL_KEY = 'tagPool';
+
 interface DataState {
   ready: boolean;
   categories: Category[];
   todos: Todo[];
+  /**
+   * 全局标签池（持久化）。
+   * 标签不再从 todos 实时推导——否则「最后一个使用它的任务删掉标签」时，
+   * 标签就会从建议/筛选里消失，无法复用（滴答清单的行为是保留，可再次选用）。
+   */
+  tagPool: string[];
 
   init: () => Promise<void>;
+
+  /** 把标签注册进全局池（幂等） */
+  addTagToPool: (tags: string[]) => Promise<void>;
+  /** 从全局池彻底删除标签（仅用于将来显式的「删除标签」入口） */
+  removeTagFromPool: (tag: string) => Promise<void>;
 
   addCategory: (name: string, icon: string, color?: string) => Promise<Category>;
   updateCategory: (id: string, patch: Partial<Omit<Category, 'id'>>) => Promise<void>;
@@ -72,6 +86,36 @@ export const useDataStore = create<DataState>((set, get) => ({
   ready: false,
   categories: [],
   todos: [],
+  tagPool: [],
+
+  /** 把标签合并进全局池（幂等，去重，去空白）；有新增才写盘 */
+  async addTagToPool(tags) {
+    const incoming = (tags ?? []).map((t) => (t ?? '').trim()).filter(Boolean);
+    if (incoming.length === 0) return;
+    const cur = get().tagPool;
+    const set0 = new Set(cur);
+    const added: string[] = [];
+    for (const t of incoming) {
+      if (!set0.has(t)) {
+        set0.add(t);
+        added.push(t);
+      }
+    }
+    if (added.length === 0) return;
+    const next = [...set0];
+    set({ tagPool: next });
+    await db.setMeta(TAG_POOL_KEY, next);
+  },
+
+  /** 从全局池彻底删除某个标签（不影响任何任务上的标签） */
+  async removeTagFromPool(tag) {
+    const t = (tag ?? '').trim();
+    if (!t) return;
+    const next = get().tagPool.filter((x) => x !== t);
+    if (next.length === get().tagPool.length) return;
+    set({ tagPool: next });
+    await db.setMeta(TAG_POOL_KEY, next);
+  },
 
   async init() {
     if (get().ready) return;
@@ -88,7 +132,16 @@ export const useDataStore = create<DataState>((set, get) => ({
       todos = seed.todos;
     }
 
-    set({ categories, todos, ready: true });
+    // 标签池：读取持久化的池，并与现有任务的标签取并集（兼容历史数据，自动播种）
+    const storedPool = (await db.getMeta<string[]>(TAG_POOL_KEY)) ?? [];
+    const fromTodos: string[] = [];
+    for (const t of todos) for (const tg of t.tags ?? []) if (tg && tg.trim()) fromTodos.push(tg.trim());
+    const merged = [...new Set([...storedPool, ...fromTodos])];
+    if (merged.length !== storedPool.length) {
+      await db.setMeta(TAG_POOL_KEY, merged);
+    }
+
+    set({ categories, todos, ready: true, tagPool: merged });
 
     // 一次性迁移：旧版默认清单名「收件箱 / 收集箱」统一改为 Inbox
     const legacy = categories.filter((c) => c.name === '收件箱' || c.name === '收集箱');
@@ -217,6 +270,8 @@ export const useDataStore = create<DataState>((set, get) => ({
     };
     await db.putTodo(t);
     set((s) => ({ todos: [...s.todos, t] }));
+    // 标签进池：只增不减，任务里删掉标签不影响以后复用
+    await get().addTagToPool(t.tags ?? []);
     return t;
   },
 
@@ -226,6 +281,8 @@ export const useDataStore = create<DataState>((set, get) => ({
     const next = { ...cur, ...patch } as Todo;
     await db.putTodo(next);
     set((s) => ({ todos: s.todos.map((t) => (t.id === id ? next : t)) }));
+    // 标签进池：只增不减，任务里删掉标签不影响以后复用
+    await get().addTagToPool(next.tags ?? []);
   },
 
   async toggleTodo(id) {

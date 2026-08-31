@@ -64,6 +64,12 @@ export default function TodoListView({ todos, query, listGroupKey }: { todos: To
       return av - bv || a.sortOrder - b.sortOrder;
     };
     const bySort = (a: Todo, b: Todo) => a.sortOrder - b.sortOrder;
+    // 已完成：按「打卡时间」倒序（最近勾选的排最前）；无 completedAt 的旧数据兜底到 0
+    const byCompletedDesc = (a: Todo, b: Todo) => {
+      const av = a.completedAt ? +a.completedAt : 0;
+      const bv = b.completedAt ? +b.completedAt : 0;
+      return bv - av || a.sortOrder - b.sortOrder;
+    };
 
     // ── 按时间分桶（默认）──
     if (activeGroup === 'time') {
@@ -88,7 +94,7 @@ export default function TodoListView({ todos, query, listGroupKey }: { todos: To
         { key: 'later', label: '更晚', items: buckets.later },
         { key: 'none', label: '未安排日期', items: buckets.none },
       ] as Group[]).filter((g) => g.items.length > 0);
-      return { groups: gs, completed: done.sort((a, b) => (b.dueDate ? +b.dueDate : 0) - (a.dueDate ? +a.dueDate : 0) || b.sortOrder - a.sortOrder) };
+      return { groups: gs, completed: done.sort(byCompletedDesc) };
     }
 
     // ── 按清单分桶 ──
@@ -117,7 +123,7 @@ export default function TodoListView({ todos, query, listGroupKey }: { todos: To
         inboxBucket.items.sort(byDueAsc);
         gs.push({ key: 'cat-inbox', label: 'Inbox', items: inboxBucket.items });
       }
-      return { groups: gs, completed: done.sort(bySort) };
+      return { groups: gs, completed: done.sort(byCompletedDesc) };
     }
 
     // ── 按分组（section）分桶 —— 仅单清单模式有效 ──
@@ -147,11 +153,11 @@ export default function TodoListView({ todos, query, listGroupKey }: { todos: To
         unsectioned.sort(bySort);
         gs.push({ key: 'sec-none', label: '未分组', items: unsectioned });
       }
-      return { groups: gs, completed: done.sort(bySort) };
+      return { groups: gs, completed: done.sort(byCompletedDesc) };
     }
 
     // fallback：按时间
-    return { groups: [], completed: done };
+    return { groups: [], completed: done.sort(byCompletedDesc) };
   }, [todos, filter, activeGroup, categories, exiting, collapsing]);
 
   // 搜索模式：扁平结果列表，忽略时间分桶与「已完成」专属视图
@@ -183,15 +189,15 @@ export default function TodoListView({ todos, query, listGroupKey }: { todos: To
     if (completed.length === 0) {
       return <EmptyState title="还没有已完成的任务" desc="勾掉一件小事，它就会出现在这里 🍵" />;
     }
-    // 已完成板块单独排序：按到期时间倒序（最晚到期在最上面），与活动任务「按到期正序」相反
-    const byDueDesc = (a: Todo, b: Todo) => {
-      const av = a.dueDate ? +a.dueDate : 0;
-      const bv = b.dueDate ? +b.dueDate : 0;
+    // 已完成板块单独排序：按「打卡时间」倒序（最近勾选的排最上面）
+    const byCompletedDesc = (a: Todo, b: Todo) => {
+      const av = a.completedAt ? +a.completedAt : 0;
+      const bv = b.completedAt ? +b.completedAt : 0;
       return bv - av || a.sortOrder - b.sortOrder;
     };
     // 按清单分桶
     const catBuckets = new Map<string, { label: string; items: Todo[]; icon?: string }>();
-    for (const t of [...completed].sort(byDueDesc)) {
+    for (const t of [...completed].sort(byCompletedDesc)) {
       const cid = t.categoryId || '';
       if (!catBuckets.has(cid)) {
         const cat = categories.find((c) => c.id === cid);
