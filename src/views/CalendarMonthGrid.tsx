@@ -101,21 +101,19 @@ function MonthPane({ date }: { date: Date }) {
                   className={`relative flex min-h-[92px] flex-col items-stretch border-b border-r border-primary-100 px-[2px] pb-1 pt-1 text-left`}
                   style={{ minWidth: 0 }}
                 >
+                  {mark && (
+                    <span className="absolute right-[3px] top-[3px] z-10">
+                      <HolidayBadge mark={mark} />
+                    </span>
+                  )}
                   <div className="mb-[2px] flex flex-col items-center">
-                    <div className="relative">
-                      <span
-                        className={`flex h-[19px] min-w-[19px] items-center justify-center rounded-full px-1 text-[12px] font-medium leading-none tabular-nums ${
-                          today ? 'bg-primary-500 text-white' : inMonth ? 'text-neutral-600' : 'text-neutral-300'
-                        }`}
-                      >
-                        {d.getDate()}
-                      </span>
-                      {mark && (
-                        <span className="absolute -right-1 -top-1">
-                          <HolidayBadge mark={mark} />
-                        </span>
-                      )}
-                    </div>
+                    <span
+                      className={`flex h-[19px] min-w-[19px] items-center justify-center rounded-full px-1 text-[12px] font-medium leading-none tabular-nums ${
+                        today ? 'bg-primary-500 text-white' : inMonth ? 'text-neutral-600' : 'text-neutral-300'
+                      }`}
+                    >
+                      {d.getDate()}
+                    </span>
                     <span
                       className={`mt-[1px] w-full truncate text-center text-[8px] leading-none ${
                         inMonth ? 'text-neutral-400' : 'text-neutral-300'

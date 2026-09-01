@@ -60,29 +60,27 @@ export default function CalendarWeekCards() {
                 setSelected(d);
                 setViewDate(d);
               }}
-              className={`flex min-h-[132px] flex-col rounded-lg bg-white p-2.5 shadow-card-soft ${
+              className={`relative flex min-h-[132px] flex-col rounded-lg bg-white p-2.5 shadow-card-soft ${
                 sel ? 'ring-1 ring-primary-400' : ''
               }`}
             >
+              {mark && (
+                <span className="absolute right-2 top-2 z-10">
+                  <HolidayBadge mark={mark} />
+                </span>
+              )}
               <div className="mb-1.5 flex items-baseline gap-1.5">
                 {/* 左上角星期标签（英文） */}
                 <span className="text-[11px] font-bold tracking-wide text-primary-600">
                   {WEEK_EN[i]}
                 </span>
-                <div className="relative">
-                  <span
-                    className={`text-[15px] font-semibold leading-none tabular-nums ${
-                      today ? 'text-white' : 'text-neutral-600'
-                    } ${today ? 'rounded-full bg-primary-500 px-1.5 py-0.5' : ''}`}
-                  >
-                    {d.getDate()}
-                  </span>
-                  {mark && (
-                    <span className="absolute -right-1 -top-1">
-                      <HolidayBadge mark={mark} />
-                    </span>
-                  )}
-                </div>
+                <span
+                  className={`text-[15px] font-semibold leading-none tabular-nums ${
+                    today ? 'text-white' : 'text-neutral-600'
+                  } ${today ? 'rounded-full bg-primary-500 px-1.5 py-0.5' : ''}`}
+                >
+                  {d.getDate()}
+                </span>
                 <span className="truncate text-[9px] text-neutral-400">{solarToLunar(d).label}</span>
               </div>
 
