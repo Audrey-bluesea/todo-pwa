@@ -98,11 +98,11 @@ function MonthPane({ date }: { date: Date }) {
                       setCalendarView('day');
                     }
                   }}
-                  className={`relative flex min-h-[92px] flex-col items-stretch border-b border-r border-primary-100 px-[2px] pb-1 pt-1 text-left`}
+                  className={`relative flex min-h-[92px] flex-col items-stretch border-b border-r border-primary-100 px-[2px] pb-1 pt-[14px] text-left`}
                   style={{ minWidth: 0 }}
                 >
                   {mark && (
-                    <span className="absolute right-[3px] top-[3px] z-10">
+                    <span className="absolute right-[1px] top-[1px] z-10">
                       <HolidayBadge mark={mark} />
                     </span>
                   )}

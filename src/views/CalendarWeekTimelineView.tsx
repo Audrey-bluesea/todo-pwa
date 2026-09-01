@@ -118,11 +118,11 @@ function WeekPane({ date }: { date: Date }) {
                 <button
                   key={+d}
                   onClick={() => goToDay(d)}
-                  className="relative flex min-w-0 flex-col items-center justify-center gap-[1px] py-1"
+                  className="relative flex min-w-0 flex-col items-center justify-start gap-[1px] py-1 pt-[10px]"
                   style={{ minHeight: 46 }}
                 >
                   {mark && (
-                    <span className="absolute right-[2px] top-[2px] z-10">
+                    <span className="absolute right-[1px] top-[1px] z-10">
                       <HolidayBadge mark={mark} />
                     </span>
                   )}

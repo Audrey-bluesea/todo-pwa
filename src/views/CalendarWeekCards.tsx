@@ -65,7 +65,7 @@ export default function CalendarWeekCards() {
               }`}
             >
               {mark && (
-                <span className="absolute right-2 top-2 z-10">
+                <span className="absolute right-1.5 top-1.5 z-10">
                   <HolidayBadge mark={mark} />
                 </span>
               )}

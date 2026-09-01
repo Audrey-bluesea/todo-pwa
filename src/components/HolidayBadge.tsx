@@ -10,7 +10,7 @@ export default function HolidayBadge({ mark, className = '' }: Props) {
   const isRest = mark.type === 'rest';
   return (
     <span
-      className={`inline-flex shrink-0 items-center justify-center rounded-[3px] px-[3px] text-[9.5px] font-medium leading-[13px] ${
+      className={`inline-flex shrink-0 items-center justify-center rounded-[2px] px-[2px] text-[8.5px] font-medium leading-[11px] ${
         isRest ? 'bg-[#E1F5EE] text-[#0F6E56]' : 'bg-[#FCEBEB] text-[#A32D2D]'
       } ${className}`}
       title={isRest ? `${mark.name} · 放假` : '调休上班'}
