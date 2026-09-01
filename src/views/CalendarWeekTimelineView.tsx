@@ -123,18 +123,20 @@ function WeekPane({ date }: { date: Date }) {
                 >
                   <span className="text-[10.5px] font-medium text-neutral-400">{WEEK_CN[i]}</span>
                   <div className="relative flex items-center justify-center">
-                    <span
-                      className={`flex h-[28px] w-[28px] items-center justify-center rounded-full text-[14px] font-semibold tabular-nums ${
-                        td ? 'bg-primary-500 text-white' : 'text-neutral-600'
-                      }`}
-                    >
-                      {d.getDate()}
-                    </span>
-                    {mark && (
-                      <span className="absolute -right-[7px] -top-[2px]">
-                        <HolidayBadge mark={mark} />
+                    <div className="relative">
+                      <span
+                        className={`flex h-[28px] w-[28px] items-center justify-center rounded-full text-[14px] font-semibold tabular-nums ${
+                          td ? 'bg-primary-500 text-white' : 'text-neutral-600'
+                        }`}
+                      >
+                        {d.getDate()}
                       </span>
-                    )}
+                      {mark && (
+                        <span className="absolute -right-1 -top-1">
+                          <HolidayBadge mark={mark} />
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <span className="w-full truncate px-[1px] text-center text-[8.5px] leading-none text-neutral-400">
                     {solarToLunar(d).label}
