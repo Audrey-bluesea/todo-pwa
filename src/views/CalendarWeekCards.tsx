@@ -12,6 +12,8 @@ import {
   WEEK_EN,
 } from '../lib/date';
 import { solarToLunar } from '../lib/lunar';
+import { holidayMark } from '../lib/holidays';
+import HolidayBadge from '../components/HolidayBadge';
 import { activeTodosOn, makeCatMap } from '../lib/todoIndex';
 import { IconPlus } from '../components/Icons';
 
@@ -49,6 +51,7 @@ export default function CalendarWeekCards() {
           const rest = items.length - shown.length;
           const today = isToday(d);
           const sel = isSameDay(d, selectedDate);
+          const mark = holidayMark(d);
 
           return (
             <div
@@ -74,6 +77,7 @@ export default function CalendarWeekCards() {
                   {d.getDate()}
                 </span>
                 <span className="truncate text-[9px] text-neutral-400">{solarToLunar(d).label}</span>
+                {mark && <HolidayBadge mark={mark} className="ml-auto" />}
               </div>
 
               <div className="min-h-0 flex-1 space-y-1">

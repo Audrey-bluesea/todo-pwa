@@ -4,6 +4,8 @@ import { useUIStore } from '../store/uiStore';
 import SwipePager from '../components/SwipePager';
 import { addDays, addMonths, isSameDay, isToday, startOfWeek, WEEK_CN } from '../lib/date';
 import { solarToLunar } from '../lib/lunar';
+import { holidayMark } from '../lib/holidays';
+import HolidayBadge from '../components/HolidayBadge';
 import { activeTodosOn, makeCatMap } from '../lib/todoIndex';
 
 const MAX_ROWS = 5;
@@ -84,6 +86,7 @@ function MonthPane({ date }: { date: Date }) {
               const sel = isSameDay(d, selectedDate);
               const inMonth = d.getMonth() === date.getMonth();
               const lunar = solarToLunar(d);
+              const mark = holidayMark(d);
 
               return (
                 <button
@@ -95,9 +98,14 @@ function MonthPane({ date }: { date: Date }) {
                       setCalendarView('day');
                     }
                   }}
-                  className={`flex min-h-[92px] flex-col items-stretch border-b border-r border-primary-100 px-[2px] pb-1 pt-1 text-left`}
+                  className={`relative flex min-h-[92px] flex-col items-stretch border-b border-r border-primary-100 px-[2px] pb-1 pt-1 text-left`}
                   style={{ minWidth: 0 }}
                 >
+                  {mark && (
+                    <span className="absolute right-[2px] top-[2px]">
+                      <HolidayBadge mark={mark} />
+                    </span>
+                  )}
                   <div className="mb-[2px] flex flex-col items-center">
                     <span
                       className={`flex h-[19px] min-w-[19px] items-center justify-center rounded-full px-1 text-[12px] font-medium leading-none tabular-nums ${

@@ -15,6 +15,8 @@ import {
   WEEK_CN,
 } from '../lib/date';
 import { solarToLunar } from '../lib/lunar';
+import { holidayMark } from '../lib/holidays';
+import HolidayBadge from '../components/HolidayBadge';
 import { activeTodosOn, groupByDate, makeCatMap } from '../lib/todoIndex';
 import { assignLanes, hexToRgba, darkenHex } from '../lib/calendarLanes';
 import { stripEmoji } from '../lib/text';
@@ -111,6 +113,7 @@ function WeekPane({ date }: { date: Date }) {
             {days.map((d, i) => {
               const td = isToday(d);
               const has = (byDate.get(dateKey(d)) ?? []).length > 0;
+              const mark = holidayMark(d);
               return (
                 <button
                   key={+d}
@@ -119,13 +122,20 @@ function WeekPane({ date }: { date: Date }) {
                   style={{ minHeight: 46 }}
                 >
                   <span className="text-[10.5px] font-medium text-neutral-400">{WEEK_CN[i]}</span>
-                  <span
-                    className={`flex h-[28px] w-[28px] items-center justify-center rounded-full text-[14px] font-semibold tabular-nums ${
-                      td ? 'bg-primary-500 text-white' : 'text-neutral-600'
-                    }`}
-                  >
-                    {d.getDate()}
-                  </span>
+                  <div className="relative flex items-center justify-center">
+                    <span
+                      className={`flex h-[28px] w-[28px] items-center justify-center rounded-full text-[14px] font-semibold tabular-nums ${
+                        td ? 'bg-primary-500 text-white' : 'text-neutral-600'
+                      }`}
+                    >
+                      {d.getDate()}
+                    </span>
+                    {mark && (
+                      <span className="absolute -right-[7px] -top-[2px]">
+                        <HolidayBadge mark={mark} />
+                      </span>
+                    )}
+                  </div>
                   <span className="w-full truncate px-[1px] text-center text-[8.5px] leading-none text-neutral-400">
                     {solarToLunar(d).label}
                   </span>

@@ -18,6 +18,8 @@ import {
   WEEK_CN,
 } from '../lib/date';
 import { solarToLunar } from '../lib/lunar';
+import { holidayMark } from '../lib/holidays';
+import HolidayBadge from '../components/HolidayBadge';
 import { groupByDate, activeTodosOn, makeCatMap } from '../lib/todoIndex';
 import { assignLanes, hexToRgba, darkenHex } from '../lib/calendarLanes';
 
@@ -153,6 +155,7 @@ function DayPane({ date }: { date: Date }) {
             const sel = isSameDay(d, selectedDate);
             const td = isToday(d);
             const has = (byDate.get(dateKey(d)) ?? []).length > 0;
+            const mark = holidayMark(d);
             return (
               <button
                 key={+d}
@@ -163,13 +166,20 @@ function DayPane({ date }: { date: Date }) {
                 className="flex flex-col items-center justify-center gap-[1px] py-1"
                 style={{ minWidth: 0, minHeight: 46 }}
               >
-                <span
-                  className={`flex h-[28px] w-[28px] items-center justify-center rounded-full text-[14px] font-semibold tabular-nums ${
-                    sel ? 'bg-primary-500 text-white' : td ? 'bg-primary-100 text-primary-700' : 'text-neutral-600'
-                  }`}
-                >
-                  {d.getDate()}
-                </span>
+                <div className="relative flex items-center justify-center">
+                  <span
+                    className={`flex h-[28px] w-[28px] items-center justify-center rounded-full text-[14px] font-semibold tabular-nums ${
+                      sel ? 'bg-primary-500 text-white' : td ? 'bg-primary-100 text-primary-700' : 'text-neutral-600'
+                    }`}
+                  >
+                    {d.getDate()}
+                  </span>
+                  {mark && (
+                    <span className="absolute -right-[7px] -top-[2px]">
+                      <HolidayBadge mark={mark} />
+                    </span>
+                  )}
+                </div>
                 <span
                   className={`w-full truncate px-[1px] text-center text-[8.5px] leading-none ${
                     sel ? 'text-primary-600' : 'text-neutral-400'
