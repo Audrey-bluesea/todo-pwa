@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useDataStore } from '../store/dataStore';
 import { useUIStore } from '../store/uiStore';
 import type { Todo, DrawerFilter, BoardMode, Category } from '../types';
-import { addDays, dayDiff, fmtTime, humanDate, isAllDay, isSameDay, startOfDay } from '../lib/date';
+import { addDays, completedStamp, dayDiff, fmtTime, humanDate, isAllDay, isSameDay, startOfDay } from '../lib/date';
 import { effCompletedAt } from '../lib/sort';
 import { scrollMemory } from '../lib/scrollMemory';
 import EmptyState from '../components/EmptyState';
@@ -654,6 +654,9 @@ function BoardCard({
   const hasTime = t.dueDate && !isAllDay(t.dueDate);
   const isCrossDay = !!(t.dueDate && t.endDate && !isSameDay(t.dueDate, t.endDate));
 
+  // 已完成任务的打卡时间戳（浅淡显示在标题行右上角）；未完成任务不显示
+  const completedAtLabel = t.isCompleted && t.completedAt ? completedStamp(new Date(t.completedAt)) : '';
+
   // 长按 → 拖拽换分组：检测长按（移动/滚动则取消），松手若曾长按则吞掉随后的 click
   const cardRef = useRef<HTMLDivElement>(null);
   const lp = useRef<{ timer: number | null; startX: number; startY: number; moved: boolean; fired: boolean } | null>(null);
@@ -771,10 +774,18 @@ function BoardCard({
 
       {/* 内容区 */}
       <div className="min-w-0 flex-1">
-        <div
-          className={`text-[14.5px] leading-snug ${t.isCompleted ? 'text-neutral-400 line-through' : 'text-neutral-700'}`}
-        >
-          {t.title || 'No Title'}
+        {/* 标题 + 右上角打卡时间戳（时间戳 shrink-0，长标题自动让位不重叠） */}
+        <div className="flex items-start gap-2">
+          <div
+            className={`min-w-0 flex-1 text-[14.5px] leading-snug ${t.isCompleted ? 'text-neutral-400 line-through' : 'text-neutral-700'}`}
+          >
+            {t.title || 'No Title'}
+          </div>
+          {completedAtLabel && (
+            <span className="shrink-0 whitespace-nowrap pt-[2px] text-[11px] leading-none text-neutral-400 tabular-nums">
+              {completedAtLabel}
+            </span>
+          )}
         </div>
         {t.description ? (
           <div

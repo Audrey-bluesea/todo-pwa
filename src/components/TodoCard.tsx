@@ -3,7 +3,7 @@ import type { Category, Todo } from '../types';
 import { useDataStore } from '../store/dataStore';
 import { useUIStore } from '../store/uiStore';
 import { useTimerStore } from '../store/timerStore';
-import { fmtTime, humanDate, isAllDay, isSameDay } from '../lib/date';
+import { completedStamp, fmtTime, humanDate, isAllDay, isSameDay } from '../lib/date';
 import { useAxisLock } from '../lib/useAxisLock';
 import { IconChevronDown, IconClock, IconTrash } from './Icons';
 import Highlight from './Highlight';
@@ -40,6 +40,10 @@ export default function TodoCard({ todo, category, showDate, hideCategory, query
 
   // 跨天任务标识
   const isCrossDay = !!(todo.dueDate && todo.endDate && !isSameDay(todo.dueDate, todo.endDate));
+
+  // 已完成任务的打卡时间戳（浅淡显示在标题行右上角）；未完成任务不显示
+  const completedAtLabel =
+    todo.isCompleted && todo.completedAt ? completedStamp(new Date(todo.completedAt)) : '';
 
   // 时间标签统一底色：非完成用主色浅底，已完成用中性浅灰底；消除 primary-50/100/200 混用导致的“时有时无”观感
   const timeChipCls = todo.isCompleted
@@ -132,12 +136,20 @@ export default function TodoCard({ todo, category, showDate, hideCategory, query
               openEditor({ todoId: todo.id });
             }}
           >
-            <div
-              className={`text-[15px] leading-snug ${
-                todo.isCompleted ? 'text-neutral-700 line-through' : 'text-neutral-600'
-              }`}
-            >
-              <Highlight text={todo.title} query={query} />
+            {/* 标题 + 右上角打卡时间戳（时间戳 shrink-0，长标题自动让位不重叠） */}
+            <div className="flex items-start gap-2">
+              <div
+                className={`min-w-0 flex-1 text-[15px] leading-snug ${
+                  todo.isCompleted ? 'text-neutral-700 line-through' : 'text-neutral-600'
+                }`}
+              >
+                <Highlight text={todo.title} query={query} />
+              </div>
+              {completedAtLabel && (
+                <span className="shrink-0 whitespace-nowrap pt-[2px] text-[11px] leading-none text-neutral-400 tabular-nums">
+                  {completedAtLabel}
+                </span>
+              )}
             </div>
 
             {todo.description && (

@@ -114,6 +114,17 @@ export function humanDate(d: Date): string {
   return `${d.getMonth() + 1}月${d.getDate()}日`;
 }
 
+/**
+ * 打卡时间戳（卡片右上角浅淡展示用）：始终完整绝对时间，格式 `8/25 18:02`。
+ * 跨年时补上年份（`2025/8/25 18:02`），避免去年完成的被误读成今年。
+ */
+export function completedStamp(d: Date): string {
+  const md = `${d.getMonth() + 1}/${d.getDate()}`;
+  const now = new Date();
+  const datePart = d.getFullYear() === now.getFullYear() ? md : `${d.getFullYear()}/${md}`;
+  return `${datePart} ${fmtTime(d)}`;
+}
+
 export function uid(): string {
   return `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
 }
