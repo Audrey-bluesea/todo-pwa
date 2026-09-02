@@ -157,7 +157,7 @@ export default function TodoCard({ todo, category, showDate, hideCategory, query
                     startTimer({ todoId: todo.id, title: todo.title, categoryId: category?.id ?? null });
                     showToast(`开始计时：${todo.title}`);
                   }}
-                  className="-my-1.5 -mr-1.5 flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full text-neutral-400 press active:bg-primary-100 active:text-primary-600"
+                  className="-my-1.5 -mr-1.5 flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full text-primary-600 press active:bg-primary-100"
                   aria-label="开始计时"
                 >
                   <IconClock size={15} />

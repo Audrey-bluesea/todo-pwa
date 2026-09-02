@@ -800,7 +800,7 @@ function BoardCard({
                 startTimer({ todoId: t.id, title: t.title, categoryId: cat?.id ?? null });
                 showToast(`开始计时：${t.title}`);
               }}
-              className="-my-1.5 -mr-1.5 flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full text-neutral-400 press active:bg-primary-100 active:text-primary-600"
+              className="-my-1.5 -mr-1.5 flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full text-primary-600 press active:bg-primary-100"
               aria-label="开始计时"
             >
               <IconClock size={15} />
