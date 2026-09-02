@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useDataStore } from '../store/dataStore';
 import { useUIStore } from '../store/uiStore';
+import { useTimerStore } from '../store/timerStore';
 import type { Todo, DrawerFilter, BoardMode, Category } from '../types';
 import { addDays, completedStamp, dayDiff, fmtTime, humanDate, isAllDay, isSameDay, startOfDay } from '../lib/date';
 import { effCompletedAt } from '../lib/sort';
 import { scrollMemory } from '../lib/scrollMemory';
 import EmptyState from '../components/EmptyState';
 import SectionTabBar from '../components/SectionTabBar';
+import { IconClock } from '../components/Icons';
 
 /* ---------- 类型定义 ---------- */
 
@@ -657,6 +659,10 @@ function BoardCard({
   // 已完成任务的打卡时间戳（浅淡显示在标题行右上角）；未完成任务不显示
   const completedAtLabel = t.isCompleted && t.completedAt ? completedStamp(new Date(t.completedAt)) : '';
 
+  // 计时入口：标题行右上角图标（与打卡时间戳互斥——已完成任务不显示计时）
+  const startTimer = useTimerStore((s) => s.startTimer);
+  const showToast = useUIStore((s) => s.showToast);
+
   // 长按 → 拖拽换分组：检测长按（移动/滚动则取消），松手若曾长按则吞掉随后的 click
   const cardRef = useRef<HTMLDivElement>(null);
   const lp = useRef<{ timer: number | null; startX: number; startY: number; moved: boolean; fired: boolean } | null>(null);
@@ -774,7 +780,7 @@ function BoardCard({
 
       {/* 内容区 */}
       <div className="min-w-0 flex-1">
-        {/* 标题 + 右上角打卡时间戳（时间戳 shrink-0，长标题自动让位不重叠） */}
+        {/* 标题 + 右上角：打卡时间戳（已完成）/ 计时图标（未完成）二者互斥，长标题自动让位不重叠 */}
         <div className="flex items-start gap-2">
           <div
             className={`min-w-0 flex-1 text-[14.5px] leading-snug ${t.isCompleted ? 'text-neutral-400 line-through' : 'text-neutral-700'}`}
@@ -785,6 +791,20 @@ function BoardCard({
             <span className="shrink-0 whitespace-nowrap pt-[2px] text-[11px] leading-none text-neutral-400 tabular-nums">
               {completedAtLabel}
             </span>
+          )}
+          {!t.isCompleted && (
+            <button
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+                startTimer({ todoId: t.id, title: t.title, categoryId: cat?.id ?? null });
+                showToast(`开始计时：${t.title}`);
+              }}
+              className="-my-1.5 -mr-1.5 flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full text-neutral-400 press active:bg-primary-100 active:text-primary-600"
+              aria-label="开始计时"
+            >
+              <IconClock size={15} />
+            </button>
           )}
         </div>
         {t.description ? (

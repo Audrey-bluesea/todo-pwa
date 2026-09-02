@@ -136,7 +136,7 @@ export default function TodoCard({ todo, category, showDate, hideCategory, query
               openEditor({ todoId: todo.id });
             }}
           >
-            {/* 标题 + 右上角打卡时间戳（时间戳 shrink-0，长标题自动让位不重叠） */}
+            {/* 标题 + 右上角：打卡时间戳（已完成）/ 计时图标（未完成）二者互斥，长标题自动让位不重叠 */}
             <div className="flex items-start gap-2">
               <div
                 className={`min-w-0 flex-1 text-[15px] leading-snug ${
@@ -149,6 +149,19 @@ export default function TodoCard({ todo, category, showDate, hideCategory, query
                 <span className="shrink-0 whitespace-nowrap pt-[2px] text-[11px] leading-none text-neutral-400 tabular-nums">
                   {completedAtLabel}
                 </span>
+              )}
+              {!todo.isCompleted && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    startTimer({ todoId: todo.id, title: todo.title, categoryId: category?.id ?? null });
+                    showToast(`开始计时：${todo.title}`);
+                  }}
+                  className="-my-1.5 -mr-1.5 flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full text-neutral-400 press active:bg-primary-100 active:text-primary-600"
+                  aria-label="开始计时"
+                >
+                  <IconClock size={15} />
+                </button>
               )}
             </div>
 
@@ -226,21 +239,6 @@ export default function TodoCard({ todo, category, showDate, hideCategory, query
                 </button>
               )}
 
-              {!todo.isCompleted && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    startTimer({ todoId: todo.id, title: todo.title, categoryId: category?.id ?? null });
-                    showToast(`开始计时：${todo.title}`);
-                  }}
-                  className="flex items-center gap-0.5 rounded-full px-2 py-1 text-[11.5px] font-medium text-primary-600 press active:bg-primary-100"
-                  style={{ minHeight: 32 }}
-                  aria-label="开始计时"
-                >
-                  <IconClock size={13} />
-                  计时
-                </button>
-              )}
             </div>
 
             {expanded && todo.subTasks.length > 0 && (
