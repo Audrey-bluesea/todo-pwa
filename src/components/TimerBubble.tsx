@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTimerStore, fmtElapsed, fmtDuration } from '../store/timerStore';
 import { useUIStore } from '../store/uiStore';
-import { IconClock } from './Icons';
+import { IconTimer } from './Icons';
 
 /** 按开始时间升序（最早开始 = 累计最久的排前面） */
 const byStart = (a: { start: number }, b: { start: number }) => a.start - b.start;
@@ -46,7 +46,7 @@ export default function TimerBubble() {
         aria-label="计时中，点击展开"
       >
         <span className="flex h-5 w-5 items-center justify-center rounded-lg bg-primary-500">
-          <IconClock size={13} className="text-white" />
+          <IconTimer size={13} className="text-white" />
         </span>
         <span className="font-mono text-[14px] font-semibold tabular-nums text-primary-700">{primaryElapsed}</span>
         {running.length > 1 && (
@@ -64,7 +64,7 @@ export default function TimerBubble() {
     >
       <div className="mb-2 flex items-center justify-between">
         <span className="flex items-center gap-1.5 text-[13px] font-semibold text-primary-700">
-          <IconClock size={14} className="text-primary-500" />
+          <IconTimer size={14} className="text-primary-500" />
           进行中 · {running.length}
         </span>
         <button onClick={() => setExpanded(false)} className="text-[12px] text-neutral-400 press">

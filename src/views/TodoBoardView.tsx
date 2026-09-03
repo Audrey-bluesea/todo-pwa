@@ -8,7 +8,7 @@ import { effCompletedAt } from '../lib/sort';
 import { scrollMemory } from '../lib/scrollMemory';
 import EmptyState from '../components/EmptyState';
 import SectionTabBar from '../components/SectionTabBar';
-import { IconClock } from '../components/Icons';
+import { IconTimer } from '../components/Icons';
 
 /* ---------- 类型定义 ---------- */
 
@@ -803,7 +803,7 @@ function BoardCard({
               className="-my-1.5 -mr-1.5 flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full text-primary-600 press active:bg-primary-100"
               aria-label="开始计时"
             >
-              <IconClock size={15} />
+              <IconTimer size={15} />
             </button>
           )}
         </div>

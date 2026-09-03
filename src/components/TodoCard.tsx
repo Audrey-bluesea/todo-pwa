@@ -5,7 +5,7 @@ import { useUIStore } from '../store/uiStore';
 import { useTimerStore } from '../store/timerStore';
 import { completedStamp, fmtTime, humanDate, isAllDay, isSameDay } from '../lib/date';
 import { useAxisLock } from '../lib/useAxisLock';
-import { IconChevronDown, IconClock, IconTrash } from './Icons';
+import { IconChevronDown, IconTimer, IconTrash } from './Icons';
 import Highlight from './Highlight';
 
 interface Props {
@@ -160,7 +160,7 @@ export default function TodoCard({ todo, category, showDate, hideCategory, query
                   className="-my-1.5 -mr-1.5 flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full text-primary-600 press active:bg-primary-100"
                   aria-label="开始计时"
                 >
-                  <IconClock size={15} />
+                  <IconTimer size={15} />
                 </button>
               )}
             </div>

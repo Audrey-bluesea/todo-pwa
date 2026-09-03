@@ -105,6 +105,15 @@ export const IconClock = ({ size = 24, className, strokeWidth }: IconProps) => (
   </svg>
 );
 
+/** 秒表（计时功能专用）：区别于 IconClock（时钟=改时间/提醒），避免误解 */
+export const IconTimer = ({ size = 24, className, strokeWidth }: IconProps) => (
+  <svg {...base(size, className, strokeWidth)}>
+    <circle cx="12" cy="14" r="8" />
+    <path d="M10 2h4" />
+    <path d="M12 14l3-3" />
+  </svg>
+);
+
 export const IconInbox = ({ size = 24, className, strokeWidth }: IconProps) => (
   <svg {...base(size, className, strokeWidth)}>
     <path d="M4 13l2-7.5A2 2 0 018 4h8a2 2 0 012 1.5L20 13v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5z" />

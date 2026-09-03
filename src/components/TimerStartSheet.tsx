@@ -4,7 +4,7 @@ import type { QuickTimerPreset } from '../types';
 import { useUIStore } from '../store/uiStore';
 import { useTimerStore, fmtElapsed, fmtDuration } from '../store/timerStore';
 import { useDataStore } from '../store/dataStore';
-import { IconClose, IconClock } from './Icons';
+import { IconClose, IconTimer } from './Icons';
 
 export default function TimerStartSheet() {
   const open = useUIStore((s) => s.timerSheetOpen);
@@ -109,7 +109,7 @@ export default function TimerStartSheet() {
 
         <div className="mb-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <IconClock size={20} className="text-primary-500" />
+            <IconTimer size={20} className="text-primary-500" />
             <span className="text-[17px] font-bold text-primary-700">计时</span>
           </div>
           <button onClick={close} className="hit text-neutral-400 press" aria-label="关闭">
