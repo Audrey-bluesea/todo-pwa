@@ -7,7 +7,6 @@ import TodoListView from './TodoListView';
 import TodoBoardView from './TodoBoardView';
 import ViewSegment, { type GroupKey } from '../components/ViewSegment';
 import SearchBar from '../components/SearchBar';
-import TimerButton from '../components/TimerButton';
 import TimerSearchCard from '../components/TimerSearchCard';
 import { IconMenu, IconSearch } from '../components/Icons';
 import { buildCatNameMap, searchTodos, searchTimeEntries } from '../lib/search';
@@ -233,8 +232,9 @@ export default function TodoTab() {
 
           <div className="flex-1" />
 
-          {/* 列表 / 看板 图标分段控制器 + 搜索/计时按钮。整体 shrink-0，防止看板视图下
-              内部横向 pager 把 flex 容器撑宽后，右侧按钮被挤出屏幕右边。 */}
+          {/* 列表 / 看板 图标分段控制器 + 搜索按钮。整体 shrink-0，防止看板视图下
+              内部横向 pager 把 flex 容器撑宽后，右侧按钮被挤出屏幕右边。
+              注：计时入口已移除，统一到 FAB（轻点新建 / 长按计时），故此处不再放计时按钮。 */}
           {!searchActive && (
             <div className="flex shrink-0 items-center gap-1">
               <ViewSegment
@@ -246,7 +246,6 @@ export default function TodoTab() {
                 onSelectGroup={handleSelectGroup}
                 hideGroupDropdown={isInbox || isCompletedView}
               />
-              <TimerButton />
               <button
                 onClick={() => setSearchActive(true)}
                 className="hit text-primary-700 press"

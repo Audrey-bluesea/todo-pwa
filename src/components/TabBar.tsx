@@ -1,5 +1,13 @@
+import { useRef } from 'react';
 import { useUIStore } from '../store/uiStore';
 import { IconCalendar, IconChecklist, IconPlus } from './Icons';
+
+/** 长按判定阈值（毫秒） */
+const LONG_PRESS_MS = 400;
+/** 长按容差：手指移动超过该像素即取消长按 */
+const MOVE_TOLERANCE = 8;
+/** 已提示过「长按可计时」的标记（只提示一次，避免打扰） */
+const FAB_HINT_KEY = 'xingshilu.fabTimerHinted';
 
 const FAB_EMOJI: Partial<Record<string, string>> = {
   matcha: '🍵',
@@ -21,8 +29,78 @@ export default function TabBar() {
   const drawerOpen = useUIStore((s) => s.drawerOpen);
   const todoView = useUIStore((s) => s.todoView);
   const boardSectionId = useUIStore((s) => s.boardSectionId);
+  const setTimerSheetOpen = useUIStore((s) => s.setTimerSheetOpen);
+  const showToast = useUIStore((s) => s.showToast);
 
   const fabEmoji = FAB_EMOJI[theme];
+
+  /* ---------- FAB 长按 → 计时 ----------
+     轻点行为完全不变（新建任务）；长按 0.4s 打开计时面板。
+     因此计时入口从「仅待办页头部」变成全局（日历页也能直接计时）。 */
+  const lp = useRef<{ timer: number | null; startX: number; startY: number } | null>(null);
+  /** 长按是否已触发（独立于 lp，避免被「移动取消」清掉状态导致松手时漏吞 click） */
+  const fired = useRef(false);
+  /** 手指移动是否已取消本次交互（取消后松手既不新建也不计时） */
+  const cancelled = useRef(false);
+  const suppressClick = useRef(false);
+
+  const clearLp = () => {
+    if (lp.current?.timer) window.clearTimeout(lp.current.timer);
+    lp.current = null;
+  };
+
+  const onFabPointerDown = (e: React.PointerEvent) => {
+    // 每次新按下都重置，避免上一次的残留状态影响本次
+    suppressClick.current = false;
+    fired.current = false;
+    cancelled.current = false;
+    lp.current = { timer: null, startX: e.clientX, startY: e.clientY };
+    const t = window.setTimeout(() => {
+      fired.current = true;
+      lp.current = null; // 已触发：后续 pointermove 不再介入
+      if (typeof navigator !== 'undefined' && 'vibrate' in navigator) navigator.vibrate(15);
+      setTimerSheetOpen(true);
+    }, LONG_PRESS_MS);
+    if (lp.current) lp.current.timer = t;
+  };
+
+  const onFabPointerMove = (e: React.PointerEvent) => {
+    if (!lp.current) return; // 未按下，或长按已触发
+    const dx = e.clientX - lp.current.startX;
+    const dy = e.clientY - lp.current.startY;
+    if (Math.abs(dx) > MOVE_TOLERANCE || Math.abs(dy) > MOVE_TOLERANCE) {
+      cancelled.current = true;
+      clearLp();
+    }
+  };
+
+  const onFabPointerUp = () => {
+    // 长按已开计时面板、或已因移动取消 —— 两种情况下都要吞掉随后的 click，
+    // 否则会「计时面板 + 新建编辑器」同时弹出。
+    if (fired.current || cancelled.current) suppressClick.current = true;
+    clearLp();
+  };
+
+  const handleFabClick = () => {
+    if (suppressClick.current) {
+      suppressClick.current = false;
+      return;
+    }
+    // 首次轻点提示一次长按用法（已提示过则不再打扰）
+    try {
+      if (!localStorage.getItem(FAB_HINT_KEY)) {
+        localStorage.setItem(FAB_HINT_KEY, '1');
+        showToast('提示：长按 + 可直接开始计时', { duration: 2600 });
+      }
+    } catch {
+      /* 忽略存储失败 */
+    }
+    openEditor({
+      categoryId: filter.kind === 'category' ? filter.categoryId : undefined,
+      sectionId: inBoardSection ? boardSectionId! : undefined,
+      date: tab === 'calendar' ? selectedDate : undefined,
+    });
+  };
 
   // 看板-按分组模式下，FAB 预填当前清单 + 当前分组
   const inBoardSection =
@@ -51,13 +129,14 @@ export default function TabBar() {
       {/* FAB */}
       <button
         aria-label="添加待办"
-        onClick={() => openEditor({
-          categoryId: filter.kind === 'category' ? filter.categoryId : undefined,
-          sectionId: inBoardSection ? boardSectionId! : undefined,
-          date: tab === 'calendar' ? selectedDate : undefined,
-        })}
-        className="fab flex h-14 w-14 items-center justify-center press"
-        style={fabStyle}
+        onPointerDown={onFabPointerDown}
+        onPointerMove={onFabPointerMove}
+        onPointerUp={onFabPointerUp}
+        onPointerCancel={onFabPointerUp}
+        onContextMenu={(e) => e.preventDefault()}
+        onClick={handleFabClick}
+        className="fab flex h-14 w-14 select-none items-center justify-center press"
+        style={{ ...fabStyle, WebkitTouchCallout: 'none', touchAction: 'manipulation' }}
       >
         {fabEmoji ? (
           <span className="text-[44px] leading-none">{fabEmoji}</span>
