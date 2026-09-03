@@ -79,7 +79,7 @@ export default function SectionTabBar({
   // 拖拽时，被拖动项在「其余项数组」中的插入位置（落点）；-1 表示尚未进入拖拽
   const [ins, setIns] = useState(-1);
 
-  const itemRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
+  const itemRefs = useRef<Map<string, HTMLElement>>(new Map());
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   // ref 镜像，供原生监听器读取最新值（避免闭包捕获旧 props）
@@ -318,7 +318,7 @@ export default function SectionTabBar({
       const onTouchStart = (e: TouchEvent) => {
         if (editingIdRef.current) return; // 编辑状态不响应拖拽/选择
         const target = e.target as HTMLElement;
-        const pill = target.closest('button[data-section-id]') as HTMLButtonElement | null;
+        const pill = target.closest('[data-section-id]') as HTMLElement | null;
         if (!pill) return;
         const id = pill.dataset.sectionId!;
         const t = e.touches[0];
@@ -378,7 +378,7 @@ export default function SectionTabBar({
     const onPointerDown = (e: PointerEvent) => {
       if (editingIdRef.current) return;
       const target = e.target as HTMLElement;
-      const pill = target.closest('button[data-section-id]') as HTMLButtonElement | null;
+      const pill = target.closest('[data-section-id]') as HTMLElement | null;
       if (!pill) return;
       const id = pill.dataset.sectionId!;
       document.body.classList.add(BODY_CLASS);
@@ -456,7 +456,7 @@ export default function SectionTabBar({
     const isDrop = dropTargetId != null && dropTargetId === dropId;
     const isDragging = dragId === it.id;
     return (
-      <button
+      <div
         key={it.id}
         ref={(el) => {
           if (el) itemRefs.current.set(it.id, el);
@@ -499,18 +499,21 @@ export default function SectionTabBar({
               onBlur={commitRename}
               className="w-16 bg-transparent text-center text-[13px] font-medium text-primary-700 outline-none"
             />
-            <span
-              role="button"
+            <button
+              type="button"
               aria-label="删除分组"
               data-no-drag
-              onClick={(e) => {
+              onPointerDown={(e) => {
+                // 在 input 失焦（onBlur 会卸载整个编辑态）之前触发删除，
+                // 否则点击落在已卸载的节点上，handleDelete 永远不执行。
+                e.preventDefault();
                 e.stopPropagation();
                 handleDelete(it.id);
               }}
-              className="flex h-4 w-4 items-center justify-center rounded-full bg-neutral-300 text-white active:bg-red-400"
+              className="flex h-4 w-4 cursor-pointer items-center justify-center rounded-full bg-neutral-300 text-white active:bg-red-400"
             >
               <IconClose size={11} />
-            </span>
+            </button>
           </span>
         ) : (
           <>
@@ -522,7 +525,7 @@ export default function SectionTabBar({
             </span>
           </>
         )}
-      </button>
+      </div>
     );
   };
 
