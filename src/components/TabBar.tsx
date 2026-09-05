@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { useUIStore } from '../store/uiStore';
 import { IconCalendar, IconChecklist, IconPlus } from './Icons';
 
@@ -43,6 +43,33 @@ export default function TabBar() {
   /** 手指移动是否已取消本次交互（取消后松手既不新建也不计时） */
   const cancelled = useRef(false);
   const suppressClick = useRef(false);
+  /** 松手后延迟解除全局禁选的 timer（防止解除过早，iOS 在抬手瞬间仍可能选中） */
+  const unlockTimer = useRef<number | null>(null);
+
+  /** 按住 FAB 期间全局禁止 iOS 文字选择（复用分组拖拽的 select-lock 机制）。
+      不加这个，长按弹出的计时面板会落在手指下方，松手瞬间选中面板内文字（如「管理」）。 */
+  const lockSelect = () => {
+    if (unlockTimer.current) {
+      window.clearTimeout(unlockTimer.current);
+      unlockTimer.current = null;
+    }
+    document.body.classList.add('select-lock');
+  };
+  const unlockSelect = () => {
+    if (unlockTimer.current) window.clearTimeout(unlockTimer.current);
+    unlockTimer.current = window.setTimeout(() => {
+      document.body.classList.remove('select-lock');
+      unlockTimer.current = null;
+    }, 300);
+  };
+
+  // 卸载时兜底清除（如抽屉打开导致 TabBar 卸载），避免禁选状态泄漏
+  useEffect(() => {
+    return () => {
+      if (unlockTimer.current) window.clearTimeout(unlockTimer.current);
+      document.body.classList.remove('select-lock');
+    };
+  }, []);
 
   const clearLp = () => {
     if (lp.current?.timer) window.clearTimeout(lp.current.timer);
@@ -54,10 +81,13 @@ export default function TabBar() {
     suppressClick.current = false;
     fired.current = false;
     cancelled.current = false;
+    lockSelect();
     lp.current = { timer: null, startX: e.clientX, startY: e.clientY };
     const t = window.setTimeout(() => {
       fired.current = true;
       lp.current = null; // 已触发：后续 pointermove 不再介入
+      // 清掉长按期间可能已产生的选中（双保险）
+      window.getSelection()?.removeAllRanges();
       if (typeof navigator !== 'undefined' && 'vibrate' in navigator) navigator.vibrate(15);
       setTimerSheetOpen(true);
     }, LONG_PRESS_MS);
@@ -78,6 +108,7 @@ export default function TabBar() {
     // 长按已开计时面板、或已因移动取消 —— 两种情况下都要吞掉随后的 click，
     // 否则会「计时面板 + 新建编辑器」同时弹出。
     if (fired.current || cancelled.current) suppressClick.current = true;
+    unlockSelect();
     clearLp();
   };
 

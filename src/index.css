@@ -415,7 +415,10 @@ body,
 
   /* 长按分组标签栏拖拽排序时，全局禁止 iOS 选中附近文字 */
   body.section-reordering,
-  body.section-reordering * {
+  body.section-reordering *,
+  /* FAB 长按开计时面板：按住期间全局禁选，防止松手时选中面板内文字 */
+  body.select-lock,
+  body.select-lock * {
     user-select: none !important;
     -webkit-user-select: none !important;
     -webkit-touch-callout: none !important;
