@@ -263,21 +263,22 @@ export default function TimerStartSheet() {
             </div>
           )}
 
-          <div className="flex gap-2 overflow-x-auto pb-1">
+          {/* 平铺网格：一行 4 个，超出自动换行（不再横向滚动找）；➕ 与快捷任务同规格，占一个格子 */}
+          <div className="grid grid-cols-4 gap-2 pb-1">
             {quickPresets.map((preset) => {
               const cat = categories.find((c) => c.id === preset.categoryId);
               return (
-                <div key={preset.id} className="relative shrink-0">
+                <div key={preset.id} className="relative">
                   {presetMode === 'edit' && (
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         void deletePreset(preset.id, preset.title);
                       }}
-                      className="absolute -right-1 -top-1 z-10 flex h-4 w-4 items-center justify-center rounded-full bg-neutral-400 text-white"
+                      className="absolute -right-1 -top-1 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-neutral-400 text-white"
                       aria-label="删除"
                     >
-                      <IconClose size={10} className="stroke-white" strokeWidth={2.5} />
+                      <IconClose size={11} className="stroke-white" strokeWidth={2.5} />
                     </button>
                   )}
                   <button
@@ -288,27 +289,26 @@ export default function TimerStartSheet() {
                         void startPreset(preset);
                       }
                     }}
-                    className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] press ${
+                    className={`flex h-[62px] w-full flex-col items-center justify-center gap-1 rounded-xl px-1.5 text-[12px] leading-tight press ${
                       presetMode === 'edit'
                         ? 'border border-dashed border-primary-300 bg-white text-neutral-600'
                         : 'border border-primary-100 bg-white text-neutral-700'
                     }`}
-                    style={{ minHeight: 34 }}
                   >
                     {cat?.color && (
                       <span
-                        className="h-2 w-2 rounded-full"
+                        className="h-1.5 w-1.5 shrink-0 rounded-full"
                         style={{ backgroundColor: cat.color }}
                       />
                     )}
-                    <span>{preset.title}</span>
+                    <span className="line-clamp-2 break-all text-center">{preset.title}</span>
                   </button>
                 </div>
               );
             })}
             <button
               onClick={() => openPresetDraft()}
-              className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full border border-dashed border-primary-300 text-[18px] text-primary-500 press active:bg-primary-50"
+              className="flex h-[62px] w-full items-center justify-center rounded-xl border border-dashed border-primary-300 text-[20px] leading-none text-primary-500 press active:bg-primary-50"
               aria-label="添加快捷计时"
             >
               +
