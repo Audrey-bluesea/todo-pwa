@@ -10,7 +10,7 @@ const MOVE_TOLERANCE = 8;
 const FAB_HINT_KEY = 'xingshilu.fabTimerHinted';
 
 const FAB_EMOJI: Partial<Record<string, string>> = {
-  matcha: '🍵',
+  matcha: '🥑',
   pixel: '🎡',
   spring: '🌸',
   summer: '🎐',
