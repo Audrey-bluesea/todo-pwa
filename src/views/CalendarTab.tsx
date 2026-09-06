@@ -154,7 +154,8 @@ export default function CalendarTab() {
 
       <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
         {searchActive ? (
-          <div className="scroll-y h-full pb-8">
+          // w-full：父级是横向 flex，不加会按内容收缩，导致搜索卡片变「短」
+          <div className="scroll-y h-full w-full pb-8">
             {matchedEntries.length > 0 && (
               <section className="px-3 pt-2">
                 <div className="px-1 pb-1.5 text-[12px] font-medium text-neutral-400">
