@@ -8,7 +8,7 @@ import { effCompletedAt } from '../lib/sort';
 import { scrollMemory } from '../lib/scrollMemory';
 import EmptyState from '../components/EmptyState';
 import SectionTabBar from '../components/SectionTabBar';
-import { IconTimer } from '../components/Icons';
+import { IconChevronDown, IconTimer } from '../components/Icons';
 
 /* ---------- 类型定义 ---------- */
 
@@ -663,6 +663,12 @@ function BoardCard({
   const startTimer = useTimerStore((s) => s.startTimer);
   const showToast = useUIStore((s) => s.showToast);
 
+  // 子任务：与列表视图 TodoCard 一致，卡片上直接展开查看/勾选
+  const toggleSubTask = useDataStore((s) => s.toggleSubTask);
+  const [subExpanded, setSubExpanded] = useState(false);
+  const subCount = t.subTasks?.length ?? 0;
+  const subDone = t.subTasks?.filter((s) => s.isCompleted).length ?? 0;
+
   // 长按 → 拖拽换分组：检测长按（移动/滚动则取消），松手若曾长按则吞掉随后的 click
   const cardRef = useRef<HTMLDivElement>(null);
   const lp = useRef<{ timer: number | null; startX: number; startY: number; moved: boolean; fired: boolean } | null>(null);
@@ -867,6 +873,70 @@ function BoardCard({
             </span>
           ) : null)}
         </div>
+
+        {/* 子任务：与列表视图一致（点标题展开/收起，可直接勾选）。
+            注意都要 stopPropagation：① 避免冒泡到卡片触发打开编辑器；
+            ② pointerdown 也要拦，否则分组模式下会触发长按拖拽换分组。 */}
+        {subCount > 0 && (
+          <>
+            <div className="mt-1 flex">
+              <button
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSubExpanded((v) => !v);
+                }}
+                className="-ml-1.5 flex items-center gap-0.5 rounded-full px-1.5 py-1 text-[11.5px] text-primary-600 press"
+                style={{ minHeight: 32 }}
+                aria-label="展开子任务"
+              >
+                子任务 {subDone}/{subCount}
+                <IconChevronDown
+                  size={13}
+                  className={`transition-transform duration-200 ${subExpanded ? 'rotate-180' : ''}`}
+                />
+              </button>
+            </div>
+            {subExpanded && (
+              <div
+                onPointerDown={(e) => e.stopPropagation()}
+                className="mt-1 space-y-1.5 border-t border-primary-100 pt-2 anim-pop"
+              >
+                {t.subTasks.map((s) => (
+                  <button
+                    key={s.id}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void toggleSubTask(t.id, s.id);
+                    }}
+                    className="flex w-full items-center gap-2 text-left"
+                    style={{ minHeight: 36 }}
+                  >
+                    <span
+                      className={`flex h-[15px] w-[15px] shrink-0 items-center justify-center rounded-[2px] border-[1.4px] ${
+                        s.isCompleted ? 'border-primary-400 bg-primary-400' : 'border-primary-300'
+                      }`}
+                    >
+                      {s.isCompleted && (
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M5 12.5l4.5 4.5L19 7" />
+                        </svg>
+                      )}
+                    </span>
+                    <span
+                      className={`truncate text-[13px] ${
+                        s.isCompleted ? 'text-neutral-400 line-through' : 'text-neutral-600'
+                      }`}
+                    >
+                      {s.content}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </>
+        )}
       </div>
     </div>
   );
