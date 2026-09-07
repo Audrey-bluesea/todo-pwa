@@ -9,11 +9,28 @@ import type {
 } from '../types';
 import { startOfDay } from '../lib/date';
 
-export type ThemeKey = 'matcha' | 'pixel' | 'spring' | 'summer' | 'autumn' | 'winter' | 'blossom';
+export type ThemeKey =
+  | 'matcha'
+  | 'pixel'
+  | 'spring'
+  | 'summer'
+  | 'autumn'
+  | 'winter'
+  | 'blossom'
+  | 'unicorn';
 
 const THEME_KEY = 'xingshilu.theme';
 
-const VALID_THEMES: ThemeKey[] = ['matcha', 'pixel', 'spring', 'summer', 'autumn', 'winter', 'blossom'];
+const VALID_THEMES: ThemeKey[] = [
+  'matcha',
+  'pixel',
+  'spring',
+  'summer',
+  'autumn',
+  'winter',
+  'blossom',
+  'unicorn',
+];
 
 function loadTheme(): ThemeKey {
   try {

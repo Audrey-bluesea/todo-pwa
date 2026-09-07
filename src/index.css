@@ -268,6 +268,44 @@
     --shadow-drawer: 8px 0 32px rgba(60, 130, 128, 0.16);
   }
 
+  /* ============ 🦄 独角兽 · Unicorn（梦幻紫白） ============ */
+  [data-theme='unicorn'] {
+    /* primary 色阶：薰衣草紫 → 深梦幻紫（500 为锚点，白字可辨） */
+    --c-primary-50: 251 249 255;
+    --c-primary-100: 244 239 255;
+    --c-primary-200: 233 224 255;
+    --c-primary-300: 214 198 250;
+    --c-primary-400: 188 163 240;
+    --c-primary-500: 144 112 219; /* 锚点·薰衣草紫 #9070DB */
+    --c-primary-600: 122 88 199;
+    --c-primary-700: 101 68 172; /* 标题·深紫 */
+    --c-primary-800: 80 51 144;
+    --c-primary-900: 61 37 112;
+    /* neutral 色阶：统一带一点紫调，避免发灰发脏 */
+    --c-neutral-50: 250 248 253;
+    --c-neutral-100: 243 238 250;
+    --c-neutral-200: 231 224 244;
+    --c-neutral-300: 214 204 235;
+    --c-neutral-400: 185 174 213; /* 辅助文字 */
+    --c-neutral-500: 156 144 185;
+    --c-neutral-600: 127 114 154;
+    --c-neutral-700: 99 88 121;
+    --c-neutral-800: 74 65 96;
+    /* 语义令牌 */
+    --c-accent: 232 96 155; /* 泡泡糖粉（逾期/紧急，紫底上最跳） */
+    --c-success: 92 191 166; /* 薄荷青（已完成，与紫互补） */
+    --c-star: 92 191 166; /* 点缀色 */
+    --c-ink: 59 47 94; /* 正文/标题（深紫） */
+    --c-border: 226 217 245; /* 极淡紫边 */
+    --c-muted: 176 165 204; /* 辅助灰（偏紫） */
+    --c-appbg: 246 242 254; /* 全局背景·梦幻紫白 */
+    --shadow-card: 0 4px 12px rgba(120, 90, 190, 0.12);
+    --shadow-card-soft: 0 2px 8px rgba(120, 90, 190, 0.14);
+    --shadow-fab: 0 8px 20px rgba(144, 112, 219, 0.45);
+    --shadow-sheet: 0 -8px 32px rgba(101, 68, 172, 0.18);
+    --shadow-drawer: 8px 0 32px rgba(101, 68, 172, 0.16);
+  }
+
 
 /* iOS standalone PWA 高度铁律：html/body/#root 统一 100% + svh/dvh 双保险。
  * 只给 #root 设 dvh、html/body 不设高，会导致 body 高度 auto，flex 根容器无法稳定占满。

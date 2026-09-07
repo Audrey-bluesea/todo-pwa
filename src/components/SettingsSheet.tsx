@@ -58,6 +58,13 @@ const THEMES: {
     emoji: '🌸',
     swatch: ['#4EA09E', '#B9E2DF', '#D2646C', '#488C74'],
   },
+  {
+    key: 'unicorn',
+    name: '独角兽',
+    desc: '梦幻紫白 · 温柔奇幻',
+    emoji: '🦄',
+    swatch: ['#9070DB', '#E9E0FF', '#E8609B', '#5CBFA6'],
+  },
 ];
 
 export default function SettingsSheet({
