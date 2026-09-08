@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Category, Todo } from '../types';
 import { useDataStore } from '../store/dataStore';
 import { useUIStore } from '../store/uiStore';
@@ -41,6 +41,18 @@ export default function TodoCard({ todo, category, showDate, hideCategory, query
     setEditingSubId(null);
     if (id) void updateSubTaskContent(todo.id, id, editingSubText);
   };
+
+  // 编辑框内长按拖光标时不能被外层横滑抢走（列表卡片的滑动删除 / 看板 SwipePager）。
+  // 原生监听 + stopPropagation：在 input 这层就掐断冒泡，与 React 合成事件顺序无关。
+  const subInputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    const el = subInputRef.current;
+    if (!el) return;
+    const stop = (e: Event) => e.stopPropagation();
+    const types = ['touchstart', 'touchmove', 'touchend'] as const;
+    types.forEach((ty) => el.addEventListener(ty, stop));
+    return () => types.forEach((ty) => el.removeEventListener(ty, stop));
+  }, [editingSubId]);
   // 横滑锁：判定为横向手势时掐断纵向滚动（原生 passive:false 监听）
   const { ref: swipeRef, axis, startX } = useAxisLock<HTMLDivElement>();
 
@@ -287,6 +299,7 @@ export default function TodoCard({ todo, category, showDate, hideCategory, query
                     {editingSubId === s.id ? (
                       // 无边框编辑态：视觉上就是原文字「变成了可输入」，位置与复选框居中对齐
                       <input
+                        ref={subInputRef}
                         autoFocus
                         value={editingSubText}
                         onChange={(e) => setEditingSubText(e.target.value)}

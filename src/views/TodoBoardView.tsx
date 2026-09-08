@@ -680,6 +680,19 @@ function BoardCard({
     if (id) void updateSubTaskContent(t.id, id, editingSubText);
   };
 
+  // 编辑框内长按拖光标时，不能被 SwipePager 当成横向手势（否则变成左右滑看板）。
+  // 用「原生监听 + stopPropagation」在 input 这一层就掐断冒泡：事件到不了 React
+  // 根监听器，横滑/卡片滑动都收不到，且不依赖 React 合成事件的模拟顺序。
+  const subInputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    const el = subInputRef.current;
+    if (!el) return;
+    const stop = (e: Event) => e.stopPropagation();
+    const types = ['touchstart', 'touchmove', 'touchend'] as const;
+    types.forEach((ty) => el.addEventListener(ty, stop));
+    return () => types.forEach((ty) => el.removeEventListener(ty, stop));
+  }, [editingSubId]);
+
   // 长按 → 拖拽换分组：检测长按（移动/滚动则取消），松手若曾长按则吞掉随后的 click
   const cardRef = useRef<HTMLDivElement>(null);
   const lp = useRef<{ timer: number | null; startX: number; startY: number; moved: boolean; fired: boolean } | null>(null);
@@ -947,6 +960,7 @@ function BoardCard({
                     {editingSubId === s.id ? (
                       // 无边框编辑态：视觉上就是原文字「变成了可输入」，位置与复选框居中对齐
                       <input
+                        ref={subInputRef}
                         autoFocus
                         value={editingSubText}
                         onChange={(e) => setEditingSubText(e.target.value)}
