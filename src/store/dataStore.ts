@@ -80,6 +80,7 @@ interface DataState {
   updateTodo: (id: string, patch: Partial<Omit<Todo, 'id'>>) => Promise<void>;
   toggleTodo: (id: string) => Promise<void>;
   toggleSubTask: (todoId: string, subId: string) => Promise<void>;
+  updateSubTaskContent: (todoId: string, subId: string, content: string) => Promise<void>;
   removeTodo: (id: string) => Promise<void>;
   reorderTodos: (updates: { id: string; sortOrder: number; categoryId?: string }[]) => Promise<void>;
 }
@@ -347,6 +348,18 @@ export const useDataStore = create<DataState>((set, get) => ({
     const subTasks = cur.subTasks.map((s) =>
       s.id === subId ? { ...s, isCompleted: !s.isCompleted } : s,
     );
+    const next: Todo = { ...cur, subTasks };
+    await db.putTodo(next);
+    set((s) => ({ todos: s.todos.map((t) => (t.id === todoId ? next : t)) }));
+  },
+
+  /** 就地修改子任务文字（空文本视为放弃修改，不改） */
+  async updateSubTaskContent(todoId, subId, content) {
+    const text = content.trim();
+    if (!text) return;
+    const cur = get().todos.find((t) => t.id === todoId);
+    if (!cur) return;
+    const subTasks = cur.subTasks.map((s) => (s.id === subId ? { ...s, content: text } : s));
     const next: Todo = { ...cur, subTasks };
     await db.putTodo(next);
     set((s) => ({ todos: s.todos.map((t) => (t.id === todoId ? next : t)) }));

@@ -663,11 +663,20 @@ function BoardCard({
   const startTimer = useTimerStore((s) => s.startTimer);
   const showToast = useUIStore((s) => s.showToast);
 
-  // 子任务：与列表视图 TodoCard 一致，卡片上直接展开查看/勾选
+  // 子任务：与列表视图 TodoCard 一致 —— 复选框打卡，文字单击就地编辑
   const toggleSubTask = useDataStore((s) => s.toggleSubTask);
+  const updateSubTaskContent = useDataStore((s) => s.updateSubTaskContent);
   const [subExpanded, setSubExpanded] = useState(false);
+  const [editingSubId, setEditingSubId] = useState<string | null>(null);
+  const [editingSubText, setEditingSubText] = useState('');
   const subCount = t.subTasks?.length ?? 0;
   const subDone = t.subTasks?.filter((s) => s.isCompleted).length ?? 0;
+
+  const commitSubEdit = () => {
+    const id = editingSubId;
+    setEditingSubId(null);
+    if (id) void updateSubTaskContent(t.id, id, editingSubText);
+  };
 
   // 长按 → 拖拽换分组：检测长按（移动/滚动则取消），松手若曾长按则吞掉随后的 click
   const cardRef = useRef<HTMLDivElement>(null);
@@ -903,35 +912,71 @@ function BoardCard({
                 className="mt-1 space-y-1.5 border-t border-primary-100 pt-2 anim-pop"
               >
                 {t.subTasks.map((s) => (
-                  <button
+                  // 复选框 = 打卡；文字 = 单击就地编辑（与列表视图一致）。
+                  // pointerdown 也要拦，否则分组模式下会触发长按拖拽换分组。
+                  <div
                     key={s.id}
                     onPointerDown={(e) => e.stopPropagation()}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      void toggleSubTask(t.id, s.id);
-                    }}
-                    className="flex w-full items-center gap-2 text-left"
+                    onClick={(e) => e.stopPropagation()}
+                    className="flex w-full items-start gap-2"
                     style={{ minHeight: 36 }}
                   >
-                    <span
-                      className={`flex h-[15px] w-[15px] shrink-0 items-center justify-center rounded-[2px] border-[1.4px] ${
-                        s.isCompleted ? 'border-primary-400 bg-primary-400' : 'border-primary-300'
-                      }`}
+                    <button
+                      onPointerDown={(e) => e.stopPropagation()}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        void toggleSubTask(t.id, s.id);
+                      }}
+                      className="-m-[7.5px] flex h-[30px] w-[30px] shrink-0 items-center justify-center"
+                      aria-label={s.isCompleted ? `取消完成子任务 ${s.content}` : `完成子任务 ${s.content}`}
                     >
-                      {s.isCompleted && (
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M5 12.5l4.5 4.5L19 7" />
-                        </svg>
-                      )}
-                    </span>
-                    <span
-                      className={`truncate text-[13px] ${
-                        s.isCompleted ? 'text-neutral-400 line-through' : 'text-neutral-600'
-                      }`}
-                    >
-                      {s.content}
-                    </span>
-                  </button>
+                      <span
+                        className={`flex h-[15px] w-[15px] items-center justify-center rounded-[2px] border-[1.4px] ${
+                          s.isCompleted ? 'border-primary-400 bg-primary-400' : 'border-primary-300'
+                        }`}
+                      >
+                        {s.isCompleted && (
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M5 12.5l4.5 4.5L19 7" />
+                          </svg>
+                        )}
+                      </span>
+                    </button>
+                    {editingSubId === s.id ? (
+                      <input
+                        autoFocus
+                        value={editingSubText}
+                        onChange={(e) => setEditingSubText(e.target.value)}
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={(e) => e.stopPropagation()}
+                        onBlur={commitSubEdit}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            commitSubEdit();
+                          } else if (e.key === 'Escape') {
+                            e.preventDefault();
+                            setEditingSubId(null);
+                          }
+                        }}
+                        className="mt-[1px] min-w-0 flex-1 rounded-md border border-primary-200 bg-white px-1.5 py-[3px] text-[13px] text-neutral-700 outline-none focus:border-primary-400"
+                      />
+                    ) : (
+                      <button
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingSubId(s.id);
+                          setEditingSubText(s.content);
+                        }}
+                        className={`min-w-0 flex-1 break-words text-left text-[13px] leading-snug ${
+                          s.isCompleted ? 'text-neutral-400 line-through' : 'text-neutral-600'
+                        }`}
+                      >
+                        {s.content}
+                      </button>
+                    )}
+                  </div>
                 ))}
               </div>
             )}

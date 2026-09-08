@@ -23,6 +23,7 @@ interface Props {
 export default function TodoCard({ todo, category, showDate, hideCategory, query = '', onCheck }: Props) {
   const toggleTodo = useDataStore((s) => s.toggleTodo);
   const toggleSubTask = useDataStore((s) => s.toggleSubTask);
+  const updateSubTaskContent = useDataStore((s) => s.updateSubTaskContent);
   const removeTodo = useDataStore((s) => s.removeTodo);
   const openEditor = useUIStore((s) => s.openEditor);
   const showToast = useUIStore((s) => s.showToast);
@@ -31,6 +32,15 @@ export default function TodoCard({ todo, category, showDate, hideCategory, query
   const [expanded, setExpanded] = useState(false);
   const [offset, setOffset] = useState(0);
   const moved = useRef(false);
+  /** 正在就地编辑的子任务 id + 草稿文字 */
+  const [editingSubId, setEditingSubId] = useState<string | null>(null);
+  const [editingSubText, setEditingSubText] = useState('');
+
+  const commitSubEdit = () => {
+    const id = editingSubId;
+    setEditingSubId(null);
+    if (id) void updateSubTaskContent(todo.id, id, editingSubText);
+  };
   // 横滑锁：判定为横向手势时掐断纵向滚动（原生 passive:false 监听）
   const { ref: swipeRef, axis, startX } = useAxisLock<HTMLDivElement>();
 
@@ -230,6 +240,7 @@ export default function TodoCard({ todo, category, showDate, hideCategory, query
                   }}
                   className="flex items-center gap-0.5 rounded-full px-2 py-1 text-[11.5px] text-primary-600 press"
                   style={{ minHeight: 32 }}
+                  aria-label="展开子任务"
                 >
                   子任务 {subDone}/{todo.subTasks.length}
                   <IconChevronDown
@@ -244,34 +255,69 @@ export default function TodoCard({ todo, category, showDate, hideCategory, query
             {expanded && todo.subTasks.length > 0 && (
               <div className="mt-2 space-y-1.5 border-t border-primary-100 pt-2 anim-pop">
                 {todo.subTasks.map((s) => (
-                  <button
+                  // 复选框 = 打卡（勾选完成）；文字 = 单击就地编辑。
+                  // 整行 stopPropagation，避免点空白冒泡到卡片把编辑器也打开。
+                  <div
                     key={s.id}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleSubTask(todo.id, s.id);
-                    }}
-                    className="flex w-full items-center gap-2 text-left"
+                    onClick={(e) => e.stopPropagation()}
+                    className="flex w-full items-start gap-2"
                     style={{ minHeight: 36 }}
                   >
-                    <span
-                      className={`flex h-[15px] w-[15px] shrink-0 items-center justify-center rounded-[2px] border-[1.4px] ${
-                        s.isCompleted ? 'border-primary-400 bg-primary-400' : 'border-primary-300'
-                      }`}
+                    {/* 复选框：30px 触控区（负 margin 抵消，视觉仍是 15px 小方块） */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        void toggleSubTask(todo.id, s.id);
+                      }}
+                      className="-m-[7.5px] flex h-[30px] w-[30px] shrink-0 items-center justify-center"
+                      aria-label={s.isCompleted ? `取消完成子任务 ${s.content}` : `完成子任务 ${s.content}`}
                     >
-                      {s.isCompleted && (
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M5 12.5l4.5 4.5L19 7" />
-                        </svg>
-                      )}
-                    </span>
-                    <span
-                      className={`truncate text-[13px] ${
-                        s.isCompleted ? 'text-neutral-400 line-through' : 'text-neutral-600'
-                      }`}
-                    >
-                      {s.content}
-                    </span>
-                  </button>
+                      <span
+                        className={`flex h-[15px] w-[15px] items-center justify-center rounded-[2px] border-[1.4px] ${
+                          s.isCompleted ? 'border-primary-400 bg-primary-400' : 'border-primary-300'
+                        }`}
+                      >
+                        {s.isCompleted && (
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M5 12.5l4.5 4.5L19 7" />
+                          </svg>
+                        )}
+                      </span>
+                    </button>
+                    {editingSubId === s.id ? (
+                      <input
+                        autoFocus
+                        value={editingSubText}
+                        onChange={(e) => setEditingSubText(e.target.value)}
+                        onClick={(e) => e.stopPropagation()}
+                        onBlur={commitSubEdit}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            commitSubEdit();
+                          } else if (e.key === 'Escape') {
+                            e.preventDefault();
+                            setEditingSubId(null);
+                          }
+                        }}
+                        className="mt-[1px] min-w-0 flex-1 rounded-md border border-primary-200 bg-white px-1.5 py-[3px] text-[13px] text-neutral-700 outline-none focus:border-primary-400"
+                      />
+                    ) : (
+                      // 文字可换行完整显示（不再 truncate 截断成长长一条省略号）
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingSubId(s.id);
+                          setEditingSubText(s.content);
+                        }}
+                        className={`min-w-0 flex-1 break-words text-left text-[13px] leading-snug ${
+                          s.isCompleted ? 'text-neutral-400 line-through' : 'text-neutral-600'
+                        }`}
+                      >
+                        {s.content}
+                      </button>
+                    )}
+                  </div>
                 ))}
               </div>
             )}
