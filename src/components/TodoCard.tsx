@@ -260,7 +260,7 @@ export default function TodoCard({ todo, category, showDate, hideCategory, query
                   <div
                     key={s.id}
                     onClick={(e) => e.stopPropagation()}
-                    className="flex w-full items-start gap-2"
+                    className="flex w-full items-center gap-2"
                     style={{ minHeight: 36 }}
                   >
                     {/* 复选框：30px 触控区（负 margin 抵消，视觉仍是 15px 小方块） */}
@@ -285,6 +285,7 @@ export default function TodoCard({ todo, category, showDate, hideCategory, query
                       </span>
                     </button>
                     {editingSubId === s.id ? (
+                      // 无边框编辑态：视觉上就是原文字「变成了可输入」，位置与复选框居中对齐
                       <input
                         autoFocus
                         value={editingSubText}
@@ -300,7 +301,7 @@ export default function TodoCard({ todo, category, showDate, hideCategory, query
                             setEditingSubId(null);
                           }
                         }}
-                        className="mt-[1px] min-w-0 flex-1 rounded-md border border-primary-200 bg-white px-1.5 py-[3px] text-[13px] text-neutral-700 outline-none focus:border-primary-400"
+                        className="min-w-0 flex-1 border-0 bg-transparent p-0 text-[13px] leading-snug text-neutral-700 caret-primary-500 outline-none"
                       />
                     ) : (
                       // 文字可换行完整显示（不再 truncate 截断成长长一条省略号）

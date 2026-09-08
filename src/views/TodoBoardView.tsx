@@ -584,8 +584,10 @@ export default function TodoBoardView({
                 return (
                   <div
                     key={t.id}
+                    // max-h 只是给「打卡收起」动画用的：收起时 2000→0 配合 overflow-hidden 裁剪。
+                    // 非收起态不能给小上限（原 max-h-40=160px 会把展开子任务的长卡片直接裁掉）。
                     className={`overflow-hidden transition-all duration-300 ease-out ${
-                      isCollapse ? 'max-h-0 opacity-0' : 'max-h-40 opacity-100'
+                      isCollapse ? 'max-h-0 opacity-0' : 'max-h-[2000px] opacity-100'
                     }`}
                   >
                     <BoardCard
@@ -918,7 +920,7 @@ function BoardCard({
                     key={s.id}
                     onPointerDown={(e) => e.stopPropagation()}
                     onClick={(e) => e.stopPropagation()}
-                    className="flex w-full items-start gap-2"
+                    className="flex w-full items-center gap-2"
                     style={{ minHeight: 36 }}
                   >
                     <button
@@ -943,6 +945,7 @@ function BoardCard({
                       </span>
                     </button>
                     {editingSubId === s.id ? (
+                      // 无边框编辑态：视觉上就是原文字「变成了可输入」，位置与复选框居中对齐
                       <input
                         autoFocus
                         value={editingSubText}
@@ -959,7 +962,7 @@ function BoardCard({
                             setEditingSubId(null);
                           }
                         }}
-                        className="mt-[1px] min-w-0 flex-1 rounded-md border border-primary-200 bg-white px-1.5 py-[3px] text-[13px] text-neutral-700 outline-none focus:border-primary-400"
+                        className="min-w-0 flex-1 border-0 bg-transparent p-0 text-[13px] leading-snug text-neutral-700 caret-primary-500 outline-none"
                       />
                     ) : (
                       <button
