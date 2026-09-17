@@ -222,7 +222,7 @@ export default function TodoTab() {
     >
       {/* 同 CalendarTab：header 不加 z-index（iOS 27 会把带层叠上下文的层按 1x 栅格化，标题变糊）。
           分段控件的下拉浮层自带 z-30/z-40，这里只给它自身补 relative z-30。 */}
-      <header className="shrink-0 pt-safe">
+      <header className="shrink-0 pt-safe tg-glow">
         <div className="flex items-center gap-1 px-2 pt-1">
           <button
             onClick={() => setDrawerOpen(true)}

@@ -655,7 +655,7 @@ export default function Drawer() {
         onTouchMove={handlePanelTouchMove}
         onTouchEnd={handlePanelTouchEnd}
       >
-        <div className="pt-safe">
+        <div className="pt-safe tg-glow">
           <div className="flex items-start justify-between px-5 pb-3 pt-4">
             <div>
               <div className="text-[22px] font-bold leading-tight text-primary-700">行时录</div>

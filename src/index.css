@@ -9,6 +9,9 @@
     --sal: env(safe-area-inset-left, 0px);
     --sar: env(safe-area-inset-right, 0px);
     --tabbar-h: 56px;
+    /* 顶部「玻璃渗出带」让位量：iOS 27 主屏 PWA 上给 .pt-safe 额外加的高度。
+       0 表示不让位；由 html.glasstop 决定是否生效（见文件末尾的规避规则）。 */
+    --tg: 36px;
 
     /* ============ 🍵 抹茶绿主题（默认）============ */
     /* primary 色阶（RGB 三元组） */
@@ -427,6 +430,29 @@ body,
   }
   .pb-safe {
     padding-bottom: var(--sab);
+  }
+
+  /* ===== iOS 27 顶部「玻璃渗出带」规避 =====
+     现象（真机逐 1pt 行实测）：iOS 27 主屏 PWA 的状态栏是 Liquid Glass 材质，
+     会对状态栏下方约 35pt（59→94pt）的网页内容做渐进模糊，清晰度比值从 0.14
+     一路恢复到 94pt 的 1.00；同一 header 内 94pt 以下的部分像素级清晰。
+     结论：这是系统对网页内容的采样，**无法用 CSS 关闭**，只能让文字离开这条带。
+     做法：文字整体下移 --tg(36px)，并用主题色柔光渐变把这条带填满 ——
+     模糊打在没有细节的渐变上肉眼完全看不出，视觉上是「顶部一层柔光」而非空白。
+     仅在 html.glasstop 下生效（main.tsx 判定：standalone 且 iOS >= 27），
+     桌面 / Safari 内浏览 / iOS 26 及更早完全不受影响。 */
+  html.glasstop .pt-safe {
+    padding-top: calc(var(--sat) + var(--tg));
+  }
+  html.glasstop .tg-glow {
+    background-image: linear-gradient(
+      180deg,
+      rgb(var(--c-primary-300) / 0.42) 0px,
+      rgb(var(--c-primary-200) / 0.26) 40px,
+      rgb(var(--c-primary-100) / 0.12) 68px,
+      rgb(var(--c-primary-50) / 0) calc(var(--sat) + var(--tg))
+    );
+    background-repeat: no-repeat;
   }
   .h-dvh {
     height: 100vh;

@@ -33,6 +33,32 @@ if (window.visualViewport) {
   window.visualViewport.addEventListener('scroll', fitRootToViewport);
 }
 
+/* ============================================================
+ * iOS 27 顶部玻璃渗出带规避开关
+ * ------------------------------------------------------------
+ * 判定：主屏 PWA（display-mode: standalone / navigator.standalone）
+ *       + iOS 主版本 >= 27（Liquid Glass 状态栏开始外渗的版本）。
+ * 命中后给 <html> 加 glasstop，触发 index.css 里的两条规则：
+ *   1) .pt-safe 顶部多让出 --tg(36px)，把文字推到 95pt 以下；
+ *   2) .tg-glow 用主题色柔光渐变填满这条带，模糊落在纯色/渐变上看不出来。
+ * 未命中（桌面、Safari 内浏览、iOS 26 及更早）布局与观感完全不变。
+ * ============================================================ */
+function applyGlassTopGuard() {
+  try {
+    const standalone =
+      window.matchMedia?.('(display-mode: standalone)').matches === true ||
+      (navigator as unknown as { standalone?: boolean }).standalone === true;
+    const m = /(?:iPhone|iPad|iPod).*?OS (\d+)_/.exec(navigator.userAgent);
+    const major = m ? parseInt(m[1], 10) : 0;
+    if (standalone && major >= 27) {
+      document.documentElement.classList.add('glasstop');
+    }
+  } catch {
+    /* 判定失败就不加，保持原样 */
+  }
+}
+applyGlassTopGuard();
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <App />

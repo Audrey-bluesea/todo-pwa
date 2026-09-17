@@ -75,7 +75,7 @@ export default function CalendarTab() {
       {/* 铁律：header 上**不要**加 z-index。z-index 会让这个 flex item 变成独立层叠上下文，
           iOS 27 的 WebKit 会把这类层按 1x 栅格化再放大到 3x，整行标题变糊（已实测）。
           下拉浮层自带 z-30/z-40，不需要 header 提供层叠上下文。 */}
-      <header className="shrink-0 pt-safe">
+      <header className="shrink-0 pt-safe tg-glow">
         {searchActive ? (
           <div className="flex items-center gap-2 px-3 pb-2 pt-2">
             <div className="min-w-0 flex-1">

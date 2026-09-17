@@ -14,11 +14,12 @@
     <!-- iOS 全屏 Web App -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
-    <!-- 状态栏样式：iOS 27 下 black-translucent 会让系统对状态栏下方约 35pt 的网页内容
-         做「渐进模糊」（Liquid Glass 材质外渗），顶部文字发虚。
-         改成 default 让状态栏不透明、网页内容不再被材质采样。
-         安全区仍走 env()：若系统把网页区域内缩，--sat/--sab 会自动变 0，布局自适应。 -->
-    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <!-- 状态栏样式：保持 black-translucent。
+         实测（真机逐像素）：iOS 27 即便用 default，状态栏仍是玻璃材质，仍会对状态栏
+         下方约 35pt 的网页内容做渐进模糊；而 black-translucent 下状态栏文字是深色、
+         底色沿用页面背景，观感更好，且底部安全区(--sab=34)是已验证可用的状态。
+         顶部模糊改用「柔光渐变 + 文字下移」规避（见 index.css 的 html.glasstop）。 -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="行时录" />
     <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
 
