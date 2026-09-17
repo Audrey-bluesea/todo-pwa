@@ -612,13 +612,16 @@ export default function TodoEditorSheet() {
         }}
       />
 
+      {/* 面板必须是纵向 flex：max-h 90dvh 封顶后靠内容区 flex-1 收缩让位。
+          否则（纯 block + overflow-hidden）内容一超长就把底部 footer 连同 pb-safe
+          整个裁掉 —— 真机表现就是「确认添加」贴到屏幕最底（实测只剩 2pt）。 */}
       <div
         ref={sheetRef}
         onTouchStart={onSheetTouchStart}
         onTouchMove={onSheetTouchMove}
         onTouchEnd={onSheetTouchEnd}
         onTouchCancel={onSheetTouchCancel}
-        className={`relative max-h-[90dvh] w-full overflow-hidden rounded-t-[24px] bg-white shadow-sheet ${
+        className={`relative flex max-h-[90dvh] w-full flex-col overflow-hidden rounded-t-[24px] bg-white shadow-sheet ${
           closing ? '' : 'anim-sheet'
         }`}
         style={{
@@ -627,12 +630,12 @@ export default function TodoEditorSheet() {
         }}
       >
         {/* 拖拽把手：视觉指示，整个 sheet 都支持下拉收起 */}
-        <div className="flex h-8 w-full items-center justify-center">
+        <div className="flex h-8 w-full shrink-0 items-center justify-center">
           <span className="h-[5px] w-10 rounded-full bg-primary-200" />
         </div>
 
         {/* 头部栏 */}
-        <div className="flex items-center justify-between px-5 pb-2">
+        <div className="flex shrink-0 items-center justify-between px-5 pb-2">
           <button onClick={handleClose} className="-ml-2 px-2 text-[15px] text-neutral-500 press" style={{ minHeight: 44 }}>
             取消
           </button>
@@ -648,7 +651,10 @@ export default function TodoEditorSheet() {
           )}
         </div>
 
-        <div ref={contentRef} className="scroll-y max-h-[calc(90dvh-150px)] px-5 pb-3">
+        {/* 内容区：flex-1 + min-h-0，由它吸收「面板被 max-h 封顶」后的多余高度，
+            原来写死的 max-h-[calc(90dvh-150px)] 没算上页脚真实高度（≈191px），
+            内容一长就会溢出面板、把页脚顶出可视区。 */}
+        <div ref={contentRef} className="scroll-y min-h-0 flex-1 px-5 pb-3">
           {/* ① 清单选择：emoji + name + chevron */}
           <button
             onClick={() => setShowCatPicker(!showCatPicker)}
@@ -1042,7 +1048,7 @@ export default function TodoEditorSheet() {
         </div>
 
         {/* 操作区 */}
-        <div className="border-t border-primary-100 bg-white px-5 pt-3 pb-safe">
+        <div className="shrink-0 border-t border-primary-100 bg-white px-5 pt-3 pb-safe">
           <button onClick={submit}
             className="mb-3 w-full rounded-2xl bg-primary-500 py-3.5 text-[16px] font-semibold text-white press active:bg-primary-600"
             style={{ minHeight: 48 }}
