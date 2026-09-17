@@ -148,11 +148,13 @@ export default function TabBar() {
     { key: 'calendar' as const, label: '日历', Icon: IconCalendar },
   ];
 
-  // FAB：与 v16 一致，在 TabBar 上方一点
+  // FAB：与 v16 一致，在 TabBar 上方一点。
+  // iOS 27 起主屏 Web App 视口铺满整块物理屏，fixed 元素不再被系统自动抬到 Home 指示条之上，
+  // 故此处需自行叠加 var(--sab)（= env(safe-area-inset-bottom)）；旧系统该值为 0，位置不变。
   const fabStyle: React.CSSProperties = {
     position: 'fixed',
     right: 16,
-    bottom: 58,
+    bottom: 'calc(58px + var(--sab))',
     zIndex: 50,
   };
 
@@ -182,12 +184,14 @@ export default function TabBar() {
           z-[30] 低于所有浮层打开态(40~60)，打开浮层时浮层会盖住 TabBar（正确）；
           日常所有浮层关闭态均不渲染或 pointer-events-none，故 TabBar 可正常点击。 */}
       {/* TabBar —— in-flow flex（真机 standalone 可滑动）+ relative z-[30]。
-          总高 48px 与旧版视觉高度一致；按钮顶部留空、底部贴边，避免图标贴顶。 */}
+          按钮行固定 48px；下方再补 pb-safe（= env(safe-area-inset-bottom)）：
+          iOS 27 起主屏 Web App 视口改为铺满整块物理屏（含 Home 指示条），
+          不补安全区的话整条 TabBar 会压在指示条上。旧系统该值为 0，视觉不变。 */}
       <nav
-        className="tabbar relative z-[30] flex h-12 shrink-0 flex-col border-t border-primary-100 bg-appbg pointer-events-auto"
+        className="tabbar relative z-[30] flex shrink-0 flex-col border-t border-primary-100 bg-appbg pb-safe pointer-events-auto"
         style={{ boxShadow: '0 -2px 12px rgba(107, 170, 122, 0.08)' }}
       >
-        <div className="flex h-full w-full items-start justify-around">
+        <div className="flex h-12 w-full shrink-0 items-start justify-around">
           {items.map(({ key, label, Icon }) => {
             const active = tab === key;
             return (

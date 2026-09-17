@@ -43,10 +43,10 @@ export default function TimerBubble() {
         onClick={() => setExpanded(true)}
         className="fixed left-4 z-40 flex items-center gap-2 rounded-full border border-primary-200 bg-primary-100 px-3 py-2 shadow-fab press active:bg-primary-200 anim-pop"
         // 与 FAB 平行（垂直居中对齐）：
-        // 两者同为 position:fixed，iOS standalone 下 fixed 元素已被锚在安全区之上，
-        // 故此处**不能再叠加 var(--sab)**（叠加会让胶囊比 FAB 高出一整个安全区高度）。
         // --tabbar-h(56) + 12 = 68；胶囊高约 37 → 中心 68+18.5 ≈ FAB(bottom 58 / 高 56) 的中心 86。
-        style={{ bottom: 'calc(var(--tabbar-h) + 12px)' }}
+        // iOS 27 起视口铺满物理屏、fixed 不再被系统抬到安全区之上，故与 FAB 同步叠加 var(--sab)
+        // （旧系统该值为 0，位置不变；FAB 见 TabBar.tsx 的 fabStyle）。
+        style={{ bottom: 'calc(var(--tabbar-h) + 12px + var(--sab))' }}
         aria-label="计时中，点击展开"
       >
         <span className="flex h-5 w-5 items-center justify-center rounded-lg bg-primary-500">
@@ -64,7 +64,7 @@ export default function TimerBubble() {
   return (
     <div
       className="fixed left-4 z-40 w-[260px] rounded-2xl border border-primary-200 bg-white p-3 shadow-fab anim-pop"
-      style={{ bottom: 56 }}
+      style={{ bottom: 'calc(56px + var(--sab))' }}
     >
       <div className="mb-2 flex items-center justify-between">
         <span className="flex items-center gap-1.5 text-[13px] font-semibold text-primary-700">

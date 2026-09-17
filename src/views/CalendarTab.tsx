@@ -72,7 +72,10 @@ export default function CalendarTab() {
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-      <header className="shrink-0 pt-safe z-30">
+      {/* 铁律：header 上**不要**加 z-index。z-index 会让这个 flex item 变成独立层叠上下文，
+          iOS 27 的 WebKit 会把这类层按 1x 栅格化再放大到 3x，整行标题变糊（已实测）。
+          下拉浮层自带 z-30/z-40，不需要 header 提供层叠上下文。 */}
+      <header className="shrink-0 pt-safe">
         {searchActive ? (
           <div className="flex items-center gap-2 px-3 pb-2 pt-2">
             <div className="min-w-0 flex-1">
@@ -90,12 +93,15 @@ export default function CalendarTab() {
           <>
             {/* 第一行：视图切换 + 标题 + 操作按钮 */}
             <div className="flex items-center gap-1 px-2 pt-1.5">
-              {/* 左上角：视图切换下拉 */}
-              <ViewDropdown
-                options={CAL_VIEW_OPTIONS}
-                value={view}
-                onChange={(v) => setView(v as CalendarViewMode)}
-              />
+              {/* 左上角：视图切换下拉（自身带 z-30 遮罩 / z-40 面板，故这里补一层 relative z-30，
+                  替代原本挂在 header 上的 z-30，保证浮层仍盖在内容之上） */}
+              <div className="relative z-30">
+                <ViewDropdown
+                  options={CAL_VIEW_OPTIONS}
+                  value={view}
+                  onChange={(v) => setView(v as CalendarViewMode)}
+                />
+              </div>
 
               <button onClick={() => step(-1)} className="hit text-primary-500 press" aria-label="上一页">
                 <IconChevronLeft size={20} />

@@ -220,7 +220,9 @@ export default function TodoTab() {
       onTouchMove={handleEdgeTouchMove}
       onTouchEnd={handleEdgeTouchEnd}
     >
-      <header className="shrink-0 pt-safe z-30">
+      {/* 同 CalendarTab：header 不加 z-index（iOS 27 会把带层叠上下文的层按 1x 栅格化，标题变糊）。
+          分段控件的下拉浮层自带 z-30/z-40，这里只给它自身补 relative z-30。 */}
+      <header className="shrink-0 pt-safe">
         <div className="flex items-center gap-1 px-2 pt-1">
           <button
             onClick={() => setDrawerOpen(true)}
@@ -236,7 +238,7 @@ export default function TodoTab() {
               内部横向 pager 把 flex 容器撑宽后，右侧按钮被挤出屏幕右边。
               注：计时入口已移除，统一到 FAB（轻点新建 / 长按计时），故此处不再放计时按钮。 */}
           {!searchActive && (
-            <div className="flex shrink-0 items-center gap-1">
+            <div className="relative z-30 flex shrink-0 items-center gap-1">
               <ViewSegment
                 isBoard={isBoardView}
                 onSelectList={handleSelectList}
