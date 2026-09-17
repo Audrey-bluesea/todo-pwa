@@ -14,7 +14,11 @@
     <!-- iOS 全屏 Web App -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <!-- 状态栏样式：iOS 27 下 black-translucent 会让系统对状态栏下方约 35pt 的网页内容
+         做「渐进模糊」（Liquid Glass 材质外渗），顶部文字发虚。
+         改成 default 让状态栏不透明、网页内容不再被材质采样。
+         安全区仍走 env()：若系统把网页区域内缩，--sat/--sab 会自动变 0，布局自适应。 -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="行时录" />
     <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
 
