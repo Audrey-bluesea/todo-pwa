@@ -29,6 +29,61 @@
   </head>
   <body>
     <div id="root"></div>
+
+    <!-- ================= 临时自检（定位 iOS 27 底部安全区异常，定位完即删） =================
+         ① 屏幕最上方 3px 青线 = 页面坐标系顶边；最下方 3px 品红线 = 页面坐标系底边。
+            若品红线正好贴在屏幕最下沿 ⇒ 页面能画到最底（安全区报大了）；
+            若它悬空在离底边约 60pt 处 ⇒ 系统把底部整段让出去了（另一种修法）。
+         ② 顶部白条显示实测数值（innerHeight / screen.height / sat / sab / display-mode）。 -->
+    <div style="position:fixed;left:0;right:0;top:0;height:3px;background:#00e5ff;z-index:2147483647;pointer-events:none"></div>
+    <div style="position:fixed;left:0;right:0;bottom:0;height:3px;background:#ff00e5;z-index:2147483647;pointer-events:none"></div>
+    <div id="__diag" style="position:fixed;left:0;right:0;top:0;z-index:2147483647;pointer-events:none;background:rgba(255,255,255,.97);border-bottom:1px solid #e2e2e2;color:#111;font:11.5px/1.5 ui-monospace,Menlo,monospace;padding:6px 8px;padding-top:calc(env(safe-area-inset-top,0px) + 6px);white-space:pre-wrap"></div>
+    <script>
+      (function () {
+        function upd() {
+          var cs = getComputedStyle(document.documentElement);
+          var probe = document.createElement('div');
+          probe.style.cssText = 'position:absolute;left:-9999px;width:1px;padding-bottom:env(safe-area-inset-bottom,0px);padding-top:env(safe-area-inset-top,0px)';
+          document.body.appendChild(probe);
+          var pcs = getComputedStyle(probe);
+          var rawSab = pcs.paddingBottom, rawSat = pcs.paddingTop;
+          document.body.removeChild(probe);
+          var ua = navigator.userAgent;
+          var m = /(?:iPhone|iPad|iPod).*?OS (\d+_\d+)/.exec(ua);
+          var vv = window.visualViewport;
+          var lines = [
+            'inner ' + window.innerWidth + 'x' + window.innerHeight +
+              '   screen ' + screen.width + 'x' + screen.height + '   dpr ' + window.devicePixelRatio,
+            'rawInsat ' + rawSat + ' / ' + rawSab +
+              '   --sat ' + cs.getPropertyValue('--sat').trim() +
+              '   --sab ' + cs.getPropertyValue('--sab').trim(),
+            (vv ? 'vv ' + Math.round(vv.width) + 'x' + Math.round(vv.height) + ' scale ' + vv.scale.toFixed(2) + ' top ' + Math.round(vv.offsetTop) : 'vv n/a') +
+              '   mode ' + (window.matchMedia('(display-mode: standalone)').matches ? 'standalone' : 'browser') +
+              (navigator.standalone ? '/navStandalone' : '') +
+              '   glasstop ' + (document.documentElement.classList.contains('glasstop') ? 1 : 0) +
+              '   iOS ' + (m ? m[1] : '?'),
+          ];
+          var el = document.getElementById('__diag');
+          if (el) el.textContent = lines.join('\n');
+        }
+        function boot() { upd(); }
+        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+        window.addEventListener('resize', upd);
+        window.addEventListener('orientationchange', function () { setTimeout(upd, 300); });
+        if (window.visualViewport) {
+          window.visualViewport.addEventListener('resize', upd);
+          window.visualViewport.addEventListener('scroll', upd);
+        }
+        /* 60 秒后自动撤掉自检标记（看错过的把 App 划掉重开即可再见） */
+        setTimeout(function () {
+          var box = document.getElementById('__diag');
+          if (box) box.remove();
+          var bars = document.querySelectorAll('div[style*="2147483647"]');
+          for (var i = 0; i < bars.length; i++) bars[i].remove();
+        }, 60000);
+      })();
+    </script>
+
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

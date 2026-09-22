@@ -78,7 +78,7 @@ export default function App() {
       <TimerEntryEditSheet />
 
       {toast && (
-        <div className="pointer-events-none fixed inset-x-0 z-[60] flex justify-center" style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 100px)' }}>
+        <div className="pointer-events-none fixed inset-x-0 z-[60] flex justify-center" style={{ bottom: 'calc(var(--sab) + 100px)' }}>
           <div className="flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-4 py-2 text-[13px] font-medium text-neutral-800 shadow-card anim-pop">
             <span>{toast}</span>
             {toastAction && (

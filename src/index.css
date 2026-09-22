@@ -5,7 +5,13 @@
 @layer base {
   :root {
     --sat: env(safe-area-inset-top, 0px);
-    --sab: env(safe-area-inset-bottom, 0px);
+    /* 底部安全区做「上限保护」：真机实测（iPhone 17 Pro Max + iOS 27 + 主屏 PWA）
+       系统会把 safe-area-inset-bottom 报成 ≈96px（= 顶部安全区 62 + Home 指示条 34），
+       而页面坐标系其实是铺满整块屏的。后果：TabBar / FAB / 计时胶囊整条上飘 ~62pt，
+       底部露出一大块空白，内容区（列表 / 看板列）也跟着变矮、卡片被截。
+       iPhone 的底部安全区真值最大只有 34px（竖屏）/ 21px（横屏），故此处夹到 ≤40px。
+       正常机型（报 34）不受影响。 */
+    --sab: min(env(safe-area-inset-bottom, 0px), 40px);
     --sal: env(safe-area-inset-left, 0px);
     --sar: env(safe-area-inset-right, 0px);
     --tabbar-h: 56px;
