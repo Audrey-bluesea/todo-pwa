@@ -14,12 +14,17 @@
     <!-- iOS 全屏 Web App -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
-    <!-- 状态栏样式：保持 black-translucent。
-         实测（真机逐像素）：iOS 27 即便用 default，状态栏仍是玻璃材质，仍会对状态栏
-         下方约 35pt 的网页内容做渐进模糊；而 black-translucent 下状态栏文字是深色、
-         底色沿用页面背景，观感更好，且底部安全区(--sab=34)是已验证可用的状态。
-         顶部模糊改用「柔光渐变 + 文字下移」规避（见 index.css 的 html.glasstop）。 -->
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <!-- 状态栏样式：改回 default。
+         【真机数据（iPhone 18 Pro Max, 440x956）推翻了之前的判断】
+         black-translucent 下实测：inner 440x894（= 956 − 62）、--sat 62px、--sab 34px。
+         即：网页坐标系只有 894 高、顶边贴屏幕顶，屏幕最下 62pt 不属于网页
+         （自检品红线画在 891–894pt，离屏幕底 62pt）。
+         后果：TabBar / FAB / 计时胶囊整条停在 894pt，下方空出 62pt；
+         内容区同时矮 62pt，看板列被挤短。
+         注意：--sab 本身是正常值 34px，所以上一版的 min(...,40px) 夹取对此无效。
+         default 让系统按「网页区域从状态栏下方开始」的标准路径布局，
+         预期网页底边落回屏幕底。效果由自检品红线位置判定。 -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="行时录" />
     <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
 
@@ -35,9 +40,13 @@
             若品红线正好贴在屏幕最下沿 ⇒ 页面能画到最底（安全区报大了）；
             若它悬空在离底边约 60pt 处 ⇒ 系统把底部整段让出去了（另一种修法）。
          ② 顶部白条显示实测数值（innerHeight / screen.height / sat / sab / display-mode）。 -->
-    <div style="position:fixed;left:0;right:0;top:0;height:3px;background:#00e5ff;z-index:2147483647;pointer-events:none"></div>
     <div style="position:fixed;left:0;right:0;bottom:0;height:3px;background:#ff00e5;z-index:2147483647;pointer-events:none"></div>
+    <div style="position:fixed;left:0;right:0;bottom:-8px;height:6px;background:#22c55e;z-index:2147483647;pointer-events:none"></div>
     <div id="__diag" style="position:fixed;left:0;right:0;top:0;z-index:2147483647;pointer-events:none;background:rgba(255,255,255,.97);border-bottom:1px solid #e2e2e2;color:#111;font:11.5px/1.5 ui-monospace,Menlo,monospace;padding:6px 8px;padding-top:calc(env(safe-area-inset-top,0px) + 6px);white-space:pre-wrap"></div>
+    <!-- 青线放最后 ⇒ 同 z-index 下层级最高，不会被诊断白条盖住。
+         它在屏幕上的位置 = 网页坐标系顶边：贴屏幕最顶 ⇒ 网页含状态栏区域；
+         出现在状态栏下方约 62pt 处 ⇒ 网页从状态栏下方开始（default 生效）。 -->
+    <div style="position:fixed;left:0;right:0;top:0;height:3px;background:#00e5ff;z-index:2147483647;pointer-events:none"></div>
     <script>
       (function () {
         function upd() {
@@ -50,16 +59,17 @@
           document.body.removeChild(probe);
           var ua = navigator.userAgent;
           var m = /(?:iPhone|iPad|iPod).*?OS (\d+_\d+)/.exec(ua);
-          var vv = window.visualViewport;
+          var sbMeta = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');
+          var gap = Math.round(screen.height - window.innerHeight);
           var lines = [
             'inner ' + window.innerWidth + 'x' + window.innerHeight +
-              '   screen ' + screen.width + 'x' + screen.height + '   dpr ' + window.devicePixelRatio,
+              '   screen ' + screen.width + 'x' + screen.height +
+              '   gap ' + gap + '   dpr ' + window.devicePixelRatio,
             'rawInsat ' + rawSat + ' / ' + rawSab +
               '   --sat ' + cs.getPropertyValue('--sat').trim() +
               '   --sab ' + cs.getPropertyValue('--sab').trim(),
-            (vv ? 'vv ' + Math.round(vv.width) + 'x' + Math.round(vv.height) + ' scale ' + vv.scale.toFixed(2) + ' top ' + Math.round(vv.offsetTop) : 'vv n/a') +
-              '   mode ' + (window.matchMedia('(display-mode: standalone)').matches ? 'standalone' : 'browser') +
-              (navigator.standalone ? '/navStandalone' : '') +
+            'mode ' + (window.matchMedia('(display-mode: standalone)').matches ? 'standalone' : 'browser') +
+              '   meta ' + (sbMeta ? sbMeta.getAttribute('content') : '?') +
               '   glasstop ' + (document.documentElement.classList.contains('glasstop') ? 1 : 0) +
               '   iOS ' + (m ? m[1] : '?'),
           ];
