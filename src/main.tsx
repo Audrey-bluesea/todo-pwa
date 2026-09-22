@@ -34,30 +34,53 @@ if (window.visualViewport) {
 }
 
 /* ============================================================
- * iOS 27 顶部玻璃渗出带规避开关
+ * iOS 独立 PWA「满屏无安全区」模式的自检与自补
  * ------------------------------------------------------------
- * 判定：主屏 PWA（display-mode: standalone / navigator.standalone）
- *       + iOS 主版本 >= 27（Liquid Glass 状态栏开始外渗的版本）。
- * 命中后给 <html> 加 glasstop，触发 index.css 里的两条规则：
- *   1) .pt-safe 顶部多让出 --tg(36px)，把文字推到 95pt 以下；
- *   2) .tg-glow 用主题色柔光渐变填满这条带，模糊落在纯色/渐变上看不出来。
- * 未命中（桌面、Safari 内浏览、iOS 26 及更早）布局与观感完全不变。
+ * 真机实测（iPhone 18 Pro Max / iOS 27，440x956@3x）：
+ *   apple-mobile-web-app-status-bar-style = default 时，
+ *   网页区域铺满整块物理屏（innerHeight == screen.height == 956），
+ *   但 WebKit 把 env(safe-area-inset-top) 与 env(safe-area-inset-bottom) 都报成 0。
+ *   → 内容顶到状态栏底下、TabBar 压在 Home 指示条上。
+ *   （black-translucent 的 env 值是对的 62/34，但网页只有 894 高、
+ *     屏幕最下 62pt 不属于网页，贴底元素只能悬在半空 —— 所以不能用它。）
+ *
+ * 判定方式：**特征探测，不用 UA 版本号**。
+ *   iOS 18 起 Safari 的 UA 版本号被冻结成 18_x（真机实测报 18_7），
+ *   用正则判「iOS >= 27」永远判不出来，这正是上一版顶部规避一直没生效的原因。
+ * 做法：放一个探针 div 实测 env(safe-area-inset-top) 的计算值。
+ *   0   ⇒ 命中「满屏无安全区」模式 → 给 <html> 加 .ios-pwa，
+ *         CSS 里用 max() 自补 62 / 34，并开启顶部渗出带的柔光让位。
+ *   >0  ⇒ 系统给了正常安全区（iOS 26 及更早、Safari 内浏览、桌面），什么都不做。
  * ============================================================ */
-function applyGlassTopGuard() {
+function readSafeAreaInsetTop(): number {
+  const probe = document.createElement('div');
+  probe.style.cssText =
+    'position:absolute;left:-9999px;top:0;width:1px;height:0;padding-top:env(safe-area-inset-top,0px)';
+  document.body.appendChild(probe);
+  const value = parseFloat(getComputedStyle(probe).paddingTop) || 0;
+  probe.remove();
+  return value;
+}
+
+function applyIosPwaFullscreenGuard() {
   try {
+    if (!document.body) return;
     const standalone =
       window.matchMedia?.('(display-mode: standalone)').matches === true ||
       (navigator as unknown as { standalone?: boolean }).standalone === true;
-    const m = /(?:iPhone|iPad|iPod).*?OS (\d+)_/.exec(navigator.userAgent);
-    const major = m ? parseInt(m[1], 10) : 0;
-    if (standalone && major >= 27) {
-      document.documentElement.classList.add('glasstop');
+    if (!standalone) return;
+    const isIOS =
+      /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    if (!isIOS) return;
+    if (readSafeAreaInsetTop() === 0) {
+      document.documentElement.classList.add('ios-pwa');
     }
   } catch {
-    /* 判定失败就不加，保持原样 */
+    /* 判定失败就保持原样 */
   }
 }
-applyGlassTopGuard();
+applyIosPwaFullscreenGuard();
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
