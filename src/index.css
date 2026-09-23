@@ -436,33 +436,43 @@ body,
     padding-bottom: var(--sab);
   }
 
-  /* ===== iOS PWA「满屏无安全区」自补（由 main.tsx 按特征探测加 .ios-pwa） =====
+  /* ===== iOS PWA「满屏无安全区」自补（由 main.tsx 按「iOS + standalone」加 .ios-pwa） =====
      背景（真机实测 iPhone 18 Pro Max / iOS 27，440x956@3x）：
      status-bar-style = default 时网页铺满整块屏（innerHeight == screen.height），
      但 WebKit 把 env(safe-area-inset-top/bottom) 都报成 0px —— 内容顶到状态栏下、
-     TabBar 压在 Home 指示条上。这里用 max() 自补系统真值：
+     TabBar 压在 Home 指示条上。这里自补两个安全区：
        顶部 62px（本机状态栏高度，black-translucent 下实测值）
        底部 34px（Home 指示条）
-     env() 若在后续系统版本恢复正确取值，max() 会自动改用系统值；不满足判定
-     （桌面 / Safari 内浏览 / iOS 26 及更早）时 .ios-pwa 不生效，一行都不变。
+
+     ⚠️ 铁律：这里必须用**写死的常量**，绝不能写成 max(env(...), 62px)。
+     真机实测 iOS 27 上 env(safe-area-inset-bottom) 会**自己抖动**（34px ↔ 96px
+     都出现过，随系统手势条/键盘等状态变化），一旦被 max() 采纳，TabBar 就会
+     毫无规律地「上飘 + 底部露出一大片空白」——这正是之前反复修不好的元凶。
+     常量换来的是 100% 稳定；真机 62/34 是实测值，与系统真值一致。
 
      顶部额外让出 --tg(36px) 的原因：iOS 27 的状态栏是 Liquid Glass 材质，
      会对状态栏下方约 35pt 的网页内容做渐进模糊（清晰度比值 0.14 → 94pt 处 1.00）。
-     该采样无法用 CSS 关闭，只能让文字离开这条带；腾出来的地方用主题色柔光渐变填满，
-     模糊打在没有细节的渐变上肉眼看不出来，观感是「顶部一层柔光」而不是空白。 */
+     该采样无法用 CSS 关闭，只能让文字离开这条带。 */
   html.ios-pwa {
-    --sat: max(env(safe-area-inset-top, 0px), 62px);
-    --sab: max(env(safe-area-inset-bottom, 0px), 34px);
+    --sat: 62px;
+    --sab: 34px;
   }
   html.ios-pwa .pt-safe {
     padding-top: calc(var(--sat) + var(--tg));
   }
+  /* 顶部「主题色实色顶栏」：
+     ① 0 ~ --sat(62px)：状态栏区，铺主题主色实色 —— 这块本来是纯留白，
+        染成主色后观感是一条有意设计的顶栏；且 Liquid Glass 的模糊采样打在
+        纯色上完全没有细节可糊，肉眼看不出模糊。
+     ② --sat ~ --sat+--tg：主色 → 背景色的柔光过渡，衔接自然不生硬。
+     文字从 --sat+--tg 之后开始，落在干净背景上，清晰。 */
   html.ios-pwa .tg-glow {
     background-image: linear-gradient(
       180deg,
-      rgb(var(--c-primary-300) / 0.34) 0px,
-      rgb(var(--c-primary-200) / 0.30) var(--sat),
-      rgb(var(--c-primary-100) / 0.16) calc(var(--sat) + 18px),
+      rgb(var(--c-primary-500)) 0px,
+      rgb(var(--c-primary-500)) var(--sat),
+      rgb(var(--c-primary-400) / 0.55) calc(var(--sat) + 4px),
+      rgb(var(--c-primary-200) / 0.28) calc(var(--sat) + 18px),
       rgb(var(--c-primary-50) / 0) calc(var(--sat) + var(--tg))
     );
     background-repeat: no-repeat;

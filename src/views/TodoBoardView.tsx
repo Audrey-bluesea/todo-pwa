@@ -478,7 +478,10 @@ export default function TodoBoardView({
   }, []);
 
   return (
-    <div className="flex h-full min-h-0 min-w-0 flex-col">
+    // ⚠️ 用 flex-1（不是 h-full）：父级是 flex 容器（TodoTab 的视图区），
+    // flex-1 才能拿到确定的剩余高度；父级若换成滚动容器，h-full 会解析不稳，
+    // 看板会只占内容高度、下面留一截空白（真机表现为「被截断」）。
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       {/* ====== 创建分组入口（仅看板-按分组模式） ====== */}
       {filter.kind === 'category' && groupBy === 'section' && !addingSec && (
         <div className="shrink-0 px-3 pt-2">

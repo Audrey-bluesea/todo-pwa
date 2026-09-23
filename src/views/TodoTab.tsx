@@ -360,14 +360,14 @@ export default function TodoTab() {
         </div>
       )}
 
-      <div
-        key={mountKey}
-        ref={scrollRef}
-        onScroll={onScroll}
-        className="scroll-y min-h-0 flex-1 anim-fade pb-8"
-      >
+      {/* ⚠️ 这一层必须是 flex 容器，不能是滚动容器。
+          看板每列自带独立纵向滚动，它需要「父级是 flex 容器 + 自己 flex-1」才能
+          拿到确定高度；若把它塞进 scroll-y（滚动容器）里，height:100% 在滚动容器中
+          解析不稳，看板只能拿到内容高度 —— 表现为「下面明明还有空间却被截断」。
+          列表视图不需要高度（内容自然流），因此把滚动下沉到列表那一支。 */}
+      <div key={mountKey} className="flex min-h-0 min-w-0 flex-1 flex-col anim-fade">
         {searchActive ? (
-          <div>
+          <div ref={scrollRef} onScroll={onScroll} className="scroll-y min-h-0 flex-1 pb-8">
             {matchedEntries.length > 0 && (
               <section className="px-3 pt-2">
                 <div className="px-1 pb-1.5 text-[12px] font-medium text-neutral-400">
@@ -383,7 +383,9 @@ export default function TodoTab() {
             <TodoListView todos={searched} query={searchQuery} />
           </div>
         ) : effectiveView === 'list' ? (
-          <TodoListView todos={searched} listGroupKey={isCompletedView ? 'category' : groupBy} />
+          <div ref={scrollRef} onScroll={onScroll} className="scroll-y min-h-0 flex-1 pb-8">
+            <TodoListView todos={searched} listGroupKey={isCompletedView ? 'category' : groupBy} />
+          </div>
         ) : (
           <TodoBoardView todos={searched} mode={isCompletedView ? 'category' : boardMode} filter={filter} />
         )}
