@@ -14,8 +14,12 @@
     --sar: env(safe-area-inset-right, 0px);
     --tabbar-h: 56px;
     /* 顶部「玻璃渗出带」让位量：iOS 27 主屏 PWA 上给 .pt-safe 额外加的高度。
-       0 表示不让位；由 html.ios-pwa 决定是否生效（见文件末尾的规避规则）。 */
-    --tg: 36px;
+       0 表示不让位；由 html.ios-pwa 决定是否生效（见文件末尾的规避规则）。
+       ⚠️ 这个值不能再往下压了：iOS 27 的 Liquid Glass 会对屏幕顶部约 94pt 内的
+       网页内容做渐进模糊，header 第一行内容实际起点 = --sat(62) + --tg + 12px
+       （header 自身 pt + 按钮内居中），--tg=26 时正好落在 ~100pt，刚好出模糊带。
+       再减就会把图标和标题送进模糊带，重现「水洇纸」。 */
+    --tg: 26px;
 
     /* ============ 🍵 抹茶绿主题（默认）============ */
     /* primary 色阶（RGB 三元组） */
@@ -461,18 +465,20 @@ body,
     padding-top: calc(var(--sat) + var(--tg));
   }
   /* 顶部「主题色实色顶栏」：
-     ① 0 ~ --sat(62px)：状态栏区，铺主题主色实色 —— 这块本来是纯留白，
-        染成主色后观感是一条有意设计的顶栏；且 Liquid Glass 的模糊采样打在
-        纯色上完全没有细节可糊，肉眼看不出模糊。
-     ② --sat ~ --sat+--tg：主色 → 背景色的柔光过渡，衔接自然不生硬。
-     文字从 --sat+--tg 之后开始，落在干净背景上，清晰。 */
+     实色一直铺到 --sat+--tg 的上沿（只留最后 6px 收边），也就是**铺到文字上沿**，
+     让状态栏正下方不再出现一段浅色空白。
+     ① 0 ~ --sat(62px)：状态栏区，铺主题主色实色。Liquid Glass 的模糊采样打在
+        纯色上没有细节可糊，看不出模糊。
+     ② --sat ~ --sat+--tg：继续实色 —— 这段原本是「避模糊让位」的浅色留白，
+        用户反馈「完全没必要的一截空白」。既然内容本来就要在 --sat+--tg 之后
+        才开始，那就把这截全部染成顶栏色，视觉上顶栏直接接到内容，不留空档。
+     ③ 最后 6px：快速渐隐收边，避免和下方背景形成硬切边。 */
   html.ios-pwa .tg-glow {
     background-image: linear-gradient(
       180deg,
       rgb(var(--c-primary-500)) 0px,
-      rgb(var(--c-primary-500)) var(--sat),
-      rgb(var(--c-primary-400) / 0.55) calc(var(--sat) + 4px),
-      rgb(var(--c-primary-200) / 0.28) calc(var(--sat) + 18px),
+      rgb(var(--c-primary-500)) calc(var(--sat) + var(--tg) - 6px),
+      rgb(var(--c-primary-300) / 0.45) calc(var(--sat) + var(--tg) - 2px),
       rgb(var(--c-primary-50) / 0) calc(var(--sat) + var(--tg))
     );
     background-repeat: no-repeat;
