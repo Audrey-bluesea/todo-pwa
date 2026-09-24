@@ -54,7 +54,9 @@ export default function App() {
     // 根容器直接 fixed inset-0 钉死在视口上，不再依赖 dvh / 100% 链路（这些在 iOS
     // standalone 下解析不稳，导致 #root 撑不满、TabBar 跑到中间、main 高度塌陷滑不动）。
     // TabBar 仍是内部 in-flow 的 flex 子项（非 fixed bottom），不踩 iOS 布局铁律。
-    <div className="fixed inset-0 flex flex-col overflow-hidden bg-appbg">
+    // id="app-root" 供 viewportGuard 使用：它会把本容器高度持续钉回 window.innerHeight，
+    // 修掉「iOS 把 fixed 容器高度缩到 894（=956−62）后不恢复」导致的整块底部上飘 62pt。
+    <div id="app-root" className="fixed inset-0 flex flex-col overflow-hidden bg-appbg">
       <main className="flex min-h-0 flex-1 overflow-hidden">
         {!ready ? (
           <div className="flex h-full flex-col items-center justify-center gap-3">

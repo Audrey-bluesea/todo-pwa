@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import './index.css';
 import { refreshSubscriptionOnLoad } from './lib/push';
+import { initViewportGuard } from './lib/viewportGuard';
 
 /* ============================================================
  * iOS 独立 PWA「满屏无安全区」模式：自补安全区
@@ -23,28 +24,37 @@ import { refreshSubscriptionOnLoad } from './lib/push';
  * App 根容器是 fixed inset-0，尺寸由视口直接决定，与 #root 高度无关，
  * 因此这里**不要**再用 JS 锁 #root 高度（旧做法会引入额外抖动源）。
  * ============================================================ */
-function applyIosPwaFullscreenGuard() {
+function isIosStandalone(): boolean {
   try {
     const standalone =
       window.matchMedia?.('(display-mode: standalone)').matches === true ||
       (navigator as unknown as { standalone?: boolean }).standalone === true;
-    if (!standalone) return;
-    const isIOS =
+    if (!standalone) return false;
+    return (
       /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-    if (!isIOS) return;
-    document.documentElement.classList.add('ios-pwa');
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+    );
   } catch {
-    /* 判定失败就保持原样 */
+    return false;
   }
 }
+
+function applyIosPwaFullscreenGuard() {
+  if (isIosStandalone()) document.documentElement.classList.add('ios-pwa');
+}
 applyIosPwaFullscreenGuard();
+
+/** 是否 iOS 主屏独立模式（视口看门狗只在此时才做异常判定，避免桌面误报） */
+const IOS_STANDALONE = isIosStandalone();
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <App />
   </React.StrictMode>,
 );
+
+/* 视口看门狗：修「整块底部偶发上飘 62pt」（详见 lib/viewportGuard.ts） */
+initViewportGuard({ iosStandalone: IOS_STANDALONE });
 
 /* 双指缩放兜底：即便浏览器忽略 user-scalable=no 也拦住手势缩放 */
 document.addEventListener(
