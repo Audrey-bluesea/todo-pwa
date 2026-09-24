@@ -20,6 +20,11 @@
        （header 自身 pt + 按钮内居中），--tg=26 时正好落在 ~100pt，刚好出模糊带。
        再减就会把图标和标题送进模糊带，重现「水洇纸」。 */
     --tg: 26px;
+    /* 顶栏色调浓度：0 = 完全不上色（纯背景），1 = 满色。
+       iOS 27 顶部必须有一层实色/半实色顶栏来承接 Liquid Glass 的模糊采样，
+       但用户反馈原先用满色（primary-500）「饱和度太高」，所以改用更浅的
+       primary-300 色阶 + 半透明叠在页面背景上。要再淡就往下调这个值。 */
+    --tg-tint: 0.8;
 
     /* ============ 🍵 抹茶绿主题（默认）============ */
     /* primary 色阶（RGB 三元组） */
@@ -464,22 +469,23 @@ body,
   html.ios-pwa .pt-safe {
     padding-top: calc(var(--sat) + var(--tg));
   }
-  /* 顶部「主题色实色顶栏」：
-     实色一直铺到 --sat+--tg 的上沿（只留最后 6px 收边），也就是**铺到文字上沿**，
-     让状态栏正下方不再出现一段浅色空白。
-     ① 0 ~ --sat(62px)：状态栏区，铺主题主色实色。Liquid Glass 的模糊采样打在
-        纯色上没有细节可糊，看不出模糊。
-     ② --sat ~ --sat+--tg：继续实色 —— 这段原本是「避模糊让位」的浅色留白，
-        用户反馈「完全没必要的一截空白」。既然内容本来就要在 --sat+--tg 之后
-        才开始，那就把这截全部染成顶栏色，视觉上顶栏直接接到内容，不留空档。
-     ③ 最后 6px：快速渐隐收边，避免和下方背景形成硬切边。 */
+  /* 顶部「主题色柔光顶栏」：
+     2026-09-24 调整：原先直接铺 primary-500 满色，用户反馈「饱和度太高」。
+     现改为：更浅的 primary-300 色阶 × --tg-tint(0.8) 半透明，叠在页面背景色上。
+     既保留了「顶部一条有色顶栏」的设计感，又把饱和度和明度压下来。
+     要想再淡 → 把 :root 里的 --tg-tint 调小（如 0.5）；想完全去掉 → 设 0。
+     ① 0 ~ --sat(62px)：状态栏区。Liquid Glass 的模糊采样需要纯色/柔色承接，
+        这层必须存在，否则状态栏下会出现"磨砂 + 脏"的杂色。
+     ② --sat ~ --sat+--tg-8px：继续同一层浅色，铺到首行内容上沿（消穴空白）。
+     ③ 最后 8px：渐隐收边，避免和下方背景形成硬切边。 */
   html.ios-pwa .tg-glow {
+    /* 垫一层页面背景色：半透明顶栏混合的基准色，保证结果可预期、各主题一致 */
+    background-color: rgb(var(--c-appbg));
     background-image: linear-gradient(
       180deg,
-      rgb(var(--c-primary-500)) 0px,
-      rgb(var(--c-primary-500)) calc(var(--sat) + var(--tg) - 6px),
-      rgb(var(--c-primary-300) / 0.45) calc(var(--sat) + var(--tg) - 2px),
-      rgb(var(--c-primary-50) / 0) calc(var(--sat) + var(--tg))
+      rgb(var(--c-primary-300) / var(--tg-tint)) 0px,
+      rgb(var(--c-primary-300) / var(--tg-tint)) calc(var(--sat) + var(--tg) - 8px),
+      rgb(var(--c-primary-300) / 0) calc(var(--sat) + var(--tg))
     );
     background-repeat: no-repeat;
   }
