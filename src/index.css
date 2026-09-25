@@ -466,6 +466,42 @@ body,
     --sat: 62px;
     --sab: 34px;
   }
+
+  /* ===== 「视口少算一个状态栏高度」缺陷的正面对抗（2026-09-25 查证）=====
+     已确认的 WebKit 缺陷：iOS 主屏独立模式下，冷启动 / 软键盘弹出过一次之后，
+     动态视口那一组取值会永久少算**正好一个 env(safe-area-inset-top)**（本机 62pt）：
+       screen.height = 956 ✅   100vh / 100lvh = 956 ✅（standalone 没有地址栏）
+       100dvh / 100svh = 894 ❌   window.innerHeight = 894 ❌
+     本 App 壳是 fixed inset-0、TabBar 是 in-flow，全由视口高度推导 → 整条底部
+     少 62pt（就是用户看到的「TabBar 上飘 + 底下一条空白」）。
+     所以：主屏模式下把文档高度从 100dvh 换成 100vh —— 它本来就是对的，
+     同时多出来的 62px 正好构成该缺陷的自愈触发条件「内容溢出视口」。
+     非主屏（桌面 / Safari 标签页）不生效，一行都不变。 */
+  html.ios-pwa,
+  html.ios-pwa body,
+  html.ios-pwa #root,
+  html.ios-pwa #app-root {
+    height: 100vh;
+  }
+
+  /* ===== 视口看门狗用的两个**临时**状态（用完立刻移除，见 lib/viewportGuard.ts）=====
+     ① vp-overflow：临时放开 html/body 的 overflow:hidden。
+        本 App 平时页面永远不可能溢出，而 iOS 的「视口回港」自愈恰恰需要
+        「内容溢出视口（哪怕 1px）」这个信号 —— 暂时把它补上。 */
+  html.vp-overflow,
+  html.vp-overflow body {
+    overflow: visible !important;
+  }
+  /* ② vp-fullheight：升级手段 —— 把 App 壳显式钉成 100vh。
+        standalone 下 100vh = 真实满屏高，dvh/svh/innerHeight 才是错的。
+        壳撑到 100vh 会在偏小的视口里多出 62px 溢出，是很强的重算信号；
+        一旦重算成功，这个高度本身就是正确的。 */
+  html.vp-fullheight,
+  html.vp-fullheight body,
+  html.vp-fullheight #root,
+  html.vp-fullheight #app-root {
+    height: 100vh !important;
+  }
   html.ios-pwa .pt-safe {
     padding-top: calc(var(--sat) + var(--tg));
   }

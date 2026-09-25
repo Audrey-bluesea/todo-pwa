@@ -394,7 +394,10 @@ function CategoryEditSheet({
 
   // 抽屉 aside 带 backdrop-filter，会成为 fixed 的包含块 → 必须 Portal 到 body
   return createPortal(
-    <div className="fixed inset-0 z-[60] flex items-end justify-center">
+    <div
+      className="fixed inset-0 z-[60] flex items-end justify-center"
+      style={{ bottom: 'calc(-1 * var(--vp-gap))' }}
+    >
       <div
         className="absolute inset-0 anim-fade"
         style={{ backgroundColor: 'rgba(62, 122, 78, 0.4)' }}
@@ -819,7 +822,10 @@ export default function Drawer() {
 
         {/* 导入确认弹层 */}
         {pendingImport && (
-          <div className="fixed inset-0 z-[60] flex items-end justify-center">
+          <div
+      className="fixed inset-0 z-[60] flex items-end justify-center"
+      style={{ bottom: 'calc(-1 * var(--vp-gap))' }}
+    >
             <div
               className="absolute inset-0 anim-fade"
               style={{ backgroundColor: 'rgba(30, 43, 60, 0.45)' }}

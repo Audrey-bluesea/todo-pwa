@@ -149,10 +149,11 @@ export default function TabBar() {
   ];
 
   // FAB：与 v16 一致，在 TabBar 上方一点。
-  // iOS 27 起主屏 Web App 视口铺满整块物理屏，fixed 元素不再被系统自动抬到 Home 指示条之上，
-  // 故此处需自行叠加 var(--sab)（= env(safe-area-inset-bottom)）；旧系统该值为 0，位置不变。
+  // 用 absolute（而非 fixed）锚到 #app-root（iOS 主屏下已被 CSS 钉成 100vh=真实满屏），
+  // 这样不再受 WebKit「fixed/ICB 少算一个状态栏高度(=894)」的牵连 —— 这正是
+  // 「TabBar/FAB 上飘 62px」的根因。bottom 仍按 58px+sab 计算，视觉与旧 fixed 版一致。
   const fabStyle: React.CSSProperties = {
-    position: 'fixed',
+    position: 'absolute',
     right: 16,
     bottom: 'calc(58px + var(--sab))',
     zIndex: 50,

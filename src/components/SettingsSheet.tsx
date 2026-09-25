@@ -80,7 +80,7 @@ export default function SettingsSheet({
   if (!open) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[55]">
+    <div className="fixed inset-0 z-[55]" style={{ bottom: 'calc(-1 * var(--vp-gap))' }}>
       <div
         className="absolute inset-0 anim-fade"
         style={{ backgroundColor: 'rgba(30, 43, 60, 0.4)' }}

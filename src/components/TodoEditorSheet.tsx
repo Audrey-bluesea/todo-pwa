@@ -149,7 +149,10 @@ function DateTimePicker({
 
   // ── Render ──
   return createPortal(
-    <div className={`fixed inset-0 z-[60] flex items-end justify-center ${!open ? 'pointer-events-none' : ''}`}>
+    <div
+      className={`fixed inset-0 z-[60] flex items-end justify-center ${!open ? 'pointer-events-none' : ''}`}
+      style={{ bottom: 'calc(-1 * var(--vp-gap))' }}
+    >
       <div
         className={closing.current ? '' : 'anim-fade'}
         style={{
@@ -596,7 +599,10 @@ export default function TodoEditorSheet() {
   const removeTag = (t: string) => setTags(tags.filter((x) => x !== t));
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col justify-end">
+    <div
+      className="fixed inset-0 z-50 flex flex-col justify-end"
+      style={{ bottom: 'calc(-1 * var(--vp-gap))' }}
+    >
       {/* 遮罩 */}
       <div
         onClick={handleClose}
