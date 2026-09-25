@@ -151,7 +151,7 @@ function DateTimePicker({
   return createPortal(
     <div
       className={`fixed inset-0 z-[60] flex items-end justify-center ${!open ? 'pointer-events-none' : ''}`}
-      style={{ bottom: 'calc(-1 * var(--vp-gap))' }}
+      style={{ bottom: 'calc(var(--kb-h, 0px) - var(--vp-gap, 0px))' }}
     >
       <div
         className={closing.current ? '' : 'anim-fade'}
@@ -601,7 +601,7 @@ export default function TodoEditorSheet() {
   return (
     <div
       className="fixed inset-0 z-50 flex flex-col justify-end"
-      style={{ bottom: 'calc(-1 * var(--vp-gap))' }}
+      style={{ bottom: 'calc(var(--kb-h, 0px) - var(--vp-gap, 0px))' }}
     >
       {/* 遮罩 */}
       <div

@@ -206,12 +206,17 @@ function tick(ev: string) {
 
   const gap = Math.max(screenH - inner, maxInner - inner);
   const broken = iosStandalone && kb <= KB_MAX && gap >= BAR;
+  // 缺口（少算的 62pt）与「键盘是否弹起」解耦：键盘弹起时也必须把 --vp-gap 维持
+  // 在真实值，否则键盘避让看门狗的抬升公式 calc(var(--kb-h) - var(--vp-gap)) 会退化成
+  // 纯 kb，弹层底边掉到键盘上沿下方 62px（出现缝隙/盖不住）。自愈状态机仍用 broken
+  // （kb<=KB_MAX）门控，键盘态下不折腾 innerHeight。
+  const hasGap = iosStandalone && gap >= BAR;
 
-  // 把缺口写进 CSS 变量：模态层用 bottom:calc(-1*var(--vp-gap)) 把自身往下延长到
-  // 真实屏幕底（见 index.css）。仅 iOS 主屏模式才写；桌面/标签页永远 0，否则会
-  // 误把模态层推出视口。视觉已由 CSS 钉死（#app-root 100vh + 模态 --vp-gap），
-  // 所以这个缺陷**不影响实际显示**，这里只为顺手把 innerHeight 也扳正。
-  const targetGap = broken ? gap : 0;
+  // 把缺口写进 CSS 变量：模态层用 bottom:calc(var(--kb-h) - var(--vp-gap)) 把自身
+  // 顶到键盘上沿 / 延长到真实屏幕底（见 index.css）。仅 iOS 主屏模式才写；桌面/
+  // 标签页永远 0，否则会误把模态层推出视口。视觉已由 CSS 钉死（#app-root 100vh +
+  // 模态 --vp-gap），所以这个缺陷**不影响实际显示**，这里只为顺手把 innerHeight 也扳正。
+  const targetGap = hasGap ? gap : 0;
   document.documentElement.style.setProperty('--vp-gap', targetGap + 'px');
 
   let act = 'none';

@@ -396,7 +396,7 @@ function CategoryEditSheet({
   return createPortal(
     <div
       className="fixed inset-0 z-[60] flex items-end justify-center"
-      style={{ bottom: 'calc(-1 * var(--vp-gap))' }}
+      style={{ bottom: 'calc(var(--kb-h, 0px) - var(--vp-gap, 0px))' }}
     >
       <div
         className="absolute inset-0 anim-fade"
@@ -824,7 +824,7 @@ export default function Drawer() {
         {pendingImport && (
           <div
       className="fixed inset-0 z-[60] flex items-end justify-center"
-      style={{ bottom: 'calc(-1 * var(--vp-gap))' }}
+      style={{ bottom: 'calc(var(--kb-h, 0px) - var(--vp-gap, 0px))' }}
     >
             <div
               className="absolute inset-0 anim-fade"

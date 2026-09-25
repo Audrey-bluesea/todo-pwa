@@ -600,6 +600,14 @@ body,
 .anim-sheet {
   animation: sheet-up 320ms cubic-bezier(0.32, 0.72, 0, 1);
 }
+/* 键盘弹起时：底部弹层已被抬到键盘上沿（见各 Sheet 遮罩 bottom），
+   其面板 max-height 须封顶到「键盘上方可用区」，否则比可用区还高会整体
+   顶出屏幕顶部、且内部内容滚不到头。100% = 遮罩（= 键盘上方整块）高度；
+   再扣 --sat(62px) 让面板顶边落到状态栏下沿，避免被状态栏压住。
+   仅 .kb-open（键盘确实弹起）时生效，无键盘时各面板保持原 max-h 不变。 */
+html.kb-open .anim-sheet {
+  max-height: calc(100% - var(--sat, 0px)) !important;
+}
 .anim-fade {
   animation: fade-in 240ms ease;
 }

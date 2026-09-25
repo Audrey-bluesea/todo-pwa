@@ -4,6 +4,7 @@ import App from './App';
 import './index.css';
 import { refreshSubscriptionOnLoad } from './lib/push';
 import { initViewportGuard } from './lib/viewportGuard';
+import { initKeyboardGuard } from './lib/keyboardGuard';
 
 /* ============================================================
  * iOS 独立 PWA「满屏无安全区」模式：自补安全区
@@ -55,6 +56,10 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
 
 /* 视口看门狗：修「整块底部偶发上飘 62pt」（详见 lib/viewportGuard.ts） */
 initViewportGuard({ iosStandalone: IOS_STANDALONE });
+
+/* 键盘避让看门狗：弹键盘时把底部弹层顶到键盘上沿，并把输入框滚进可视区
+   （详见 lib/keyboardGuard.ts）。全平台运行，无键盘时视觉零变化。 */
+initKeyboardGuard();
 
 /* 双指缩放兜底：即便浏览器忽略 user-scalable=no 也拦住手势缩放 */
 document.addEventListener(

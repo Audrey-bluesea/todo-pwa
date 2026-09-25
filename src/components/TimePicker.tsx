@@ -94,7 +94,7 @@ export default function TimePicker({
   const minutes = Array.from({ length: 60 }, (_, i) => i);
 
   return createPortal(
-    <div className="fixed inset-0 z-[60]" style={{ bottom: 'calc(-1 * var(--vp-gap))' }}>
+    <div className="fixed inset-0 z-[60]" style={{ bottom: 'calc(var(--kb-h, 0px) - var(--vp-gap, 0px))' }}>
       <div
         className="absolute inset-0 anim-fade"
         style={{ backgroundColor: 'rgba(30, 43, 60, 0.4)' }}
