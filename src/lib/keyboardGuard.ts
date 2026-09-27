@@ -18,6 +18,8 @@
  *   ③ 8 处底部弹层的遮罩 bottom 改为  calc(var(--kb-h) - var(--vp-gap))，
  *      键盘弹起时整张弹层被顶到键盘上沿（详见各 Sheet 组件）。
  *   ④ 键盘弹起后，把当前聚焦的输入框 scrollIntoView 到可视区（防长面板场景）。
+ *   ⑤ 切后台 / 离开页面前主动 blur 掉聚焦的输入框 —— 规避 iOS 的「选字栏空白」
+ *      系统 bug（2026-09-27，IMG_2970）。缘由详见 dropFocusForSuspend 的注释。
  *   全平台运行：安卓/桌面无键盘时 kb 恒为 0，--kb-h=0、类摘除，视觉零变化。
  *   配合 viewportGuard：键盘态下 --vp-gap 仍保持 62（少算档），故抬升公式在
  *   键盘态退化为 kb-62，弹层底边正好落在键盘上沿（零间隙、不重叠）。
@@ -60,6 +62,36 @@ function ensureVisible(el: Element | null) {
   }
 }
 
+/** 是否是「会唤起键盘的文本输入控件」（用 tagName 判定，跨 realm 安全、也便于单测） */
+function isTextEntry(el: Element | null): boolean {
+  if (!el) return false;
+  const tag = (el as HTMLElement).tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA') return true;
+  return (el as HTMLElement).isContentEditable === true;
+}
+
+/* ------------------------------------------------------------
+ * 切后台 / 离开页面前，主动把键盘收掉
+ * ------------------------------------------------------------
+ * 【为什么必须做】iOS 键盘扩展会为「当前聚焦的输入框」持有一份**输入会话**，候选/选字栏
+ *   就是这份会话产出的。带着键盘切到别的 App 时，系统挂起网页进程并顺手拆掉这份会话；
+ *   回到前台，iOS 只把**键盘视图**重新摆出来、没把候选栏重新指回输入框 ⇒ 选字栏「在位
+ *   却永远空白」，且因为会话已死，之后怎么点都不会重开，只能杀掉 App 重建进程。
+ *   这是 iOS 26.0 起已知的系统级 bug（Apple 未修；网页侧改 CSS/JS 无法根治，只能规避）。
+ *   真机取证见项目 memory 2026-09-27：空白区颜色与键盘按键缝隙色只差 1~2/255 ⇒ 属键盘材质。
+ *
+ * 【规避原理】在挂起**之前** blur，就不存在「半死的会话」被带过挂起期；用户回前台点一下
+ *   输入框 ＝ 全新会话 ＝ 选字栏正常。代价：从后台回来时键盘不再自动弹起（要再点一下），
+ *   换来的是它一定能用。用户 2026-09-27 确认按此方案实施。
+ * ------------------------------------------------------------ */
+function dropFocusForSuspend() {
+  if (!isTextEntry(document.activeElement)) return;
+  (document.activeElement as HTMLElement).blur();
+  // blur 后立刻重算 + 补一拍：防止个别情况下 vv.resize 不来、--kb-h 卡在旧键盘高度上
+  schedule();
+  window.setTimeout(schedule, 250);
+}
+
 export function initKeyboardGuard() {
   const vv = window.visualViewport;
   if (!vv) return; // 极少数无 visualViewport 的环境无法探测，0 即安全
@@ -84,6 +116,12 @@ export function initKeyboardGuard() {
     () => window.setTimeout(schedule, 200),
     true,
   );
+
+  // 切后台 / 页面被丢弃前把键盘收掉（规避 iOS「选字栏空白」系统 bug，见上方注释）
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) dropFocusForSuspend();
+  });
+  window.addEventListener('pagehide', () => dropFocusForSuspend());
 
   // 首帧
   apply();
