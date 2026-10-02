@@ -176,3 +176,11 @@ export const IconTimeline = ({ size = 24, className, strokeWidth }: IconProps) =
     <path d="M10 7h10M10 12h7M10 17h10" />
   </svg>
 );
+
+/** 回顾/复盘：历史回环箭头（区别于 IconClock 时钟、IconTimer 秒表） */
+export const IconRecap = ({ size = 24, className, strokeWidth = 1.8 }: IconProps) => (
+  <svg {...base(size, className, strokeWidth)}>
+    <path d="M3.5 12a8.5 8.5 0 1 0 2.8-6.3" />
+    <path d="M3.5 4.5V9H8" />
+  </svg>
+);

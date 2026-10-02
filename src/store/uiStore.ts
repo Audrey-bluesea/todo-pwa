@@ -156,6 +156,8 @@ interface UIState {
   completedView: TodoViewMode;
   /** 计时面板（开始/记录/历史）是否打开 */
   timerSheetOpen: boolean;
+  /** 回顾页（每日/每周复盘）是否打开 */
+  recapOpen: boolean;
   /** 正在编辑的计时记录 id（日时间轴点击触发），null 表示无 */
   editingTimeEntryId: string | null;
   /** 看板-按分组模式下当前所在分组的 id（用于 FAB 预填；非该模式为 null） */
@@ -185,6 +187,7 @@ interface UIState {
   closeEditor: () => void;
   showToast: (msg: string, opts?: { actionLabel?: string; onAction?: () => void; duration?: number }) => void;
   setTimerSheetOpen: (b: boolean) => void;
+  setRecapOpen: (b: boolean) => void;
   setEditingTimeEntry: (id: string | null) => void;
   /** 设置看板当前所在分组（用于 FAB 预填分类+分组） */
   setBoardSection: (sectionId: string | null) => void;
@@ -218,6 +221,7 @@ export const useUIStore = create<UIState>((set) => ({
   theme: loadTheme(),
   completedView: rememberedView.completedView ?? 'list',
   timerSheetOpen: false,
+  recapOpen: false,
   editingTimeEntryId: null,
   boardSectionId: null,
 
@@ -265,6 +269,7 @@ export const useUIStore = create<UIState>((set) => ({
     toastTimer = setTimeout(() => set({ toast: null, toastAction: null }), opts?.duration ?? 1800);
   },
   setTimerSheetOpen: (timerSheetOpen) => set({ timerSheetOpen }),
+  setRecapOpen: (recapOpen) => set({ recapOpen }),
   setEditingTimeEntry: (editingTimeEntryId) => set({ editingTimeEntryId }),
   setBoardSection: (boardSectionId) => set({ boardSectionId }),
 }));

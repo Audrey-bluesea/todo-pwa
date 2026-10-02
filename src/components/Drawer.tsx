@@ -4,7 +4,7 @@ import { useDataStore, randomCategoryColor, CATEGORY_COLORS } from '../store/dat
 import { useUIStore } from '../store/uiStore';
 import type { Category, DrawerFilter } from '../types';
 import { dayDiff, startOfDay } from '../lib/date';
-import { IconCheck, IconChecklist, IconGrid, IconInbox, IconPlus, IconSun } from './Icons';
+import { IconCheck, IconChecklist, IconGrid, IconInbox, IconPlus, IconRecap, IconSun } from './Icons';
 import SettingsSheet from './SettingsSheet';
 import { downloadBackup, parseBackupFile, restoreBackup, type BackupData } from '../lib/backup';
 import { useAxisLock } from '../lib/useAxisLock';
@@ -492,6 +492,7 @@ export default function Drawer() {
   const offset = useUIStore((s) => s.drawerOffset);
   const setOpen = useUIStore((s) => s.setDrawerOpen);
   const setOffset = useUIStore((s) => s.setDrawerOffset);
+  const setRecapOpen = useUIStore((s) => s.setRecapOpen);
   const filter = useUIStore((s) => s.filter);
   const setFilter = useUIStore((s) => s.setFilter);
 
@@ -708,6 +709,24 @@ export default function Drawer() {
                 </button>
               </div>
             ))}
+          </div>
+
+          {/* 回顾入口：进入每日/每周复盘（全屏页，不破坏底部两 Tab 布局） */}
+          <div className="px-3">
+            <button
+              onClick={() => {
+                setRecapOpen(true);
+                setOpen(false);
+              }}
+              className="relative flex w-full items-center gap-3 rounded-xl px-3 text-left press active:bg-primary-50"
+              style={{ minHeight: 44 }}
+            >
+              <span className="text-primary-400">
+                <IconRecap size={19} />
+              </span>
+              <span className="flex-1 truncate text-[15px] text-neutral-600">回顾</span>
+              <span className="text-[15px] text-neutral-400">›</span>
+            </button>
           </div>
 
           <div className="mt-4 flex items-center justify-between px-5 pb-1">
