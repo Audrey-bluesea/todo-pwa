@@ -11,9 +11,78 @@ import {
   weekDays,
   isSameDay,
   fmtTime,
+  fmtDate,
   WEEK_CN,
 } from '../lib/date';
 import { IconClose, IconRecap } from './Icons';
+import type { TimeEntry } from '../types';
+
+/* ---------- 睡眠洞察辅助 ---------- */
+interface SleepAgg {
+  hasData: boolean;
+  avgDailyMs?: number;
+  daysWithSleep?: number;
+  avgBed?: string;
+  avgWake?: string;
+  regularity?: string;
+  usualFrom?: string;
+  usualTo?: string;
+  trend?: { date: Date; ms: number }[];
+  maxSleep?: number;
+  lastAgo?: string;
+  lastDur?: string;
+}
+
+const pad2 = (n: number) => (n < 10 ? `0${n}` : String(n));
+
+/** 时钟时刻（分钟 0–1439）的圆形均值，正确处理跨午夜（23:30 与 00:30 平均成 00:00） */
+function clockMeanMin(times: number[]): number {
+  if (!times.length) return 0;
+  let s = 0;
+  let c = 0;
+  for (const t of times) {
+    const a = (t / 1440) * 2 * Math.PI;
+    s += Math.sin(a);
+    c += Math.cos(a);
+  }
+  let m = (Math.atan2(s, c) / (2 * Math.PI)) * 1440;
+  if (m < 0) m += 1440;
+  return m;
+}
+
+/** 时钟时刻的圆形标准差（分钟），衡量规律性 */
+function clockStdMin(times: number[]): number {
+  if (times.length < 2) return 0;
+  let s = 0;
+  let c = 0;
+  for (const t of times) {
+    const a = (t / 1440) * 2 * Math.PI;
+    s += Math.sin(a);
+    c += Math.cos(a);
+  }
+  const R = Math.sqrt(s * s + c * c) / times.length;
+  if (R >= 1) return 0;
+  return Math.sqrt(-2 * Math.log(R)) * (1440 / (2 * Math.PI));
+}
+
+const fmtHM = (min: number): string => {
+  min = (((Math.round(min) % 1440) + 1440) % 1440);
+  return `${pad2(Math.floor(min / 60))}:${pad2(min % 60)}`;
+};
+
+const agoText = (ms: number): string => {
+  const min = Math.max(0, Math.round(ms / 60000));
+  if (min < 60) return `${min} 分钟前`;
+  const h = Math.floor(min / 60);
+  if (h < 24) return `${h} 小时前`;
+  return `${Math.floor(h / 24)} 天前`;
+};
+
+/** 睡眠归属日：凌晨 5 点前入睡算前一天（兜住夜猫子跨零点） */
+const sleepAttrDay = (start: Date): Date => {
+  const h = start.getHours();
+  return h < 5 ? addDays(startOfDay(start), -1) : startOfDay(start);
+};
 
 /* ---------- 小部件 ---------- */
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -119,7 +188,72 @@ export default function RecapView() {
     }));
     const maxTrend = trend.length ? Math.max(1, ...trend.map((t) => t.count)) : 0;
 
-    return { completed, pending, distArr, maxMs, totalMs, trend, maxTrend };
+    // 睡眠洞察（固定近 14 天窗口）
+    const sleepWinStart = startOfDay(addDays(now, -13));
+    const sleepWinEnd = endOfDay(now);
+    const SLEEP_KW = ['睡', '眠', 'sleep'];
+    const sleepCatName = (id: string | null) =>
+      id ? (catMap.get(id)?.name ?? '').toLowerCase() : '';
+    const isSleep = (e: TimeEntry): boolean => {
+      if (!e.end) return false;
+      const t = (e.title || '').toLowerCase();
+      const c = sleepCatName(e.categoryId);
+      return SLEEP_KW.some((k) => t.includes(k) || c.includes(k));
+    };
+    const sleepAll = timeEntries.filter(isSleep);
+    const sleepInWin = sleepAll.filter((e) => {
+      const a = sleepAttrDay(e.start);
+      return a >= sleepWinStart && a <= sleepWinEnd;
+    });
+
+    let sleep: SleepAgg = { hasData: false };
+    if (sleepInWin.length) {
+      let totalMs = 0;
+      const daySet = new Set<string>();
+      const dayMs = new Map<string, number>();
+      const bedMins: number[] = [];
+      const wakeMins: number[] = [];
+      for (const e of sleepInWin) {
+        const ms = e.end!.getTime() - e.start.getTime();
+        if (ms <= 0) continue;
+        totalMs += ms;
+        const a = sleepAttrDay(e.start);
+        const key = fmtDate(a);
+        daySet.add(key);
+        dayMs.set(key, (dayMs.get(key) ?? 0) + ms);
+        bedMins.push(e.start.getHours() * 60 + e.start.getMinutes());
+        wakeMins.push(e.end!.getHours() * 60 + e.end!.getMinutes());
+      }
+      const daysWithSleep = daySet.size;
+      const bedMean = clockMeanMin(bedMins);
+      const bedStd = clockStdMin(bedMins);
+      const wakeMean = clockMeanMin(wakeMins);
+      const regularity =
+        bedStd < 30 ? '很规律' : bedStd < 60 ? '比较规律' : '起伏较大';
+      const sleepTrend = Array.from({ length: 14 }, (_, i) => {
+        const d = addDays(sleepWinStart, i);
+        return { date: d, ms: dayMs.get(fmtDate(d)) ?? 0 };
+      });
+      const maxSleep = Math.max(1, ...sleepTrend.map((t) => t.ms));
+      const last = [...sleepAll].sort((a, b) => b.start.getTime() - a.start.getTime())[0];
+      const lastMs = last.end!.getTime() - last.start.getTime();
+      sleep = {
+        hasData: true,
+        avgDailyMs: daysWithSleep ? totalMs / daysWithSleep : 0,
+        daysWithSleep,
+        avgBed: fmtHM(bedMean),
+        avgWake: fmtHM(wakeMean),
+        regularity,
+        usualFrom: fmtHM(bedMean - bedStd),
+        usualTo: fmtHM(bedMean + bedStd),
+        trend: sleepTrend,
+        maxSleep,
+        lastAgo: agoText(now.getTime() - last.end!.getTime()),
+        lastDur: fmtDuration(lastMs),
+      };
+    }
+
+    return { completed, pending, distArr, maxMs, totalMs, trend, maxTrend, sleep };
   }, [todos, categories, timeEntries, mode]);
 
   if (!open) return null;
@@ -220,6 +354,63 @@ export default function RecapView() {
             </div>
           )}
         </Section>
+
+        {/* 睡眠洞察（固定近 14 天） */}
+        {data.sleep.hasData && (
+          <Section title="睡眠">
+            <div className="mb-3 rounded-2xl bg-primary-50/70 px-5 py-4">
+              <div className="text-[13px] text-primary-600">近 14 天日均睡眠</div>
+              <div className="mt-0.5 text-[28px] font-bold leading-tight text-primary-700 tabular-nums">
+                {fmtDuration(data.sleep.avgDailyMs ?? 0)}
+              </div>
+              <div className="mt-1 text-[12px] text-neutral-500">
+                按有记录的天（{data.sleep.daysWithSleep} 天）
+              </div>
+            </div>
+
+            <div className="mb-3 grid grid-cols-2 gap-2.5">
+              <div className="rounded-xl border border-primary-100 bg-white px-3 py-2.5">
+                <div className="text-[12px] text-neutral-400">平均入睡</div>
+                <div className="mt-0.5 text-[18px] font-semibold tabular-nums text-neutral-700">
+                  {data.sleep.avgBed}
+                </div>
+              </div>
+              <div className="rounded-xl border border-primary-100 bg-white px-3 py-2.5">
+                <div className="text-[12px] text-neutral-400">平均起床</div>
+                <div className="mt-0.5 text-[18px] font-semibold tabular-nums text-neutral-700">
+                  {data.sleep.avgWake}
+                </div>
+              </div>
+            </div>
+
+            <div className="mb-3 text-[12px] text-neutral-500">
+              多在 {data.sleep.usualFrom}–{data.sleep.usualTo} 间入睡 · {data.sleep.regularity}
+            </div>
+
+            <div className="mb-2 text-[13px] text-neutral-400">近 14 天</div>
+            <div className="mb-1 flex items-end justify-between gap-1" style={{ height: 64 }}>
+              {data.sleep.trend!.map((t, i) => {
+                const pct = t.ms > 0 ? Math.max((t.ms / data.sleep.maxSleep!) * 100, 8) : 3;
+                const color =
+                  t.ms === 0 ? '#D3D1C7' : t.ms < 360 * 60000 ? '#EF9F27' : '#639922';
+                return (
+                  <div
+                    key={i}
+                    className="flex-1 rounded-sm"
+                    style={{ height: `${pct}%`, backgroundColor: color }}
+                  />
+                );
+              })}
+            </div>
+            <div className="mb-3 text-[11px] text-neutral-400">
+              绿色=睡够 · 橙色=偏短（不足 6 小时）
+            </div>
+
+            <div className="rounded-xl border border-primary-100 bg-white px-3 py-2.5 text-[13px] text-neutral-600">
+              最近一次 · {data.sleep.lastAgo} · 睡了 {data.sleep.lastDur}
+            </div>
+          </Section>
+        )}
 
         {/* 还没做完（仅今日） */}
         {mode === 'day' && (
