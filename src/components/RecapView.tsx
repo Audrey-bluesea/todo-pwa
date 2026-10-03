@@ -8,11 +8,9 @@ import {
   endOfDay,
   startOfWeek,
   addDays,
-  weekDays,
   isSameDay,
   fmtTime,
   fmtDate,
-  WEEK_CN,
 } from '../lib/date';
 import { IconClose, IconRecap } from './Icons';
 import type { TimeEntry } from '../types';
@@ -34,6 +32,14 @@ interface SleepAgg {
 }
 
 const pad2 = (n: number) => (n < 10 ? `0${n}` : String(n));
+
+/** 睡眠柱上的紧凑时长：如 7h32m / 6h / 45m */
+const fmtShort = (ms: number): string => {
+  const totalMin = Math.round(ms / 60000);
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  return h === 0 ? `${m}m` : `${h}h${pad2(m)}`;
+};
 
 /** 时钟时刻（分钟 0–1439）的圆形均值，正确处理跨午夜（23:30 与 00:30 平均成 00:00） */
 function clockMeanMin(times: number[]): number {
@@ -131,7 +137,7 @@ export default function RecapView() {
   const todos = useDataStore((s) => s.todos);
   const categories = useDataStore((s) => s.categories);
   const timeEntries = useTimerStore((s) => s.timeEntries);
-  const [mode, setMode] = useState<'day' | 'week'>('day');
+  const [mode, setMode] = useState<'day' | 'week' | 'habit'>('day');
 
   const data = useMemo(() => {
     const now = new Date();
@@ -179,14 +185,6 @@ export default function RecapView() {
     }
     const distArr = [...dist.values()].sort((a, b) => b.ms - a.ms);
     const maxMs = distArr.length ? distArr[0].ms : 0;
-
-    // 本周每日完成趋势
-    const days = mode === 'week' ? weekDays(now) : [];
-    const trend = days.map((d) => ({
-      date: d,
-      count: completed.filter((t) => t.completedAt && isSameDay(t.completedAt, d)).length,
-    }));
-    const maxTrend = trend.length ? Math.max(1, ...trend.map((t) => t.count)) : 0;
 
     // 睡眠洞察（固定近 14 天窗口）
     const sleepWinStart = startOfDay(addDays(now, -13));
@@ -253,14 +251,14 @@ export default function RecapView() {
       };
     }
 
-    return { completed, pending, distArr, maxMs, totalMs, trend, maxTrend, sleep };
+    return { completed, pending, distArr, maxMs, totalMs, sleep };
   }, [todos, categories, timeEntries, mode]);
 
   if (!open) return null;
 
   return createPortal(
     <div className="fixed inset-0 z-[55] flex flex-col bg-appbg">
-      {/* 顶部：标题 + 关闭 + 今日/本周切换（pt-safe + tg-glow 避开 iOS 27 顶部模糊带） */}
+      {/* 顶部：标题 + 关闭 + 今日/本周/习惯切换（pt-safe + tg-glow 避开 iOS 27 顶部模糊带） */}
       <div className="pt-safe tg-glow">
         <div className="flex items-center justify-between px-5 pb-2 pt-4">
           <div className="flex items-center gap-2">
@@ -280,13 +278,16 @@ export default function RecapView() {
         <div className="flex gap-2 px-5 pb-3">
           <SegBtn label="今日" active={mode === 'day'} onClick={() => setMode('day')} />
           <SegBtn label="本周" active={mode === 'week'} onClick={() => setMode('week')} />
+          <SegBtn label="习惯" active={mode === 'habit'} onClick={() => setMode('habit')} />
         </div>
       </div>
 
       {/* 内容区 */}
       <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-safe pt-1">
-        {/* 英雄卡：完成数 + 计时合计 */}
-        <div className="mb-5 rounded-2xl bg-primary-50/70 px-5 py-4">
+        {mode !== 'habit' && (
+          <>
+            {/* 英雄卡：完成数 + 计时合计 */}
+            <div className="mb-5 rounded-2xl bg-primary-50/70 px-5 py-4">
           <div className="text-[13px] text-primary-600">{mode === 'day' ? '今天完成' : '本周完成'}</div>
           <div className="mt-0.5 text-[28px] font-bold leading-tight text-primary-700 tabular-nums">
             {data.completed.length}
@@ -354,9 +355,11 @@ export default function RecapView() {
             </div>
           )}
         </Section>
+          </>
+        )}
 
-        {/* 睡眠洞察（固定近 14 天） */}
-        {data.sleep.hasData && (
+        {/* 睡眠洞察（固定近 14 天，仅「习惯」Tab） */}
+        {mode === 'habit' && data.sleep.hasData && (
           <Section title="睡眠">
             <div className="mb-3 rounded-2xl bg-primary-50/70 px-5 py-4">
               <div className="text-[13px] text-primary-600">近 14 天日均睡眠</div>
@@ -388,17 +391,23 @@ export default function RecapView() {
             </div>
 
             <div className="mb-2 text-[13px] text-neutral-400">近 14 天</div>
-            <div className="mb-1 flex items-end justify-between gap-1" style={{ height: 64 }}>
+            <div className="mb-1 flex items-end gap-1" style={{ height: 78 }}>
               {data.sleep.trend!.map((t, i) => {
                 const pct = t.ms > 0 ? Math.max((t.ms / data.sleep.maxSleep!) * 100, 8) : 3;
                 const color =
                   t.ms === 0 ? '#D3D1C7' : t.ms < 360 * 60000 ? '#EF9F27' : '#639922';
                 return (
-                  <div
-                    key={i}
-                    className="flex-1 rounded-sm"
-                    style={{ height: `${pct}%`, backgroundColor: color }}
-                  />
+                  <div key={i} className="flex h-full flex-1 flex-col items-center">
+                    <span className="h-[11px] shrink-0 text-[9px] leading-[11px] tabular-nums text-neutral-500 whitespace-nowrap">
+                      {t.ms > 0 ? fmtShort(t.ms) : ''}
+                    </span>
+                    <div className="flex w-full flex-1 items-end">
+                      <div
+                        className="w-full rounded-sm"
+                        style={{ height: `${pct}%`, backgroundColor: color }}
+                      />
+                    </div>
+                  </div>
                 );
               })}
             </div>
@@ -410,6 +419,9 @@ export default function RecapView() {
               最近一次 · {data.sleep.lastAgo} · 睡了 {data.sleep.lastDur}
             </div>
           </Section>
+        )}
+        {mode === 'habit' && !data.sleep.hasData && (
+          <Empty text="近 14 天还没有睡眠记录（用计时记录「睡 / 眠 / sleep」即可自动统计）" />
         )}
 
         {/* 还没做完（仅今日） */}
@@ -430,27 +442,6 @@ export default function RecapView() {
                 ))}
               </div>
             )}
-          </Section>
-        )}
-
-        {/* 一周完成趋势（仅本周） */}
-        {mode === 'week' && (
-          <Section title="一周完成趋势">
-            <div className="flex items-end justify-between gap-1.5" style={{ height: 92 }}>
-              {data.trend.map((t, i) => (
-                <div key={i} className="flex flex-1 flex-col items-center gap-1">
-                  <div className="flex w-full flex-1 items-end">
-                    <div
-                      className="w-full rounded-md bg-primary-200"
-                      style={{
-                        height: `${t.count ? Math.max((t.count / data.maxTrend) * 100, 8) : 3}%`,
-                      }}
-                    />
-                  </div>
-                  <span className="text-[10px] text-neutral-400">{WEEK_CN[i]}</span>
-                </div>
-              ))}
-            </div>
           </Section>
         )}
 
