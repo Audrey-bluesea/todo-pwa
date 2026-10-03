@@ -393,19 +393,27 @@ export default function RecapView() {
             <div className="mb-2 text-[13px] text-neutral-400">近 14 天</div>
             <div className="mb-1 flex items-end gap-1" style={{ height: 78 }}>
               {data.sleep.trend!.map((t, i) => {
-                const pct = t.ms > 0 ? Math.max((t.ms / data.sleep.maxSleep!) * 100, 8) : 3;
-                const color =
-                  t.ms === 0 ? '#D3D1C7' : t.ms < 360 * 60000 ? '#EF9F27' : '#639922';
+                const pct = t.ms > 0 ? Math.max((t.ms / data.sleep.maxSleep!) * 100, 12) : 3;
+                const isShort = t.ms > 0 && t.ms < 360 * 60000;
+                const color = t.ms === 0 ? '#D3D1C7' : isShort ? '#EF9F27' : '#639922';
                 return (
-                  <div key={i} className="flex h-full flex-1 flex-col items-center">
-                    <span className="h-[11px] shrink-0 text-[9px] leading-[11px] tabular-nums text-neutral-500 whitespace-nowrap">
-                      {t.ms > 0 ? fmtShort(t.ms) : ''}
-                    </span>
-                    <div className="flex w-full flex-1 items-end">
-                      <div
-                        className="w-full rounded-sm"
-                        style={{ height: `${pct}%`, backgroundColor: color }}
-                      />
+                  <div key={i} className="flex h-full flex-1 items-end">
+                    <div
+                      className="relative w-full rounded-sm"
+                      style={{ height: `${pct}%`, backgroundColor: color }}
+                    >
+                      {t.ms > 0 && (
+                        <span
+                          className="absolute inset-0 flex items-center justify-center whitespace-nowrap text-[8.5px] font-medium leading-none tabular-nums"
+                          style={{
+                            // 亮橙底压不住白字，改用深棕；深绿底用白字+阴影
+                            color: isShort ? '#5A3A00' : '#FFFFFF',
+                            textShadow: isShort ? 'none' : '0 0 2px rgba(0,0,0,0.45)',
+                          }}
+                        >
+                          {fmtShort(t.ms)}
+                        </span>
+                      )}
                     </div>
                   </div>
                 );
