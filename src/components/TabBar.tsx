@@ -11,7 +11,7 @@ const FAB_HINT_KEY = 'xingshilu.fabTimerHinted';
 
 const FAB_EMOJI: Partial<Record<string, string>> = {
   matcha: '🥑',
-  pixel: '🎡',
+  pixel: '🪸',
   spring: '🌸',
   summer: '🎐',
   autumn: '🍁',
