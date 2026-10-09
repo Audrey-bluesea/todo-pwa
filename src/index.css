@@ -474,10 +474,16 @@ body {
      毫无规律地「上飘 + 底部露出一大片空白」——这正是之前反复修不好的元凶。
      常量换来的是 100% 稳定；真机 62/34 是实测值，与系统真值一致。
 
-     顶部额外让出的 --tg 现在只有 6px（缓冲量）：
+      顶部额外让出的 --tg 现在只有 6px（缓冲量）：
      2026-10-09 起顶部改为「实色背景 + 12px 取样条」（见下方「顶部与背景融合」），
      状态栏玻璃会被染成页面背景色，不再有白雾，因此不必再为模糊带让位；
-     旧版为躲开渗出带而写的 --tg=26px 已废弃。 */
+     旧版为躲开渗出带而写的 --tg=26px 已废弃。
+
+     ⚠️⚠️ 2026-10-09 三次修订（最重要的那条）：**根容器 #app-root 已由 fixed inset-0
+     改为 position: relative 的文档流元素**（见 src/App.tsx）。iOS 26/27 会把「固定定位
+     元素」当成系统导航栏去模糊/降采样，根容器是 fixed ⇒ 整个 App 图层被糊，
+     顶部最明显；改成 relative 后该行为消失。所以这里的 62px 安全区自补依然必要
+     （default 模式下 env 仍报 0），但不再需要与「顶部玻璃」做任何妥协。 */
   html.ios-pwa {
     --sat: 62px;
     --sab: 34px;
@@ -542,7 +548,12 @@ body {
      Cogito 的 .appbar 明确写死 `background: transparent; backdrop-filter: none`，
      注释原话「不铺色块、不做模糊，让主题底色一路铺到状态栏」。这里照抄该写法：
      状态栏区露出的就是 html / body 的底色（已由上方规则填成 --bg-top），
-     照样与背景完全融合，但不再存在一个会被系统当成「顶层合成块」去降采样/模糊的图层。 */
+     照样与背景完全融合，但不再存在一个会被系统当成「顶层合成块」去降采样/模糊的图层。
+
+     🔴 三次修订结论：上面这些「顶部怎么画」的调整都不是病根。真凶是**根容器用了
+     position: fixed**（见 src/App.tsx）—— iOS 26/27 会把固定定位层当系统导航栏去
+     整体模糊/降采样，于是「改颜色、加取样条、调 padding」全部毫无反应。现已把
+     #app-root 改回文档流 relative。本条的「不铺色块」只是好习惯，保留。 */
   html.ios-pwa .tg-glow {
     background-color: transparent;
     background-image: none;
@@ -559,11 +570,13 @@ body {
            一个巨型层叠上下文，而「iOS 27 会把带层叠上下文的层按 1x 栅格化、导致字发糊」
            是本 App 已经踩过一次的坑（见 TodoTab header 上的注释）。
      pointer-events: none ⇒ 不拦截任何触摸；只占状态栏区内，视觉零影响。 */
+  /* 2026-10-09 三次修订：**无条件存在**，不再依赖 html.ios-pwa（完全对齐 Cogito 的写法）。
+     原因：取样条只有在「元素真实存在、位于视口顶边、且有确定的 background-color」
+     时才会被系统采纳。之前写成 html.ios-pwa 才 display:block，一旦判定时机晚了
+     一步（或压根没加上），取样条就是 0 高度的空 div ⇒ 系统取不到色 ⇒ 回落纯白 ⇒
+     顶部白雾，而且改什么都没反应。
+     它颜色 = 页面背景色、高 12px、pointer-events:none ⇒ 任何环境下视觉零影响。 */
   .top-tint {
-    display: none;
-  }
-  html.ios-pwa .top-tint {
-    display: block;
     position: fixed;
     top: 0;
     left: 0;
