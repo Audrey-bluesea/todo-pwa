@@ -501,9 +501,35 @@ body {
      非主屏（桌面 / Safari 标签页）不生效，一行都不变。 */
   html.ios-pwa,
   html.ios-pwa body,
-  html.ios-pwa #root,
-  html.ios-pwa #app-root {
+  html.ios-pwa #root {
     height: 100vh;
+  }
+
+  /* ===== 顶部模糊「固定色块延伸」容器（2026-10-09 第五次修订，对齐已验证修法）=====
+     WebKit 原文判据（WKWebViewIOS.mm `_shouldHideTopScrollPocket` →
+     `LocalFrameView::fixedContainerEdges`）：在**视口顶边下方 4px、水平中点**做一次
+     hit-test，向上找第一个 position:fixed / sticky 的盒子，要求
+       · ≥ 90% 视口宽
+       · ≤ 105% 视口高
+     然后取**它的 background-color** 作为「固定色块延伸」，找到就隐藏顶部
+     Liquid Glass 滚动边缘模糊（真机实测那条带约覆盖屏幕 0~120pt）。
+
+     🔴 前四版全栽在同一个地方：**hit-test 在 y=4 命中的是 .top-tint（z-index 9999
+     盖在最上层），它只有 16px 高、只钉了 top/left/right 三条边** —— 命中被它截走，
+     而它自己通不过判据，于是整条链永远找不到合格容器。
+     变体 3（加高到 62px）/ 变体 4（z-index 降到 1000）都只改了它自己，所以都没用。
+
+     正解（与另一份同类 App 报告里**真机验证有效**的写法一致）：
+       ① 让**根容器自己**成为那个盒子：`fixed; inset: 0` ⇒ 四条边全钉、宽 100%、
+          高恰等于视口（100%，稳过 105%）、背景是 bg-appbg 不透明；
+       ② 把 .top-tint 的命中让出来（pointer-events: none），否则它会继续截走命中。
+     ⚠️ 顺序不能反：先有合格的盒子，再清掉抢命中的元素。 */
+  html.ios-pwa #app-root {
+    position: fixed;
+    inset: 0;
+    /* 必须 auto：height:100vh(=956) 在视口 894 时是 107% > 105%，会被判据拒收。
+       inset:0 让高度恰等于视口，永远 100%。 */
+    height: auto;
   }
 
   /* ===== 视口看门狗用的两个**临时**状态（用完立刻移除，见 lib/viewportGuard.ts）=====
@@ -600,8 +626,12 @@ body {
        不足 10px 时它会退而取「顶部 2px」的颜色。16px 留出安全余量。 */
     height: 16px;
     background-color: rgb(var(--bg-top));
-    /* ❗不要改回 none：见上方说明，会被 hit-test 跳过 */
-    pointer-events: auto;
+    /* ❗2026-10-09 再修订：这里**必须**是 none。
+       它是 z-index 9999 盖在最顶层的元素，一旦可命中，系统那次 y=4 的 hit-test
+       就会命中它、而通不过判据（只钉了 top/left/right、只有 16px 高），
+       真正合格的根容器就永远没机会被找到 —— 这就是前四版怎么改都没反应的原因。
+       让出命中后，y=4 命中的就是 fixed inset-0 的 #app-root。 */
+    pointer-events: none;
     z-index: 9999;
   }
   /* ===== 顶部模糊「现场探针」变体（临时，定位完成即删）=====
@@ -609,33 +639,38 @@ body {
      每个变体对应一条 WebKit 判据；点选后整页 reload（系统会重新计算固定容器），
      再看顶部文字是否变清晰，就能锁定是哪一条在卡。
      变体编号存在 localStorage['xingshilu.topfix']，由 main.tsx 在渲染前打到 <html data-topfix>。 */
-  /* 变体 1：#app-root 本身改成 fixed inset-0（原文在同类 App 上验证有效的修法）。
-     注意**不要**再加 height:100vh，否则高度可能超过视口 105% 而被判据拒收。 */
+  /* 编号说明：6 = 新默认（不加 data-topfix，即上面 html.ios-pwa #app-root 那套）。
+     其余都是排查用的对照项，定位完成后随探针一起删除。 */
+
+  /* 变体 1：【回退】根容器改回文档流 relative —— 顶部仍糊，但布局 100% 安全。
+     若选 6 之后底部 TabBar 上飘/露白，先切回这里保住可用。 */
   html[data-topfix='1'] #app-root {
-    position: fixed !important;
-    inset: 0 !important;
-    height: auto !important;
+    position: relative !important;
+    inset: auto !important;
+    height: 100vh !important;
   }
-  /* 变体 2：取样条改用 sticky（判据里 fixed 与 sticky 等价，用来排除"fixed 层被特殊对待"） */
+  /* 变体 2：根容器 fixed inset-0，但**让取样条继续可命中**。
+     若这条糊、6 清晰 ⇒ 坐实「取样条截走命中」是前四版的真因。 */
   html[data-topfix='2'] .top-tint {
+    pointer-events: auto !important;
+  }
+  /* 变体 7：根容器 fixed inset-0 + 顶栏改 sticky top:0（原文列出的另一条有效修法）。
+     顶栏本身也成为一个 sticky 盒子，多一层保险。 */
+  html[data-topfix='7'] .tg-glow {
     position: sticky !important;
     top: 0 !important;
-    pointer-events: auto !important;
+    background-color: rgb(var(--bg-top)) !important;
   }
-  /* 变体 3：取样条加高到 62px（排除"高度不够/取样点没落在条内"） */
-  html[data-topfix='3'] .top-tint {
-    height: 62px !important;
-    pointer-events: auto !important;
+  /* 变体 3/4/5：把首行内容逐步下移，用来二分模糊带的真实下边界。
+     已知 5（≈145pt）清晰、0~2 位置（≈85pt）糊 ⇒ 边界在 110~145 之间。 */
+  html[data-topfix='3'] .pt-safe {
+    padding-top: calc(var(--sat) + 14px) !important; /* 首行 ≈100pt */
   }
-  /* 变体 4：取样条 z-index 从 9999 降到 1000（排除极端 z-index 的干扰） */
-  html[data-topfix='4'] .top-tint {
-    z-index: 1000 !important;
-    pointer-events: auto !important;
+  html[data-topfix='4'] .pt-safe {
+    padding-top: calc(var(--sat) + 30px) !important; /* 首行 ≈115pt */
   }
-  /* 变体 5：把首行内容下移到 ≈145pt（把 header 完全移出 ~120pt 模糊带）。
-     这一条不追求好看，纯粹是判定「模糊到底是不是一条固定高度的屏幕带」。 */
   html[data-topfix='5'] .pt-safe {
-    padding-top: calc(var(--sat) + 68px) !important;
+    padding-top: calc(var(--sat) + 68px) !important; /* 首行 ≈145pt（已确认清晰） */
   }
 
   .h-dvh {

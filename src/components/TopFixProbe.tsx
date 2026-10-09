@@ -14,16 +14,47 @@ import { useState } from 'react';
  * 用法：点左下角小胶囊 → 逐个点变体（会自动 reload）→ 看顶部文字是否清晰。
  * ==========================================================================*/
 
-const VARIANT_KEY = 'xingshilu.topfix';
-const BUILD = 'topfix-2026-10-09 · 基于 f8ed415';
+// 换 key：第 5 版的变体编号与上一版含义不同，必须让旧选择失效，否则用户会卡在旧变体上
+const VARIANT_KEY = 'xingshilu.topfix2';
+const DEFAULT_ID = '6'; // 不写 data-topfix 时生效的就是 6 号方案
+const BUILD = 'topfix-2026-10-09 · 第 5 版（根容器 fixed inset-0 + 取样条让出命中）';
 
 const VARIANTS: { id: string; name: string; why: string }[] = [
-  { id: '0', name: '0 · 原样（当前默认）', why: '取样条 fixed / 16px / 同背景色 / 允许命中' },
-  { id: '1', name: '1 · 根容器改 fixed inset-0', why: '原文在同类 App 上验证有效的修法' },
-  { id: '2', name: '2 · 取样条改 sticky', why: '判据里 sticky 与 fixed 等价，排除 fixed 被特殊对待' },
-  { id: '3', name: '3 · 取样条加高到 62px', why: '排除「高度不够 / 取样点没落进条内」' },
-  { id: '4', name: '4 · 取样条 z-index 降为 1000', why: '排除极端 z-index 的干扰' },
-  { id: '5', name: '5 · 首行下移到 ≈145pt', why: '判定「模糊是不是一条固定高度的屏幕带」' },
+  {
+    id: '6',
+    name: '6 · 新默认：根容器 fixed inset-0',
+    why: '四条边全钉 + 高恰等于视口 + 不透明背景；取样条让出命中。对齐已验证修法',
+  },
+  {
+    id: '2',
+    name: '2 · 同 6，但取样条仍可命中',
+    why: '对照用。若 6 清晰而 2 糊 ⇒ 坐实「取样条截走命中」',
+  },
+  {
+    id: '7',
+    name: '7 · 同 6 + 顶栏 sticky top:0',
+    why: '原文列出的另一条有效修法，多一层保险',
+  },
+  {
+    id: '3',
+    name: '3 · 首行下移到 ≈100pt',
+    why: '二分模糊带下边界（已知 ≈85 糊、≈145 清晰）',
+  },
+  {
+    id: '4',
+    name: '4 · 首行下移到 ≈115pt',
+    why: '二分模糊带下边界',
+  },
+  {
+    id: '5',
+    name: '5 · 首行下移到 ≈145pt',
+    why: '已确认清晰，作为「带外」基准',
+  },
+  {
+    id: '1',
+    name: '1 · 回退：根容器改回 relative',
+    why: '顶部仍糊，但布局 100% 安全。若 6 导致底部异常，先切回这条',
+  },
 ];
 
 function readEnvProbe(prop: string): string {
@@ -36,6 +67,39 @@ function readEnvProbe(prop: string): string {
     return v || '(空)';
   } catch {
     return '(读不到)';
+  }
+}
+
+/** 复现 WebKit 那次判定：视口顶边下方 4px、水平中点做 hit-test，
+ *  然后向上走，直到遇到第一个 fixed / sticky 祖先 —— 那就是系统取背景色的盒子。 */
+function hitChain(): string {
+  try {
+    const x = Math.round(window.innerWidth / 2);
+    const first = document.elementFromPoint(x, 4);
+    if (!first) return '  (4px 处命中不到任何元素)';
+    const lines: string[] = [];
+    let n: Element | null = first;
+    while (n && lines.length < 6) {
+      const s = getComputedStyle(n);
+      const r = n.getBoundingClientRect();
+      const cls = typeof n.className === 'string' && n.className ? '.' + n.className.trim().split(/\s+/)[0] : '';
+      lines.push(
+        `  ${n.tagName.toLowerCase()}${n.id ? '#' + n.id : ''}${cls}  pos=${s.position}  ` +
+          `${Math.round(r.width)}x${Math.round(r.height)}  bg=${s.backgroundColor}  pe=${s.pointerEvents}`,
+      );
+      if (s.position === 'fixed' || s.position === 'sticky') break;
+      n = n.parentElement;
+    }
+    const last = lines[lines.length - 1];
+    const ok = /pos=(fixed|sticky)/.test(last);
+    lines.push(
+      ok
+        ? '  ✅ 链尾是 fixed/sticky ⇒ 系统应取它的背景色'
+        : '  ❌ 整条链没有 fixed/sticky ⇒ 系统找不到固定色块延伸，顶部保持模糊',
+    );
+    return lines.join('\n');
+  } catch (e) {
+    return '  (读取失败 ' + String(e) + ')';
   }
 }
 
@@ -74,6 +138,8 @@ function collect() {
       ? `position ${rootCS?.position}  height ${appRoot.getBoundingClientRect().height.toFixed(1)}` +
         `  bg ${rootCS?.backgroundColor}  宽 ${appRoot.getBoundingClientRect().width.toFixed(0)}`
       : '❌ 不存在',
+    `--- 命中链（复现系统判定：y=4，水平中点）---`,
+    hitChain(),
   ].join('\n');
 }
 
@@ -83,7 +149,7 @@ export default function TopFixProbe() {
 
   const current = (() => {
     try {
-      return localStorage.getItem(VARIANT_KEY) || '0';
+      return localStorage.getItem(VARIANT_KEY) || DEFAULT_ID;
     } catch {
       return '0';
     }

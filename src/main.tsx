@@ -49,8 +49,9 @@ applyIosPwaFullscreenGuard();
    这样系统计算「固定色块延伸」时看到的就是目标变体。详见 components/TopFixProbe.tsx
    与 index.css 里 data-topfix 的规则。定位完成后连同探针组件一起删除。 */
 try {
-  const v = localStorage.getItem('xingshilu.topfix');
-  if (v && v !== '0') document.documentElement.dataset.topfix = v;
+  const v = localStorage.getItem('xingshilu.topfix2');
+  // '0' 与 '6' 都表示「新默认」（不写 data-topfix，走 index.css 里 html.ios-pwa #app-root 那套）
+  if (v && v !== '0' && v !== '6') document.documentElement.dataset.topfix = v;
 } catch {
   /* 忽略隐私模式下的存储异常 */
 }
