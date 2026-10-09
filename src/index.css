@@ -13,18 +13,14 @@
     --sal: env(safe-area-inset-left, 0px);
     --sar: env(safe-area-inset-right, 0px);
     --tabbar-h: 56px;
-    /* 顶部「玻璃渗出带」让位量：iOS 27 主屏 PWA 上给 .pt-safe 额外加的高度。
-       0 表示不让位；由 html.ios-pwa 决定是否生效（见文件末尾的规避规则）。
-       ⚠️ 这个值不能再往下压了：iOS 27 的 Liquid Glass 会对屏幕顶部约 94pt 内的
-       网页内容做渐进模糊，header 第一行内容实际起点 = --sat(62) + --tg + 12px
-       （header 自身 pt + 按钮内居中），--tg=26 时正好落在 ~100pt，刚好出模糊带。
-       再减就会把图标和标题送进模糊带，重现「水洇纸」。 */
-    --tg: 26px;
-    /* 顶栏色调浓度：0 = 完全不上色（纯背景），1 = 满色。
-       iOS 27 顶部必须有一层实色/半实色顶栏来承接 Liquid Glass 的模糊采样，
-       但用户反馈原先用满色（primary-500）「饱和度太高」，所以改用更浅的
-       primary-300 色阶 + 半透明叠在页面背景上。要再淡就往下调这个值。 */
-    --tg-tint: 0.5;
+    /* 顶部「让位量」：iOS 27 主屏 PWA 上给 .pt-safe 额外加的高度，0 = 完全不让位。
+       ⚠️ 历史坑（2026-10-09 重做）：iOS 27 状态栏是 Liquid Glass 材质，它会**采样
+       页面最顶端的像素**去染玻璃。旧做法是「让位 26px + 顶部铺一层 primary-300
+       半透明柔光」，结果玻璃永远只采样到浅色 ⇒ 顶部永远泛白雾，还白白多留 26px
+       空白（用户反馈「白雾去不掉 + 上方空太多」）。
+       现做法：让顶部填**实打实的页面背景色**（见文件下方「顶部与背景融合」一节），
+       玻璃直接染成背景色、白雾消失 ⇒ 不再需要让位，只留 6px 缓冲。 */
+    --tg: 6px;
 
     /* ============ 🍵 抹茶绿主题（默认）============ */
     /* primary 色阶（RGB 三元组） */
@@ -55,6 +51,12 @@
     --c-border: 230 242 232; /* 极淡边（抹茶下近乎无） */
     --c-muted: 138 150 138; /* 辅助灰 */
     --c-appbg: 246 250 246; /* 全局背景 */
+    /* 页面顶边（状态栏区）实色。默认 = 页面背景色 ⇒ 顶部与背景完全融合，
+       iOS 27 的 Liquid Glass 顶栏拿它去染色，白雾消失。
+       各主题自动跟随 --c-appbg，无需逐个主题声明。
+       ⚠️ 唯一旋钮：真机上若玻璃仍显偏亮（Liquid Glass 自带提亮），
+       可以只给本变量填「比背景略深一档」的 RGB 三元组做补偿（各主题可单独覆盖）。 */
+    --bg-top: var(--c-appbg);
     /* 字体 */
     --font-base: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB',
       'Microsoft YaHei', Inter, system-ui, sans-serif;
@@ -341,6 +343,17 @@ body,
   overflow: hidden;
 }
 
+/* ===== 顶边实色：html / body **都**写（2026-10-09 新增）=====
+   iOS 27 的 Liquid Glass 顶栏（状态栏）会取页面最顶端的颜色来染玻璃。
+   html/body 一起填成 --bg-top（= 页面背景色），页面上沿就再没有「白底」
+   可被采样 ⇒ 状态栏玻璃被染成背景色，与下方内容完全融合，白雾消失。
+   （本 App 的 #app-root 本来就是 bg-appbg 铺满全屏，这里只是把「最外层」
+    也补齐，保证任何渲染时序 / 出屏回弹时露出的都是同一色。） */
+html,
+body {
+  background-color: rgb(var(--bg-top));
+}
+
   html {
     /* 双保险：即便 meta 被覆盖也禁止文本自动放大 */
     -webkit-text-size-adjust: 100%;
@@ -349,7 +362,7 @@ body,
 
   body {
     margin: 0;
-    background-color: rgb(var(--c-appbg));
+    background-color: rgb(var(--bg-top));
     color: rgb(var(--c-ink));
     font-family: var(--font-base);
     -webkit-font-smoothing: antialiased;
@@ -459,9 +472,10 @@ body,
      毫无规律地「上飘 + 底部露出一大片空白」——这正是之前反复修不好的元凶。
      常量换来的是 100% 稳定；真机 62/34 是实测值，与系统真值一致。
 
-     顶部额外让出 --tg(36px) 的原因：iOS 27 的状态栏是 Liquid Glass 材质，
-     会对状态栏下方约 35pt 的网页内容做渐进模糊（清晰度比值 0.14 → 94pt 处 1.00）。
-     该采样无法用 CSS 关闭，只能让文字离开这条带。 */
+     顶部额外让出的 --tg 现在只有 6px（缓冲量）：
+     2026-10-09 起顶部改为「实色背景 + 12px 取样条」（见下方「顶部与背景融合」），
+     状态栏玻璃会被染成页面背景色，不再有白雾，因此不必再为模糊带让位；
+     旧版为躲开渗出带而写的 --tg=26px 已废弃。 */
   html.ios-pwa {
     --sat: 62px;
     --sab: 34px;
@@ -505,26 +519,35 @@ body,
   html.ios-pwa .pt-safe {
     padding-top: calc(var(--sat) + var(--tg));
   }
-  /* 顶部「主题色柔光顶栏」：
-     2026-09-24 调整：原先直接铺 primary-500 满色，用户反馈「饱和度太高」。
-     现改为：更浅的 primary-300 色阶 × --tg-tint(0.5) 半透明，叠在页面背景色上。
-     既保留了「顶部一条有色顶栏」的设计感，又把饱和度和明度压下来。
-     要想再淡 → 把 :root 里的 --tg-tint 调小（如 0.3）；想补回来 → 调大（如 0.8）；
-     想完全去掉 → 设 0。
-     ① 0 ~ --sat(62px)：状态栏区。Liquid Glass 的模糊采样需要纯色/柔色承接，
-        这层必须存在，否则状态栏下会出现"磨砂 + 脏"的杂色。
-     ② --sat ~ --sat+--tg-8px：继续同一层浅色，铺到首行内容上沿（消穴空白）。
-     ③ 最后 8px：渐隐收边，避免和下方背景形成硬切边。 */
+  /* ===== 顶部与背景融合（2026-10-09 重做，取代旧的「主题色柔光顶栏」）=====
+     旧做法：顶部铺 primary-300 半透明柔光渐隐，想给 Liquid Glass 一个
+     「承接面」。实际效果是玻璃只采样到浅色 ⇒ 顶部永远一层白雾，而且为了躲开渗出带
+     还得多留 26px 让位，用户反馈「白雾去不掉 + 上方空白太多」。
+     新做法（用户提供思路，已确认可行）：
+       ① html / body 都填 var(--bg-top)（= 页面背景色），见上方独立规则；
+       ② 屏幕最顶端再钉一条 12px 高的同色「取样条」（body::before），
+          给 iOS 一个明确的取样点 ⇒ 顶栏玻璃染成页面背景色，白雾消失；
+       ③ 玻璃既已同色，就不必再为模糊带让位 ⇒ --tg 由 26px 压到 6px，
+          整块内容随之上移 20px。
+     本类保留作「顶部实色块」：确保状态栏区（0 ~ --sat）永远是纯背景色，
+     不会被 header 自身的背景或滚动内容染色。 */
   html.ios-pwa .tg-glow {
-    /* 垫一层页面背景色：半透明顶栏混合的基准色，保证结果可预期、各主题一致 */
-    background-color: rgb(var(--c-appbg));
-    background-image: linear-gradient(
-      180deg,
-      rgb(var(--c-primary-300) / var(--tg-tint)) 0px,
-      rgb(var(--c-primary-300) / var(--tg-tint)) calc(var(--sat) + var(--tg) - 8px),
-      rgb(var(--c-primary-300) / 0) calc(var(--sat) + var(--tg))
-    );
-    background-repeat: no-repeat;
+    background-color: rgb(var(--bg-top));
+  }
+
+  /* ② iOS Liquid Glass「取样条」：屏幕最顶端 12px 的实色条，
+     专门给系统当取色点 —— 顶栏玻璃取到它，就被染成页面背景色。
+     pointer-events: none ⇒ 不拦截任何触摸；只占状态栏区内，视觉零影响。 */
+  html.ios-pwa body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 12px;
+    background-color: rgb(var(--bg-top));
+    pointer-events: none;
+    z-index: 2147483647;
   }
   .h-dvh {
     height: 100vh;
