@@ -51,15 +51,33 @@ applyIosPwaFullscreenGuard();
    ⚠️ key 每次变体重排都要换（现在是 topfix3），否则用户会卡在旧编号上。 */
 let SKIP_VP_GUARD = false;
 try {
-  const v = localStorage.getItem('xingshilu.topfix3');
+  const v = localStorage.getItem('xingshilu.topfix4');
   // '0' 与 '8' 都表示「新默认」（不写 data-topfix，走 #root fixed 全屏那套）
   if (v && v !== '0' && v !== '8') document.documentElement.dataset.topfix = v;
-  /* 变体 3 = 诊断用：完全关掉视口看门狗的两波「制造溢出」动作。
+  /* 变体 13 = 诊断用：完全关掉视口看门狗的两波「制造溢出」动作。
+     ⚠️ 编号必须用 13：data-topfix='3' 在 CSS 里是「首行下移到 100pt」，
+     两者若共用一个编号，一次点选会同时动两个变量，结果无法解释。
      怀疑点：看门狗为了让 iOS 重算视口，会在每次启动时临时把页面撑出视口
      （html.vp-overflow + 一个比视口高 120px 的探针元素）⇒ 文档变成「可滚动」。
      如果系统那层顶部模糊正是因为「页面可滚动」才出现，这个动作就会让它在
      每次启动时稳定复现 —— 而别的 PWA 没有这套看门狗，所以它们不糊。 */
-  if (v === '3') SKIP_VP_GUARD = true;
+  if (v === '13') SKIP_VP_GUARD = true;
+
+  /* 变体 12：把 viewport-fit 从 cover 改成 auto（默认）。
+     这是一条**机制完全不同**的路：cover 会让网页内容延伸到状态栏/安全区底下，
+     从而被卷进系统状态栏那层 Liquid Glass 的合成；改成 auto 后网页不再延伸到
+     安全区，系统自己画状态栏，网页内容不参与玻璃合成。
+     代价：顶部会被系统的安全区留白占掉（看起来就是"顶上一条"），底部同理 ——
+     所以这只作为诊断项，若它能让字变清晰，就证明方向是「别让内容进玻璃合成」。 */
+  if (v === '12') {
+    const vp = document.querySelector('meta[name="viewport"]');
+    if (vp) {
+      vp.setAttribute(
+        'content',
+        'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=auto',
+      );
+    }
+  }
 } catch {
   /* 忽略隐私模式下的存储异常 */
 }
