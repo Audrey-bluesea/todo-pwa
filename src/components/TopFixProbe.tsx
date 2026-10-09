@@ -14,46 +14,46 @@ import { useState } from 'react';
  * 用法：点左下角小胶囊 → 逐个点变体（会自动 reload）→ 看顶部文字是否清晰。
  * ==========================================================================*/
 
-// 换 key：第 5 版的变体编号与上一版含义不同，必须让旧选择失效，否则用户会卡在旧变体上
-const VARIANT_KEY = 'xingshilu.topfix2';
-const DEFAULT_ID = '6'; // 不写 data-topfix 时生效的就是 6 号方案
-const BUILD = 'topfix-2026-10-09 · 第 5 版（根容器 fixed inset-0 + 取样条让出命中）';
+// 换 key：第 6 版的变体编号与上一版含义不同，必须让旧选择失效，否则用户会卡在旧变体上
+const VARIANT_KEY = 'xingshilu.topfix3';
+const DEFAULT_ID = '8'; // 不写 data-topfix 时生效的就是 8 号方案
+const BUILD = 'topfix-2026-10-09 · 第 6 版（#root 固定全屏，首帧即在场的固定色块容器）';
 
 const VARIANTS: { id: string; name: string; why: string }[] = [
   {
-    id: '6',
-    name: '6 · 新默认：根容器 fixed inset-0',
-    why: '四条边全钉 + 高恰等于视口 + 不透明背景；取样条让出命中。对齐已验证修法',
+    id: '8',
+    name: '8 · 新默认：#root 固定全屏',
+    why: '固定容器放在 index.html 的静态元素 #root 上 —— 系统判定发生在首帧布局，React 渲染的 #app-root 那时还不存在',
   },
   {
-    id: '2',
-    name: '2 · 同 6，但取样条仍可命中',
-    why: '对照用。若 6 清晰而 2 糊 ⇒ 坐实「取样条截走命中」',
-  },
-  {
-    id: '7',
-    name: '7 · 同 6 + 顶栏 sticky top:0',
-    why: '原文列出的另一条有效修法，多一层保险',
+    id: '9',
+    name: '9 · 诊断：顶部 0~100pt 涂玫红',
+    why: '玫红清晰 ⇒ 系统不糊固定元素；玫红发虚 ⇒ 整条带被系统模糊。看一眼就能定性',
   },
   {
     id: '3',
-    name: '3 · 首行下移到 ≈100pt',
-    why: '二分模糊带下边界（已知 ≈85 糊、≈145 清晰）',
+    name: '3 · 诊断：关掉「视口看门狗」',
+    why: '看门狗每次启动会临时把页面撑出视口（制造「内容溢出」逼 iOS 重算）⇒ 文档变成可滚动。若模糊是「页面可滚动」引起的，关掉它就该清晰',
   },
   {
-    id: '4',
-    name: '4 · 首行下移到 ≈115pt',
-    why: '二分模糊带下边界',
+    id: '2',
+    name: '2 · 对照：取样条可被命中',
+    why: '验证「y=4 的命中是否被取样条截走」',
+  },
+  {
+    id: '7',
+    name: '7 · 顶栏改 sticky top:0',
+    why: '原文列出的另一条有效修法（会与顶栏自身 overflow 打架）',
   },
   {
     id: '5',
     name: '5 · 首行下移到 ≈145pt',
-    why: '已确认清晰，作为「带外」基准',
+    why: '已确认清晰，作为「模糊带之外」的基准',
   },
   {
     id: '1',
-    name: '1 · 回退：根容器改回 relative',
-    why: '顶部仍糊，但布局 100% 安全。若 6 导致底部异常，先切回这条',
+    name: '1 · 回退：#root 改回普通文档流',
+    why: '顶部仍糊，但布局 100% 安全。若 8 导致底部异常，先切回这条',
   },
 ];
 
@@ -108,13 +108,17 @@ function collect() {
   const vv = window.visualViewport;
   const tint = document.querySelector('.top-tint') as HTMLElement | null;
   const tintCS = tint ? getComputedStyle(tint) : null;
+  const root = document.getElementById('root');
+  const rootCS = root ? getComputedStyle(root) : null;
   const appRoot = document.getElementById('app-root');
-  const rootCS = appRoot ? getComputedStyle(appRoot) : null;
+  const appRootCS = appRoot ? getComputedStyle(appRoot) : null;
   const cssVar = (n: string) => getComputedStyle(de).getPropertyValue(n).trim();
+  const rect = (el: HTMLElement | null) =>
+    el ? `${Math.round(el.getBoundingClientRect().width)}x${Math.round(el.getBoundingClientRect().height)}` : '—';
 
   return [
     `构建      ${BUILD}`,
-    `变体      ${de.dataset.topfix || '0（默认）'}`,
+    `变体      ${de.dataset.topfix || '8（默认）'}`,
     `UA        ${navigator.userAgent}`,
     `standalone ${String((navigator as unknown as { standalone?: boolean }).standalone)}` +
       `  display-mode:${window.matchMedia?.('(display-mode: standalone)').matches ? 'standalone' : '否'}` +
@@ -130,13 +134,17 @@ function collect() {
     `--sat ${cssVar('--sat')}   --tg ${cssVar('--tg')}   --bg-top ${cssVar('--bg-top')}`,
     `--- 取样条 .top-tint ---`,
     tint
-      ? `存在  position ${tintCS?.position}  height ${tintCS?.height}  width ${tint.getBoundingClientRect().width.toFixed(0)}` +
+      ? `position ${tintCS?.position}  height ${tintCS?.height}  ${rect(tint)}` +
         `  bg ${tintCS?.backgroundColor}  pointer-events ${tintCS?.pointerEvents}  z ${tintCS?.zIndex}`
+      : '❌ 不存在',
+    `--- #root（现在的固定色块容器）---`,
+    root
+      ? `position ${rootCS?.position}  inset ${rootCS?.top}/${rootCS?.right}/${rootCS?.bottom}/${rootCS?.left}` +
+        `  ${rect(root)}  bg ${rootCS?.backgroundColor}`
       : '❌ 不存在',
     `--- #app-root ---`,
     appRoot
-      ? `position ${rootCS?.position}  height ${appRoot.getBoundingClientRect().height.toFixed(1)}` +
-        `  bg ${rootCS?.backgroundColor}  宽 ${appRoot.getBoundingClientRect().width.toFixed(0)}`
+      ? `position ${appRootCS?.position}  ${rect(appRoot)}  bg ${appRootCS?.backgroundColor}`
       : '❌ 不存在',
     `--- 命中链（复现系统判定：y=4，水平中点）---`,
     hitChain(),
@@ -199,7 +207,8 @@ export default function TopFixProbe() {
           当前生效：<span className="font-semibold text-primary-700">{current}</span>
           <br />
           <span className="text-[11px] text-neutral-400">
-            注：模糊是系统渲染，改动必须整页重载才生效，切换前后台看不出变化。
+            最可靠的办法：选好之后**从应用切换器上滑杀掉 App，再从主屏图标重开** ——
+            系统只在页面首次布局时判定一次，并把结果保留到下一次页面加载。
           </span>
         </p>
 

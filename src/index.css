@@ -341,8 +341,28 @@ body,
   overscroll-behavior: none;
 }
 
+/* ===== #root = 系统判定用的「固定色块延伸」容器（2026-10-09 第六次修订）=====
+   为什么必须放在 **#root** 上，而不是 React 渲染出来的 #app-root 上：
+
+   WebKit 只在能找到「fixed colour extension」时才隐藏顶部那层滚动边缘模糊，
+   而它是在**页面首次布局**时去找的，找到的结果**保留到下一次页面加载**。
+   本 App 是 SPA：#app-root 由 React 在首屏之后才创建 —— 系统去找的那一刻它
+   还不存在。另一份同类 App 报告里真机验证有效的修法（#app { position:fixed;
+   inset:0 }）能生效，是因为它的 #app 写在**静态 HTML** 里，首帧就在场。
+
+   #root 正是我们这边「首帧就在场」的那个元素（index.html 里的静态 div），
+   把固定全屏 + 不透明背景色放在它身上，才满足全部判据：
+     · position:fixed            → 能被 y=4 的 hit-test 命中
+     · inset:0                    → 宽 100%（≥90%）、高恰等于视口（≤105%）
+     · background-color 不透明    → 系统取到的就是页面背景色
+
+   ⚠️ 这三条缺一不可，且**不能放到 .ios-pwa 之类的 JS 类名下** —— 那会让规则
+   的生效时机变成「JS 跑没跑」，而系统只看首帧。本节就是这次踩的坑。 */
 #root {
+  position: fixed;
+  inset: 0;
   overflow: hidden;
+  background-color: rgb(var(--bg-top));
 }
 
 /* ===== 顶边实色：html / body **都**写（2026-10-09 新增）=====
@@ -500,37 +520,37 @@ body {
      同时多出来的 62px 正好构成该缺陷的自愈触发条件「内容溢出视口」。
      非主屏（桌面 / Safari 标签页）不生效，一行都不变。 */
   html.ios-pwa,
-  html.ios-pwa body,
-  html.ios-pwa #root {
+  html.ios-pwa body {
     height: 100vh;
   }
+  /* ⚠️ 这里**故意不再包含 #root**：第 6 版起 #root 是 position:fixed; inset:0 的
+     「固定色块容器」，它的高度必须**恰等于视口**才能过 WebKit 的「≤105% 视口高」判据。
+     一旦给它 height:100vh，在视口偏小（894）时就是 956 = 107% ⇒ 会被判据拒收，
+     又回到「怎么改都没反应」。所以 #root 的高度只能由 inset:0 决定。 */
 
-  /* ===== 顶部模糊「固定色块延伸」容器（2026-10-09 第五次修订，对齐已验证修法）=====
+  /* ===== 顶部模糊「固定色块延伸」容器（2026-10-09 第六次修订 · 定稿）=====
      WebKit 原文判据（WKWebViewIOS.mm `_shouldHideTopScrollPocket` →
      `LocalFrameView::fixedContainerEdges`）：在**视口顶边下方 4px、水平中点**做一次
      hit-test，向上找第一个 position:fixed / sticky 的盒子，要求
        · ≥ 90% 视口宽
        · ≤ 105% 视口高
-     然后取**它的 background-color** 作为「固定色块延伸」，找到就隐藏顶部
-     Liquid Glass 滚动边缘模糊（真机实测那条带约覆盖屏幕 0~120pt）。
+     然后取**它的 background-color** 作为「固定色块延伸」，找到就隐藏顶部那层
+     Liquid Glass 滚动边缘模糊（真机实测那条带约覆盖视口顶边往下 75pt）。
 
-     🔴 前四版全栽在同一个地方：**hit-test 在 y=4 命中的是 .top-tint（z-index 9999
-     盖在最上层），它只有 16px 高、只钉了 top/left/right 三条边** —— 命中被它截走，
-     而它自己通不过判据，于是整条链永远找不到合格容器。
-     变体 3（加高到 62px）/ 变体 4（z-index 降到 1000）都只改了它自己，所以都没用。
+     🔴 前五版全部无效，真因是**这个盒子必须首帧布局时就在场**：
+     判据里的「找到的容器保留到下一次页面加载」意味着系统只在
+     **页面首次布局**那一刻去找一次。本 App 是 SPA，前五版把 fixed 放在
+     React 渲染出来的 #app-root 上（且还挂在 .ios-pwa 这个 JS 类名下）——
+     系统去找的时候，那个元素要么还不存在、要么类名还没加上 ⇒ 永远找不到。
+     对照组（Cogito / 另一份同类 App 报告）能生效，是因为它们的
+     #app 写在**静态 HTML** 里，首帧就在场。
 
-     正解（与另一份同类 App 报告里**真机验证有效**的写法一致）：
-       ① 让**根容器自己**成为那个盒子：`fixed; inset: 0` ⇒ 四条边全钉、宽 100%、
-          高恰等于视口（100%，稳过 105%）、背景是 bg-appbg 不透明；
-       ② 把 .top-tint 的命中让出来（pointer-events: none），否则它会继续截走命中。
-     ⚠️ 顺序不能反：先有合格的盒子，再清掉抢命中的元素。 */
-  html.ios-pwa #app-root {
-    position: fixed;
-    inset: 0;
-    /* 必须 auto：height:100vh(=956) 在视口 894 时是 107% > 105%，会被判据拒收。
-       inset:0 让高度恰等于视口，永远 100%。 */
-    height: auto;
-  }
+     ⇒ 定稿：把这个盒子放在 **#root** 上（见文件上方 #root 那一节）。
+       它是 index.html 里的静态元素，首帧一定在；
+       #app-root 回到普通文档流（relative），不再承担这件事。
+       另两条已知可行但**没有采用**的等价写法（留作备查）：
+         · header { position: sticky; top: 0 }（会与 header 的 overflow 打架）
+         · .top-tint 自己加高到 ≥ 可视带宽（会盖住内容，不可取） */
 
   /* ===== 视口看门狗用的两个**临时**状态（用完立刻移除，见 lib/viewportGuard.ts）=====
      ① vp-overflow：临时放开 html/body 的 overflow:hidden。
@@ -587,90 +607,68 @@ body {
     -webkit-backdrop-filter: none;
   }
 
-  /* ② iOS Liquid Glass「取样条」：屏幕最顶端 12px 的实色条，
-     专门给系统当取色点 —— 顶栏玻璃取到它，就被染成页面背景色。
-     与上一版相比有两处修正：
-       (a) 改用**真实元素**而不是 body::before：iOS 的取样只认「fixed/sticky 元素自身的
-           background-color」，伪元素是否参与取样没有保证（Cogito 用的是真实 div）；
-       (b) z-index 用 9999（与 Cogito 一致）而不是 2147483647：极端 z-index 会额外制造
-           一个巨型层叠上下文，而「iOS 27 会把带层叠上下文的层按 1x 栅格化、导致字发糊」
-           是本 App 已经踩过一次的坑（见 TodoTab header 上的注释）。
-     pointer-events: none ⇒ 不拦截任何触摸；只占状态栏区内，视觉零影响。 */
-  /* 2026-10-09 三次修订：**无条件存在**，不再依赖 html.ios-pwa（完全对齐 Cogito 的写法）。
-     原因：取样条只有在「元素真实存在、位于视口顶边、且有确定的 background-color」
-     时才会被系统采纳。之前写成 html.ios-pwa 才 display:block，一旦判定时机晚了
-     一步（或压根没加上），取样条就是 0 高度的空 div ⇒ 系统取不到色 ⇒ 回落纯白 ⇒
-     顶部白雾，而且改什么都没反应。
-     它颜色 = 页面背景色、高 12px、pointer-events:none ⇒ 任何环境下视觉零影响。 */
-  /* 🔴 2026-10-09 四次修订 —— 这一版是读了 WebKit 源码行为后倒推出来的，机制如下：
-     WKWebView 只有在 `_shouldHideTopScrollPocket` 找到一个「fixed colour extension」
-     时才会隐藏顶部那层 Liquid Glass 滚动边缘模糊（约 75pt 高）。
-     WebKit 的判定方式：在**视口顶边下方 4px、水平居中**那一点做 **hit-test**，
-     向上找第一个 position:fixed / sticky 的祖先；该元素必须
-       ① 宽度 ≥ 视口宽 90%
-       ② 高度 ≤ 视口高 105%
-     然后取它的 background-color 作为「固定色块延伸」。
-     ⚠️ 两个必须记住的后果：
-       · **命中不了 = 等于没做**。所以这个元素绝不能加 pointer-events:none ——
-         hit-test 会跳过指针事件关闭的元素。上一版就是栽在这一条上：
-         元素、颜色、尺寸全对，唯独自己关掉了命中，系统看不到它。
-       · 伪元素不是 hit-test 节点（早期 body::before 的写法注定无效）。
-     另：WebKit 找到的容器会**保留到下一次页面加载**，所以任何改动都必须
-     冷启动（杀掉 App 重开，或整页 reload）才能看到效果，改完立刻切换前后台是看不出来的。 */
+  /* ② iOS Liquid Glass「取样条」：**逐字照抄 Cogito 的写法**（用户要求「一模一样地改」）。
+     它是页面上最顶端的固定色块，系统顶部玻璃的取色/取边以它为准。
+     Cogito 的原始规则（styles.css:232）：
+       .top-tint { position: fixed; top:0; left:0; right:0; height:12px;
+                   background-color: var(--bg-top); pointer-events:none; z-index:9999 }
+     ⚠️ 三个字段都不要改：
+       · height 12px —— >10px 时系统取元素**自身**的 background-color；
+         不足 10px 会退而取「顶部 2px」的颜色。12px 是已生效值。
+       · pointer-events:none —— 不拦截触摸。**不要**试图靠它去「让出命中」：
+         已验证的另一份 App 与 Cogito 都是 none，且都能正常取色。
+       · background-color 必须是不透明、且 = 页面顶部实际颜色（= --bg-top）。 */
   .top-tint {
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
-    /* 必须 > 10px：≥10px 时系统取元素自身的 background-color；
-       不足 10px 时它会退而取「顶部 2px」的颜色。16px 留出安全余量。 */
-    height: 16px;
+    height: 12px;
     background-color: rgb(var(--bg-top));
-    /* ❗2026-10-09 再修订：这里**必须**是 none。
-       它是 z-index 9999 盖在最顶层的元素，一旦可命中，系统那次 y=4 的 hit-test
-       就会命中它、而通不过判据（只钉了 top/left/right、只有 16px 高），
-       真正合格的根容器就永远没机会被找到 —— 这就是前四版怎么改都没反应的原因。
-       让出命中后，y=4 命中的就是 fixed inset-0 的 #app-root。 */
     pointer-events: none;
     z-index: 9999;
   }
   /* ===== 顶部模糊「现场探针」变体（临时，定位完成即删）=====
      真机上的顶部模糊是系统级渲染，本地 WebKit 复现不了，只能到真机上逐条试。
-     每个变体对应一条 WebKit 判据；点选后整页 reload（系统会重新计算固定容器），
-     再看顶部文字是否变清晰，就能锁定是哪一条在卡。
-     变体编号存在 localStorage['xingshilu.topfix']，由 main.tsx 在渲染前打到 <html data-topfix>。 */
-  /* 编号说明：6 = 新默认（不加 data-topfix，即上面 html.ios-pwa #app-root 那套）。
+     点选后整页 reload；另：WebKit 找到的容器会**保留到下一次页面加载**，
+     所以最可靠的验证方式是**杀掉 App 冷启动**再看。
+     变体编号存在 localStorage['xingshilu.topfix3']，由 main.tsx 在渲染前打到
+     <html data-topfix>。 */
+  /* 编号说明：8 = 新默认（不加 data-topfix，即 #root fixed 全屏那套）。
      其余都是排查用的对照项，定位完成后随探针一起删除。 */
 
-  /* 变体 1：【回退】根容器改回文档流 relative —— 顶部仍糊，但布局 100% 安全。
-     若选 6 之后底部 TabBar 上飘/露白，先切回这里保住可用。 */
-  html[data-topfix='1'] #app-root {
-    position: relative !important;
+  /* 变体 1：【回退】#root 改回普通文档流 —— 顶部仍糊，但布局 100% 安全。 */
+  html[data-topfix='1'] #root {
+    position: static !important;
     inset: auto !important;
+    background-color: transparent !important;
+  }
+  html[data-topfix='1'] #app-root {
     height: 100vh !important;
   }
-  /* 变体 2：根容器 fixed inset-0，但**让取样条继续可命中**。
-     若这条糊、6 清晰 ⇒ 坐实「取样条截走命中」是前四版的真因。 */
+  /* 变体 2：对照 —— 让取样条可被命中（验证「命中是否被它截走」）。 */
   html[data-topfix='2'] .top-tint {
     pointer-events: auto !important;
   }
-  /* 变体 7：根容器 fixed inset-0 + 顶栏改 sticky top:0（原文列出的另一条有效修法）。
-     顶栏本身也成为一个 sticky 盒子，多一层保险。 */
+  /* 变体 9：【诊断】把顶部 0~100px 涂成醒目玫红（fixed，盖在最上层）。
+     用途只有一个：判定系统到底有没有在**顶部 100pt 这个区域**做模糊。
+       · 玫红条清晰 → 系统不糊「固定元素」，问题只出在内容被卷进模糊带
+       · 玫红条发虚/发暗 → 系统把整条带一起模糊，与元素是不是 fixed 无关 */
+  html[data-topfix='9'] .top-tint {
+    height: 100px !important;
+    background-color: #e0457b !important;
+    pointer-events: auto !important;
+    z-index: 99999 !important;
+  }
+  /* 变体 5：把首行内容下移到 ≈145pt（已确认清晰），作为「带外」基准。 */
+  html[data-topfix='5'] .pt-safe {
+    padding-top: calc(var(--sat) + 68px) !important;
+  }
+  /* 变体 7：顶栏改 sticky top:0（原文列出的另一条有效修法），多一层保险。 */
   html[data-topfix='7'] .tg-glow {
     position: sticky !important;
     top: 0 !important;
     background-color: rgb(var(--bg-top)) !important;
-  }
-  /* 变体 3/4/5：把首行内容逐步下移，用来二分模糊带的真实下边界。
-     已知 5（≈145pt）清晰、0~2 位置（≈85pt）糊 ⇒ 边界在 110~145 之间。 */
-  html[data-topfix='3'] .pt-safe {
-    padding-top: calc(var(--sat) + 14px) !important; /* 首行 ≈100pt */
-  }
-  html[data-topfix='4'] .pt-safe {
-    padding-top: calc(var(--sat) + 30px) !important; /* 首行 ≈115pt */
-  }
-  html[data-topfix='5'] .pt-safe {
-    padding-top: calc(var(--sat) + 68px) !important; /* 首行 ≈145pt（已确认清晰） */
   }
 
   .h-dvh {

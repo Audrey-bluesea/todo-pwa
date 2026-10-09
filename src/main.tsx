@@ -47,11 +47,19 @@ applyIosPwaFullscreenGuard();
 
 /* 顶部模糊「现场探针」：把上次选中的变体号在**首帧渲染之前**打到 <html data-topfix>，
    这样系统计算「固定色块延伸」时看到的就是目标变体。详见 components/TopFixProbe.tsx
-   与 index.css 里 data-topfix 的规则。定位完成后连同探针组件一起删除。 */
+   与 index.css 里 data-topfix 的规则。定位完成后连同探针组件一起删除。
+   ⚠️ key 每次变体重排都要换（现在是 topfix3），否则用户会卡在旧编号上。 */
+let SKIP_VP_GUARD = false;
 try {
-  const v = localStorage.getItem('xingshilu.topfix2');
-  // '0' 与 '6' 都表示「新默认」（不写 data-topfix，走 index.css 里 html.ios-pwa #app-root 那套）
-  if (v && v !== '0' && v !== '6') document.documentElement.dataset.topfix = v;
+  const v = localStorage.getItem('xingshilu.topfix3');
+  // '0' 与 '8' 都表示「新默认」（不写 data-topfix，走 #root fixed 全屏那套）
+  if (v && v !== '0' && v !== '8') document.documentElement.dataset.topfix = v;
+  /* 变体 3 = 诊断用：完全关掉视口看门狗的两波「制造溢出」动作。
+     怀疑点：看门狗为了让 iOS 重算视口，会在每次启动时临时把页面撑出视口
+     （html.vp-overflow + 一个比视口高 120px 的探针元素）⇒ 文档变成「可滚动」。
+     如果系统那层顶部模糊正是因为「页面可滚动」才出现，这个动作就会让它在
+     每次启动时稳定复现 —— 而别的 PWA 没有这套看门狗，所以它们不糊。 */
+  if (v === '3') SKIP_VP_GUARD = true;
 } catch {
   /* 忽略隐私模式下的存储异常 */
 }
@@ -65,8 +73,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   </React.StrictMode>,
 );
 
-/* 视口看门狗：修「整块底部偶发上飘 62pt」（详见 lib/viewportGuard.ts） */
-initViewportGuard({ iosStandalone: IOS_STANDALONE });
+/* 视口看门狗：修「整块底部偶发上飘 62pt」（详见 lib/viewportGuard.ts）
+   ⚠️ 探针变体 3 会跳过它（诊断用，见上方说明） */
+if (!SKIP_VP_GUARD) initViewportGuard({ iosStandalone: IOS_STANDALONE });
 
 /* 键盘避让看门狗：弹键盘时把底部弹层顶到键盘上沿，并把输入框滚进可视区
    （详见 lib/keyboardGuard.ts）。全平台运行，无键盘时视觉零变化。 */
