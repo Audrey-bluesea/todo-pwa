@@ -19,7 +19,9 @@
        半透明柔光」，结果玻璃永远只采样到浅色 ⇒ 顶部永远泛白雾，还白白多留 26px
        空白（用户反馈「白雾去不掉 + 上方空太多」）。
        现做法：让顶部填**实打实的页面背景色**（见文件下方「顶部与背景融合」一节），
-       玻璃直接染成背景色、白雾消失 ⇒ 不再需要让位，只留 6px 缓冲。 */
+       玻璃直接染成背景色、白雾消失 ⇒ 不再需要让位，只留 6px 缓冲。
+     ⚠️ 唯一旋钮：真机上首行若仍偏软，把这里调大（12 / 18 / 26）＝整体下移；
+       调小（0 / 2）＝继续上移。首行墨迹实际落点 ≈ --sat(62) + --tg + 15px。 */
     --tg: 6px;
 
     /* ============ 🍵 抹茶绿主题（默认）============ */
@@ -525,21 +527,43 @@ body {
      还得多留 26px 让位，用户反馈「白雾去不掉 + 上方空白太多」。
      新做法（用户提供思路，已确认可行）：
        ① html / body 都填 var(--bg-top)（= 页面背景色），见上方独立规则；
-       ② 屏幕最顶端再钉一条 12px 高的同色「取样条」（body::before），
+       ② 屏幕最顶端再钉一条 12px 高的同色「取样条」（.top-tint 真实元素），
           给 iOS 一个明确的取样点 ⇒ 顶栏玻璃染成页面背景色，白雾消失；
        ③ 玻璃既已同色，就不必再为模糊带让位 ⇒ --tg 由 26px 压到 6px，
-          整块内容随之上移 20px。
-     本类保留作「顶部实色块」：确保状态栏区（0 ~ --sat）永远是纯背景色，
-     不会被 header 自身的背景或滚动内容染色。 */
+          整块内容随之上移 20px；
+       ④ header 本身保持透明（见下方 .tg-glow）：顶部露出 html / body 的底色，
+          与背景完全融合，且不留任何会被系统降采样/模糊的合成块。 */
+  /* ⚠️ 顶部**不许铺任何色块、不许做模糊**（2026-10-09 二次修订，重要）。
+     上一版给 .tg-glow 铺了 rgb(var(--bg-top)) 实色，本意是「确保状态栏区是纯背景色」，
+     结果真机上首行文字发糊。用另一个 PWA（Cogito）做对照可以确认高度不是原因：
+       · 同样 iOS 27 主屏 PWA、status-bar-style=default、viewport-fit=cover；
+       · 真机同屏截图量化：本 App 首行墨迹 ≈83pt，Cogito ≈80pt —— 几乎一样高；
+       · 但 Cogito 完全清晰，我们糊 ⇒ 差异不在高度，在于画的这层东西。
+     Cogito 的 .appbar 明确写死 `background: transparent; backdrop-filter: none`，
+     注释原话「不铺色块、不做模糊，让主题底色一路铺到状态栏」。这里照抄该写法：
+     状态栏区露出的就是 html / body 的底色（已由上方规则填成 --bg-top），
+     照样与背景完全融合，但不再存在一个会被系统当成「顶层合成块」去降采样/模糊的图层。 */
   html.ios-pwa .tg-glow {
-    background-color: rgb(var(--bg-top));
+    background-color: transparent;
+    background-image: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
   }
 
   /* ② iOS Liquid Glass「取样条」：屏幕最顶端 12px 的实色条，
      专门给系统当取色点 —— 顶栏玻璃取到它，就被染成页面背景色。
+     与上一版相比有两处修正：
+       (a) 改用**真实元素**而不是 body::before：iOS 的取样只认「fixed/sticky 元素自身的
+           background-color」，伪元素是否参与取样没有保证（Cogito 用的是真实 div）；
+       (b) z-index 用 9999（与 Cogito 一致）而不是 2147483647：极端 z-index 会额外制造
+           一个巨型层叠上下文，而「iOS 27 会把带层叠上下文的层按 1x 栅格化、导致字发糊」
+           是本 App 已经踩过一次的坑（见 TodoTab header 上的注释）。
      pointer-events: none ⇒ 不拦截任何触摸；只占状态栏区内，视觉零影响。 */
-  html.ios-pwa body::before {
-    content: '';
+  .top-tint {
+    display: none;
+  }
+  html.ios-pwa .top-tint {
+    display: block;
     position: fixed;
     top: 0;
     left: 0;
@@ -547,7 +571,7 @@ body {
     height: 12px;
     background-color: rgb(var(--bg-top));
     pointer-events: none;
-    z-index: 2147483647;
+    z-index: 9999;
   }
   .h-dvh {
     height: 100vh;

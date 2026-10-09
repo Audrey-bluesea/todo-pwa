@@ -35,6 +35,10 @@
   <body>
     <div id="root"></div>
 
+    <!-- iOS 27 顶部玻璃「取样条」：真实元素（不是伪元素），仅在 html.ios-pwa 下显示，
+         颜色 = 页面背景色，故任何环境下视觉上都不存在。详见 src/index.css 的同名规则。 -->
+    <div class="top-tint" aria-hidden="true"></div>
+
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
