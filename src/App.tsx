@@ -10,7 +10,6 @@ import TimerBubble from './components/TimerBubble';
 import TimerStartSheet from './components/TimerStartSheet';
 import TimerEntryEditSheet from './components/TimerEntryEditSheet';
 import RecapView from './components/RecapView';
-import TopFixProbe from './components/TopFixProbe';
 import TodoTab from './views/TodoTab';
 import CalendarTab from './views/CalendarTab';
 
@@ -87,7 +86,6 @@ export default function App() {
       </main>
 
       <TabBar />
-      <TopFixProbe />
       <Drawer />
       <RecapView />
       <TodoEditorSheet />

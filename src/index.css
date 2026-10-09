@@ -17,21 +17,14 @@
        值 = .pt-safe 的 padding-top 里，除状态栏 62px 之外额外让出的高度。
        首行墨迹实际落点 ≈ --sat(62) + --tg + 14.3px（真机实测偏移）。
 
-       🔴 2026-10-10 实测结论（推翻此前六版全部猜测，别再回头调颜色/取样条/根容器）：
-       iOS 26/27 主屏 PWA 的顶部**不是「白雾」问题，而是一条屏幕固定高度的模糊带**。
-         · 把顶部涂成纯色块（探针变体 9）可以反解出系统那层覆盖物：
-           不透明度 0~35pt 恒为 ≈0.48 → 之后线性衰减 → **≈95~102pt 归零**；
-           纯色块自身边缘 1px 刀切 ⇒ 它不是被高斯模糊，是被一层渐变覆盖物压住。
-         · 把同一个词「October」放到不同高度、同一把尺子量锐度（mid/core，越小越锐）：
-             首行 82.7pt（--tg:6，旧默认）→ **2.10**（糊；本地干净渲染只有 0.31）
-             首行 106.3pt（--tg:30）    → **0.31**（与干净渲染一致 ⇒ 清晰）
-             首行 144.3pt（--tg:68）    → **0.31**（清晰）
-       ⇒ **带的下沿落在 102~106pt 之间；只要首行墨迹 ≥106pt 就是完全清晰的。**
-         这就是「怎么调都糊、往下挪就清晰」的全部原因。
-
-       ⚠️ 唯一旋钮：真机首行仍偏软 → 调大（40 / 48 / 68）；想更贴顶 → 调小到 30（边界）。
-         低于 28 会把首行送进模糊带（已实测会糊）。 */
-    --tg: 34px;
+       🔴 2026-10-10 根因（已对照 Cogito 同构验证，别再回头调颜色/取样条）：
+       顶部发虚/发糊**不是**「屏幕固定高度的模糊带」，而是 **#root 用了 position:fixed**。
+       iOS 26/27 会把铺满全屏的 fixed 层当系统导航栏整体模糊+降采样，故全屏字发虚、
+       顶部最明显，且改颜色/取样条/padding 全无反应。对照 App Cogito 的 #app 是
+       position:relative、首行 80pt 却完全清晰 ⇒ 病根是 fixed 而非高度。
+       修法：#root 改 relative（见下方规则），与 Cogito 同构；--tg 调小到 6px
+       即首行 ≈83pt，贴顶且锐利。本地 WebKit 渲染不出 iOS 原生那层模糊，最终以真机为准。 */
+    --tg: 6px;
 
     /* ============ 🍵 抹茶绿主题（默认）============ */
     /* primary 色阶（RGB 三元组） */
@@ -353,29 +346,20 @@ body {
   overscroll-behavior: none;
 }
 
-/* ===== #root = 系统判定用的「固定色块延伸」容器（2026-10-09 第六次修订）=====
-   为什么必须放在 **#root** 上，而不是 React 渲染出来的 #app-root 上：
-
-   WebKit 只在能找到「fixed colour extension」时才隐藏顶部那层滚动边缘模糊，
-   而它是在**页面首次布局**时去找的，找到的结果**保留到下一次页面加载**。
-   本 App 是 SPA：#app-root 由 React 在首屏之后才创建 —— 系统去找的那一刻它
-   还不存在。另一份同类 App 报告里真机验证有效的修法（#app { position:fixed;
-   inset:0 }）能生效，是因为它的 #app 写在**静态 HTML** 里，首帧就在场。
-
-   #root 正是我们这边「首帧就在场」的那个元素（index.html 里的静态 div），
-   把固定全屏 + 不透明背景色放在它身上，才满足全部判据：
-     · position:fixed            → 能被 y=4 的 hit-test 命中
-     · inset:0                    → 宽 100%（≥90%）、高恰等于视口（≤105%）
-     · background-color 不透明    → 系统取到的就是页面背景色
-
-   ⚠️ 这三条缺一不可，且**不能放到 .ios-pwa 之类的 JS 类名下** —— 那会让规则
-   的生效时机变成「JS 跑没跑」，而系统只看首帧。本节就是这次踩的坑。 */
+/* ===== #root 旧注释（2026-10-09「fixed colour extension」结论，已废弃）=====
+   该结论已被推翻：#root 用 position:fixed 正是顶部发虚/发糊的病根，不是解法。
+   正确做法与当前规则见下方「2026-10-10 修复」注释及 #root 规则本身。 */
+/* 2026-10-10 修复：#root 改回 relative（对齐 Cogito 的 #app）。
+   iOS 26/27 会把「铺满全屏的 fixed 层」当系统导航栏整体模糊+降采样，这是顶部
+   发虚/发糊的真正病根；relative 后首行贴顶（≈83pt）也能保持锐利。
+   高度用 100vh 撑满（standalone 下 iOS 唯一没被算错的长度），宽度 100%。
+   ⚠️ 上方「系统判定用的固定色块延伸容器 / fixed colour extension」整段注释
+      是 2026-10-09 的旧结论，已被推翻——fixed 不是解法而是病根，勿回退。 */
 #root {
-  position: fixed;
-  inset: 0;
-  /* 高度交给 inset:0 —— fixed + top/bottom 都指定时，height:auto 会让高度
-     恰等于视口，天然满足 WebKit「≤105% 视口高」的判据，不需要猜视口单位。 */
-  height: auto;
+  position: relative;
+  height: 100vh;
+  height: 100dvh;
+  width: 100%;
   overflow: hidden;
   background-color: rgb(var(--bg-top));
 }
@@ -653,42 +637,9 @@ body {
     pointer-events: none;
     z-index: 9999;
   }
-  /* ===== 顶部模糊「现场探针」变体（临时，用户说可以删就删）=====
-     顶部那条模糊带是**系统级渲染**，本地 WebKit 复现不了，只能到真机上试。
-     点选后整页 reload 才会重算；最可靠的是**杀掉 App 冷启动**再看。
-     变体编号存在 localStorage['xingshilu.topfix6']（每次变体重排都要换 key，
-     否则用户会卡在旧编号上），由 main.tsx 在渲染前打到 <html data-topfix>。 */
-  /* 编号说明：不加 data-topfix = 当前默认（--tg: 34px，首行 ≈110pt，真机已确认清晰）。 */
-
-  /* ===== 现在只剩两种还需要在真机上试的变体 =====
-     · 位置类（1 / 30 / 68）：改 --tg，直接把首行放到带内/带外，用来复核下沿与挑最省空间的一档；
-     · 机制类（13 / 12）：如果哪天想「白拿回这 28pt」，这两条是仅剩没被验证过、
-       且**理论上可能让系统整条带消失**的变量。已知无效的路（根容器 fixed/relative、
-       取样条 pointer-events/z-index/高度、顶栏 sticky、只关惯性滚动、去掉滚动容器身份）
-       都已实测排除，不必再试。 */
-  /* 变体 1：【回退】--tg 回到 6px（改造前的旧位置）。真机已知会糊，仅用于 A/B 对照。 */
-  html[data-topfix='1'] .pt-safe {
-    padding-top: calc(var(--sat) + 6px) !important;
-  }
-  /* 变体 30：更贴顶一档（首行 ≈106pt，正好压在带的下沿上）。若这一档也清晰，
-     说明下沿比实测的还高，可以把默认值从 34 调小、少留一点空白。 */
-  html[data-topfix='30'] .pt-safe {
-    padding-top: calc(var(--sat) + 30px) !important;
-  }
-  /* 变体 68：首行 ≈145pt（真机已确认清晰）。作为「带外」上限参考，
-     与 30 一起可以把真实下沿二分到 ±5pt。 */
-  html[data-topfix='68'] .pt-safe {
-    padding-top: calc(var(--sat) + 68px) !important;
-  }
-  /* 变体 9：【诊断】把顶部 0~100px 涂成纯色（fixed，盖在最上层）。
-     两块用途：① 一眼看出顶部到底"糊不糊"；② 用截图反解系统覆盖物的透明度剖面
-     （2026-10-10 就是靠它量出「0~35pt ≈0.48 → 95pt 归零」这条曲线的）。 */
-  html[data-topfix='9'] .top-tint {
-    height: 100px !important;
-    background-color: #e0457b !important;
-    pointer-events: auto !important;
-    z-index: 99999 !important;
-  }
+  /* 2026-10-10：顶部「现场探针」(TopFixProbe / data-topfix 变体) 已整体移除。
+     根因已定位为 #root 的 position:fixed，结构性修法见上方 #root 规则；
+     Cogito 对照证明 relative 后 80pt 仍清晰，无需再靠探针 A/B。 */
 
   .h-dvh {
     height: 100vh;
