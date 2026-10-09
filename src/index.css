@@ -13,16 +13,25 @@
     --sal: env(safe-area-inset-left, 0px);
     --sar: env(safe-area-inset-right, 0px);
     --tabbar-h: 56px;
-    /* 顶部「让位量」：iOS 27 主屏 PWA 上给 .pt-safe 额外加的高度，0 = 完全不让位。
-       ⚠️ 历史坑（2026-10-09 重做）：iOS 27 状态栏是 Liquid Glass 材质，它会**采样
-       页面最顶端的像素**去染玻璃。旧做法是「让位 26px + 顶部铺一层 primary-300
-       半透明柔光」，结果玻璃永远只采样到浅色 ⇒ 顶部永远泛白雾，还白白多留 26px
-       空白（用户反馈「白雾去不掉 + 上方空太多」）。
-       现做法：让顶部填**实打实的页面背景色**（见文件下方「顶部与背景融合」一节），
-       玻璃直接染成背景色、白雾消失 ⇒ 不再需要让位，只留 6px 缓冲。
-     ⚠️ 唯一旋钮：真机上首行若仍偏软，把这里调大（12 / 18 / 26）＝整体下移；
-       调小（0 / 2）＝继续上移。首行墨迹实际落点 ≈ --sat(62) + --tg + 15px。 */
-    --tg: 6px;
+    /* ===== 顶部「让位量」——整套顶部方案的**唯一旋钮**，改这一个数就整体上/下移。
+       值 = .pt-safe 的 padding-top 里，除状态栏 62px 之外额外让出的高度。
+       首行墨迹实际落点 ≈ --sat(62) + --tg + 14.3px（真机实测偏移）。
+
+       🔴 2026-10-10 实测结论（推翻此前六版全部猜测，别再回头调颜色/取样条/根容器）：
+       iOS 26/27 主屏 PWA 的顶部**不是「白雾」问题，而是一条屏幕固定高度的模糊带**。
+         · 把顶部涂成纯色块（探针变体 9）可以反解出系统那层覆盖物：
+           不透明度 0~35pt 恒为 ≈0.48 → 之后线性衰减 → **≈95~102pt 归零**；
+           纯色块自身边缘 1px 刀切 ⇒ 它不是被高斯模糊，是被一层渐变覆盖物压住。
+         · 把同一个词「October」放到不同高度、同一把尺子量锐度（mid/core，越小越锐）：
+             首行 82.7pt（--tg:6，旧默认）→ **2.10**（糊；本地干净渲染只有 0.31）
+             首行 106.3pt（--tg:30）    → **0.31**（与干净渲染一致 ⇒ 清晰）
+             首行 144.3pt（--tg:68）    → **0.31**（清晰）
+       ⇒ **带的下沿落在 102~106pt 之间；只要首行墨迹 ≥106pt 就是完全清晰的。**
+         这就是「怎么调都糊、往下挪就清晰」的全部原因。
+
+       ⚠️ 唯一旋钮：真机首行仍偏软 → 调大（40 / 48 / 68）；想更贴顶 → 调小到 30（边界）。
+         低于 28 会把首行送进模糊带（已实测会糊）。 */
+    --tg: 34px;
 
     /* ============ 🍵 抹茶绿主题（默认）============ */
     /* primary 色阶（RGB 三元组） */
@@ -644,71 +653,41 @@ body {
     pointer-events: none;
     z-index: 9999;
   }
-  /* ===== 顶部模糊「现场探针」变体（临时，定位完成即删）=====
-     真机上的顶部模糊是系统级渲染，本地 WebKit 复现不了，只能到真机上逐条试。
-     点选后整页 reload；另：WebKit 找到的容器会**保留到下一次页面加载**，
-     所以最可靠的验证方式是**杀掉 App 冷启动**再看。
-     变体编号存在 localStorage['xingshilu.topfix3']，由 main.tsx 在渲染前打到
-     <html data-topfix>。 */
-  /* 编号说明：8 = 新默认（不加 data-topfix，即 #root fixed 全屏那套）。
-     其余都是排查用的对照项，定位完成后随探针一起删除。 */
+  /* ===== 顶部模糊「现场探针」变体（临时，用户说可以删就删）=====
+     顶部那条模糊带是**系统级渲染**，本地 WebKit 复现不了，只能到真机上试。
+     点选后整页 reload 才会重算；最可靠的是**杀掉 App 冷启动**再看。
+     变体编号存在 localStorage['xingshilu.topfix6']（每次变体重排都要换 key，
+     否则用户会卡在旧编号上），由 main.tsx 在渲染前打到 <html data-topfix>。 */
+  /* 编号说明：不加 data-topfix = 当前默认（--tg: 34px，首行 ≈110pt，真机已确认清晰）。 */
 
-  /* 变体 1：【回退】#root 改回普通文档流 —— 顶部仍糊，但布局 100% 安全。 */
-  html[data-topfix='1'] #root {
-    position: static !important;
-    inset: auto !important;
-    background-color: transparent !important;
+  /* ===== 现在只剩两种还需要在真机上试的变体 =====
+     · 位置类（1 / 30 / 68）：改 --tg，直接把首行放到带内/带外，用来复核下沿与挑最省空间的一档；
+     · 机制类（13 / 12）：如果哪天想「白拿回这 28pt」，这两条是仅剩没被验证过、
+       且**理论上可能让系统整条带消失**的变量。已知无效的路（根容器 fixed/relative、
+       取样条 pointer-events/z-index/高度、顶栏 sticky、只关惯性滚动、去掉滚动容器身份）
+       都已实测排除，不必再试。 */
+  /* 变体 1：【回退】--tg 回到 6px（改造前的旧位置）。真机已知会糊，仅用于 A/B 对照。 */
+  html[data-topfix='1'] .pt-safe {
+    padding-top: calc(var(--sat) + 6px) !important;
   }
-  html[data-topfix='1'] #app-root {
-    height: 100vh !important;
+  /* 变体 30：更贴顶一档（首行 ≈106pt，正好压在带的下沿上）。若这一档也清晰，
+     说明下沿比实测的还高，可以把默认值从 34 调小、少留一点空白。 */
+  html[data-topfix='30'] .pt-safe {
+    padding-top: calc(var(--sat) + 30px) !important;
   }
-  /* 变体 2：对照 —— 让取样条可被命中（验证「命中是否被它截走」）。 */
-  html[data-topfix='2'] .top-tint {
-    pointer-events: auto !important;
+  /* 变体 68：首行 ≈145pt（真机已确认清晰）。作为「带外」上限参考，
+     与 30 一起可以把真实下沿二分到 ±5pt。 */
+  html[data-topfix='68'] .pt-safe {
+    padding-top: calc(var(--sat) + 68px) !important;
   }
-  /* 变体 10：关掉惯性滚动（momentum scrolling）。
-     iOS 这套效果的名字里就有 scroll（scroll-edge effect）：它是**可滚动区域**
-     的边缘效果。本 App 的内容区全靠 .scroll-y（overflow-y:auto +
-     -webkit-overflow-scrolling:touch）滚动，怀疑正是这个惯性滚动容器让系统
-     在它顶边渲染了那层模糊。若 10 变清晰 ⇒ 元凶是内部滚动容器，不是状态栏玻璃。 */
-  html[data-topfix='10'] .scroll-y {
-    -webkit-overflow-scrolling: auto !important;
-  }
-  /* 变体 11：把 .scroll-y 的滚动容器身份整个去掉（overflow 改 visible）。
-     比 10 更彻底 —— 用来判定「只要页面里存在可滚动容器，顶部就会糊」。 */
-  html[data-topfix='11'] .scroll-y {
-    overflow-y: visible !important;
-    -webkit-overflow-scrolling: auto !important;
-  }
-  /* 变体 9：【诊断】把顶部 0~100px 涂成醒目玫红（fixed，盖在最上层）。
-     用途只有一个：判定系统到底有没有在**顶部 100pt 这个区域**做模糊。
-       · 玫红条清晰 → 系统不糊「固定元素」，问题只出在内容被卷进模糊带
-       · 玫红条发虚/发暗 → 系统把整条带一起模糊，与元素是不是 fixed 无关 */
+  /* 变体 9：【诊断】把顶部 0~100px 涂成纯色（fixed，盖在最上层）。
+     两块用途：① 一眼看出顶部到底"糊不糊"；② 用截图反解系统覆盖物的透明度剖面
+     （2026-10-10 就是靠它量出「0~35pt ≈0.48 → 95pt 归零」这条曲线的）。 */
   html[data-topfix='9'] .top-tint {
     height: 100px !important;
     background-color: #e0457b !important;
     pointer-events: auto !important;
     z-index: 99999 !important;
-  }
-  /* 变体 5：把首行内容下移到 ≈145pt（已确认清晰），作为「带外」基准。 */
-  html[data-topfix='5'] .pt-safe {
-    padding-top: calc(var(--sat) + 68px) !important;
-  }
-  /* 变体 3 / 4：把首行逐步下移，用来**二分模糊带的真实下边界**。
-     已知 ≈85pt 糊、≈145pt（变体 5）清晰 ⇒ 边界在两者之间。
-     这两个读数决定了「位置兜底方案」到底要下移多少，
-     下移 = padding-top − 6px（6px 是当前默认值 --tg）。 */
-  html[data-topfix='3'] .pt-safe {
-    padding-top: calc(var(--sat) + 14px) !important; /* 首行 ≈100pt */
-  }
-  html[data-topfix='4'] .pt-safe {
-    padding-top: calc(var(--sat) + 30px) !important; /* 首行 ≈115pt */
-  }
-  /* 变体 7：顶栏改 sticky top:0（原文列出的另一条有效修法），多一层保险。 */
-  html[data-topfix='7'] .tg-glow {
-    position: sticky !important;
-    top: 0 !important;
-    background-color: rgb(var(--bg-top)) !important;
   }
 
   .h-dvh {

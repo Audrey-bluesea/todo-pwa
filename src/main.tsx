@@ -46,14 +46,13 @@ function applyIosPwaFullscreenGuard() {
 applyIosPwaFullscreenGuard();
 
 /* 顶部模糊「现场探针」：把上次选中的变体号在**首帧渲染之前**打到 <html data-topfix>，
-   这样系统计算「固定色块延伸」时看到的就是目标变体。详见 components/TopFixProbe.tsx
-   与 index.css 里 data-topfix 的规则。定位完成后连同探针组件一起删除。
-   ⚠️ key 每次变体重排都要换（现在是 topfix3），否则用户会卡在旧编号上。 */
+   让页面以目标变体布局。详见 components/TopFixProbe.tsx 与 index.css 里 data-topfix 的规则。
+   ⚠️ key 每次变体重排都要换（现在是 topfix6），否则用户会卡在旧编号上。 */
 let SKIP_VP_GUARD = false;
 try {
-  const v = localStorage.getItem('xingshilu.topfix4');
-  // '0' 与 '8' 都表示「新默认」（不写 data-topfix，走 #root fixed 全屏那套）
-  if (v && v !== '0' && v !== '8') document.documentElement.dataset.topfix = v;
+  const v = localStorage.getItem('xingshilu.topfix6');
+  // '0' 与 '34' 都表示「新默认」（不写 data-topfix，走 --tg: 34px 那套）
+  if (v && v !== '0' && v !== '34') document.documentElement.dataset.topfix = v;
   /* 变体 13 = 诊断用：完全关掉视口看门狗的两波「制造溢出」动作。
      ⚠️ 编号必须用 13：data-topfix='3' 在 CSS 里是「首行下移到 100pt」，
      两者若共用一个编号，一次点选会同时动两个变量，结果无法解释。
