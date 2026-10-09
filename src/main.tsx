@@ -45,6 +45,16 @@ function applyIosPwaFullscreenGuard() {
 }
 applyIosPwaFullscreenGuard();
 
+/* 顶部模糊「现场探针」：把上次选中的变体号在**首帧渲染之前**打到 <html data-topfix>，
+   这样系统计算「固定色块延伸」时看到的就是目标变体。详见 components/TopFixProbe.tsx
+   与 index.css 里 data-topfix 的规则。定位完成后连同探针组件一起删除。 */
+try {
+  const v = localStorage.getItem('xingshilu.topfix');
+  if (v && v !== '0') document.documentElement.dataset.topfix = v;
+} catch {
+  /* 忽略隐私模式下的存储异常 */
+}
+
 /** 是否 iOS 主屏独立模式（视口看门狗只在此时才做异常判定，避免桌面误报） */
 const IOS_STANDALONE = isIosStandalone();
 

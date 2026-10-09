@@ -576,16 +576,68 @@ body {
      一步（或压根没加上），取样条就是 0 高度的空 div ⇒ 系统取不到色 ⇒ 回落纯白 ⇒
      顶部白雾，而且改什么都没反应。
      它颜色 = 页面背景色、高 12px、pointer-events:none ⇒ 任何环境下视觉零影响。 */
+  /* 🔴 2026-10-09 四次修订 —— 这一版是读了 WebKit 源码行为后倒推出来的，机制如下：
+     WKWebView 只有在 `_shouldHideTopScrollPocket` 找到一个「fixed colour extension」
+     时才会隐藏顶部那层 Liquid Glass 滚动边缘模糊（约 75pt 高）。
+     WebKit 的判定方式：在**视口顶边下方 4px、水平居中**那一点做 **hit-test**，
+     向上找第一个 position:fixed / sticky 的祖先；该元素必须
+       ① 宽度 ≥ 视口宽 90%
+       ② 高度 ≤ 视口高 105%
+     然后取它的 background-color 作为「固定色块延伸」。
+     ⚠️ 两个必须记住的后果：
+       · **命中不了 = 等于没做**。所以这个元素绝不能加 pointer-events:none ——
+         hit-test 会跳过指针事件关闭的元素。上一版就是栽在这一条上：
+         元素、颜色、尺寸全对，唯独自己关掉了命中，系统看不到它。
+       · 伪元素不是 hit-test 节点（早期 body::before 的写法注定无效）。
+     另：WebKit 找到的容器会**保留到下一次页面加载**，所以任何改动都必须
+     冷启动（杀掉 App 重开，或整页 reload）才能看到效果，改完立刻切换前后台是看不出来的。 */
   .top-tint {
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
-    height: 12px;
+    /* 必须 > 10px：≥10px 时系统取元素自身的 background-color；
+       不足 10px 时它会退而取「顶部 2px」的颜色。16px 留出安全余量。 */
+    height: 16px;
     background-color: rgb(var(--bg-top));
-    pointer-events: none;
+    /* ❗不要改回 none：见上方说明，会被 hit-test 跳过 */
+    pointer-events: auto;
     z-index: 9999;
   }
+  /* ===== 顶部模糊「现场探针」变体（临时，定位完成即删）=====
+     真机上的顶部模糊是系统级渲染，本地 WebKit 复现不了，只能到真机上逐条试。
+     每个变体对应一条 WebKit 判据；点选后整页 reload（系统会重新计算固定容器），
+     再看顶部文字是否变清晰，就能锁定是哪一条在卡。
+     变体编号存在 localStorage['xingshilu.topfix']，由 main.tsx 在渲染前打到 <html data-topfix>。 */
+  /* 变体 1：#app-root 本身改成 fixed inset-0（原文在同类 App 上验证有效的修法）。
+     注意**不要**再加 height:100vh，否则高度可能超过视口 105% 而被判据拒收。 */
+  html[data-topfix='1'] #app-root {
+    position: fixed !important;
+    inset: 0 !important;
+    height: auto !important;
+  }
+  /* 变体 2：取样条改用 sticky（判据里 fixed 与 sticky 等价，用来排除"fixed 层被特殊对待"） */
+  html[data-topfix='2'] .top-tint {
+    position: sticky !important;
+    top: 0 !important;
+    pointer-events: auto !important;
+  }
+  /* 变体 3：取样条加高到 62px（排除"高度不够/取样点没落在条内"） */
+  html[data-topfix='3'] .top-tint {
+    height: 62px !important;
+    pointer-events: auto !important;
+  }
+  /* 变体 4：取样条 z-index 从 9999 降到 1000（排除极端 z-index 的干扰） */
+  html[data-topfix='4'] .top-tint {
+    z-index: 1000 !important;
+    pointer-events: auto !important;
+  }
+  /* 变体 5：把首行内容下移到 ≈145pt（把 header 完全移出 ~120pt 模糊带）。
+     这一条不追求好看，纯粹是判定「模糊到底是不是一条固定高度的屏幕带」。 */
+  html[data-topfix='5'] .pt-safe {
+    padding-top: calc(var(--sat) + 68px) !important;
+  }
+
   .h-dvh {
     height: 100vh;
     height: 100dvh;
