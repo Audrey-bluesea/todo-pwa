@@ -618,14 +618,16 @@ body {
          不足 10px 会退而取「顶部 2px」的颜色。12px 是已生效值。
        · pointer-events:none —— 不拦截触摸。**不要**试图靠它去「让出命中」：
          已验证的另一份 App 与 Cogito 都是 none，且都能正常取色。
-       · background-color 必须是不透明、且 = 页面顶部实际颜色（= --bg-top）。 */
+       · background-color 须为**不透明、且非纯白**的主题色（当前 = --c-primary-300，逐主题跟随）。
+         2026-10-10 探针 B：iOS 状态栏玻璃取此色；近白取样会诱发强毛玻璃模糊，染色则不糊，
+         这正是对齐 Cogito「彩色取样条」的做法（Cogito 默认 --bg-top 也是暖米 #ECE5D9 而非纯白）。 */
   .top-tint {
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
     height: 12px;
-    background-color: rgb(var(--bg-top));
+    background-color: rgb(var(--c-primary-300));
     pointer-events: none;
     z-index: 9999;
   }
