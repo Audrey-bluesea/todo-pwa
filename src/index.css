@@ -570,7 +570,11 @@ body {
     height: 100vh !important;
   }
   html.ios-pwa .pt-safe {
-    padding-top: calc(var(--sat) + var(--tg));
+    /* 探针A（2026-10-10）：弃用写死的 --sat(62px)，改用真实 env(safe-area-inset-top)。
+       本设备独立PWA下 env() 返回 0（见 :root 注释），故顶部内边距≈0+--tg，
+       首行回到状态栏底下（0–54pt 系统玻璃不模糊区）→ 复刻 Cogito「高位且清晰」。
+       若 env() 实际返回真实值(~59)，首行≈59+--tg，落在清晰区或模糊带由 --tg 调。 */
+    padding-top: calc(env(safe-area-inset-top, 0px) + var(--tg));
   }
   /* ===== 顶部与背景融合（2026-10-09 重做，取代旧的「主题色柔光顶栏」）=====
      旧做法：顶部铺 primary-300 半透明柔光渐隐，想给 Liquid Glass 一个
