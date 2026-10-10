@@ -349,9 +349,6 @@ body {
   overscroll-behavior: none;
 }
 
-/* ===== #root 旧注释（2026-10-09「fixed colour extension」结论，已废弃）=====
-   该结论已被推翻：#root 用 position:fixed 正是顶部发虚/发糊的病根，不是解法。
-   正确做法与当前规则见下方「2026-10-10 修复」注释及 #root 规则本身。 */
 /* ===== #root 关于顶部模糊的注释（历史，全部已否证）=====
    2026-10-09 曾认为 #root 用 position:fixed 是顶部发糊病根、改 relative 可解；
    2026-10-10 真机实测「没有一点效果」⇒ fixed⇄relative 对顶部清晰度**零作用**，
