@@ -60,7 +60,9 @@ function MonthPane({ date }: { date: Date }) {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="grid shrink-0 grid-cols-7 border-b border-primary-100 pb-1 pt-1">
+      {/* ⚠️ 不带 border-b：primary-100 在本项目等于 appbg 色，压在顶部渐变上会成一条突兀白线
+          （用户报「月视图顶部这条白色的线」）。星期行与下方日期块的区分靠间距即可。 */}
+      <div className="grid shrink-0 grid-cols-7 pb-1 pt-1">
         {WEEK_CN.map((w) => (
           <div key={w} className="text-center text-[10.5px] font-medium text-neutral-400">
             {w}

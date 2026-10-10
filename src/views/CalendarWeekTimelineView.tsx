@@ -106,7 +106,11 @@ function WeekPane({ date }: { date: Date }) {
     // 内部用 absolute inset-0 做滚动容器，仅时间轴区域可纵向滑动，避开 iOS WebKit 的 flex 滚动 bug。
     <div className="grid min-h-0 h-full w-full max-w-full min-w-0 grid-rows-[auto_auto_1fr] overflow-x-hidden">
       {/* 日期头：固定置顶，纵向滑动时间轴时始终停留最上方；点击进入日视图 */}
-      <div className="day-week-header shrink-0 border-b border-primary-100 bg-[rgb(var(--c-appbg))] px-0 pb-1 pt-1.5">
+      {/* ⚠️ 这里**不能**铺不透明背景、也**不能**留 border-b：
+          · 铺 bg-appbg ⇒ 顶部色带在此被齐刷刷切断（用户报「时间轴顶部直接截断」）；
+          · border-primary-100 在本项目等于 appbg 色（各主题皆然）⇒ 压在渐变上会成一条突兀白线。
+          二者都在渐变覆盖区（≈130pt），故 header 保持透明，让色带一路延续（与月视图一致）。 */}
+      <div className="day-week-header shrink-0 px-0 pb-1 pt-1.5">
         <div className="flex">
           <div style={{ width: GUTTER }} className="shrink-0" />
           <div className="grid flex-1 grid-cols-7">
