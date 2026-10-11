@@ -52,24 +52,12 @@ export default function App() {
   }, [theme]);
 
   return (
-    // ⚠️ 根容器必须是**普通文档流定位（relative）**，绝不能再改回 fixed（2026-10-09 第三次修订）。
-    //
-    // 【为什么不能用 fixed】iOS 26/27 的顶部 Liquid Glass（状态栏）会把「固定定位元素」
-    // 当作系统导航栏/工具栏处理，对**该合成层整体**做模糊与降采样。根容器一旦是
-    // fixed inset-0，整个 App 都在这个层里 ⇒ 全屏字体发虚，顶部最明显（背景对比度低）。
-    // 症状极具迷惑性：改顶部颜色、加取色条、调 padding 全部「没有任何变化」——
-    // 因为糊的不是那条色带，是这一层本身。
-    // 对照取证：另一个同类 PWA（Cogito）的 #app 用的就是 position: relative，
-    // 同为 iOS 27 主屏 PWA、同 viewport-fit=cover、同 status-bar-style=default，
-    // 首行墨迹高度与我们几乎一致，但它完全不糊。
-    //
-    // 【为什么现在敢用文档流】高度不再依赖「视口报值」：
-    //   html.ios-pwa #root / #app-root 均被 CSS 钉成 100vh（standalone 下 = 真实满屏 956，
-    //   是全项目唯一没被 iOS 算错的长度），故本容器高度 = 100vh，稳定。
-    //   这也顺带把 viewportGuard 注释里说的「fixed 壳堵死视口自愈路径」重新打开。
+    // 根容器直接 fixed inset-0 钉死在视口上，不再依赖 dvh / 100% 链路（这些在 iOS
+    // standalone 下解析不稳，导致 #root 撑不满、TabBar 跑到中间、main 高度塌陷滑不动）。
     // TabBar 仍是内部 in-flow 的 flex 子项（非 fixed bottom），不踩 iOS 布局铁律。
-    // id="app-root" 供 viewportGuard 使用（诊断采样 + --vp-gap 计算），保持不变。
-    <div id="app-root" className="relative flex h-full flex-col overflow-hidden bg-appbg">
+    // id="app-root" 供 viewportGuard 使用：它会把本容器高度持续钉回 window.innerHeight，
+    // 修掉「iOS 把 fixed 容器高度缩到 894（=956−62）后不恢复」导致的整块底部上飘 62pt。
+    <div id="app-root" className="fixed inset-0 flex flex-col overflow-hidden bg-appbg">
       <main className="flex min-h-0 flex-1 overflow-hidden">
         {!ready ? (
           <div className="flex h-full flex-col items-center justify-center gap-3">

@@ -45,9 +45,6 @@ function applyIosPwaFullscreenGuard() {
 }
 applyIosPwaFullscreenGuard();
 
-/* 2026-10-10：顶部「现场探针」(TopFixProbe / data-topfix) 已移除，根因是 #root
-   的 position:fixed，结构性修法见 index.css 的 #root 规则，无需再靠探针 A/B。 */
-
 /** 是否 iOS 主屏独立模式（视口看门狗只在此时才做异常判定，避免桌面误报） */
 const IOS_STANDALONE = isIosStandalone();
 
@@ -57,8 +54,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   </React.StrictMode>,
 );
 
-/* 视口看门狗：修「整块底部偶发上飘 62pt」（详见 lib/viewportGuard.ts）
-   ⚠️ 探针变体 3 会跳过它（诊断用，见上方说明） */
+/* 视口看门狗：修「整块底部偶发上飘 62pt」（详见 lib/viewportGuard.ts） */
 initViewportGuard({ iosStandalone: IOS_STANDALONE });
 
 /* 键盘避让看门狗：弹键盘时把底部弹层顶到键盘上沿，并把输入框滚进可视区

@@ -142,8 +142,7 @@ function DayPane({ date }: { date: Date }) {
     // 对 flex item 滚动容器计算 scrollHeight 的 bug。
     <div className="grid min-h-0 h-full w-full max-w-full grid-rows-[auto_auto_1fr] overflow-x-hidden">
       {/* 本周日期行 */}
-      {/* 同月/周视图：不留 border-b（primary-100 = appbg 色，压在顶部渐变上会成突兀白线） */}
-      <div className="day-week-header shrink-0 px-2 pb-1 pt-1.5">
+      <div className="day-week-header shrink-0 border-b border-primary-100 px-2 pb-1 pt-1.5">
         <div className="grid grid-cols-7">
           {WEEK_CN.map((w) => (
             <div key={w} className="text-center text-[10.5px] font-medium text-neutral-400">

@@ -13,29 +13,18 @@
     --sal: env(safe-area-inset-left, 0px);
     --sar: env(safe-area-inset-right, 0px);
     --tabbar-h: 56px;
-    /* ===== 顶部「让位量」——整套顶部方案的**唯一旋钮**，改这一个数就整体上/下移。
-       值 = .pt-safe 的 padding-top 里，除状态栏 62px 之外额外让出的高度。
-       首行墨迹实际落点 ≈ --sat(62) + --tg + 14.3px（真机实测偏移）。
-
-       🔴 2026-10-10 结论（真机已否证上一版「#root fixed」假设，别再走那条路）：
-       顶部发虚/发糊 = **主屏 Web App 状态栏那层系统玻璃材质的渐进模糊外渗到状态栏
-       下方约 35pt**（**屏幕固定带，不跟元素走**）。三次真机实测的共同结论：
-         · 同一个 <header> 内：76–92pt 糊、114–146pt **像素级清晰**（锐度比 1.00）⇒ 不是元素问题；
-         · 锐度比 真机÷本地 向下渐隐：73pt=0.14 → 88pt=0.38 → 94pt=0.79 → ≥94pt=1.00；
-         · 首行落在 106.3pt 时锐度 0.31 = **干净渲染基准**（即彻底不糊）。
-       🟢 2026-10-10 最终定案（三次真机对照；曾被两次误判为「颜色是唯一杠杆」，勿再回头）：
-       ① **颜色能「降低」模糊阈值，但不能消除**：
-          · 顶部近白（无带）时清晰线 ≈94pt（IMG_3107：白@83pt = 糊）；
-          · 铺实心主题色带后清晰线降到 ≈**84pt**（IMG_3108：--tg:18 ⇒ 首行 84pt = 不糊）。
-          ⇒ 「整片顶部铺实心主题色」确实有效（此前只染 12px 取样条无效，因模糊带里露出的仍是近白）；
-            但**位置仍是硬约束**：同一条色带下 @72pt（--tg:6）**依旧糊**。
-       ② 真机三点：**72pt 糊 / 80pt 微糊 / 84pt 清晰** ⇒ **84pt（--tg:18）就是实测极限**，取之。
-       ③ ⚠️ 硬天花板 62pt：0–62px 是状态栏，首行**不能进**（会叠住时钟/电量）。
-       调参：`--tg` 每 ±1px ≈ 首行 ±1pt。**别再往上收**：80 已证微糊、72 已证糊。
-             若还想再往上（首行 <84pt），唯一没试过的杠杆是把色带顶部再加深（p-400/p-500）——
-             清晰度未知、观感也会变重，需真机另起一轮测。
-       本地 WebKit 渲染不出这层系统玻璃，清晰度只能真机判。 */
-    --tg: 18px;
+    /* 顶部「玻璃渗出带」让位量：iOS 27 主屏 PWA 上给 .pt-safe 额外加的高度。
+       0 表示不让位；由 html.ios-pwa 决定是否生效（见文件末尾的规避规则）。
+       ⚠️ 这个值不能再往下压了：iOS 27 的 Liquid Glass 会对屏幕顶部约 94pt 内的
+       网页内容做渐进模糊，header 第一行内容实际起点 = --sat(62) + --tg + 12px
+       （header 自身 pt + 按钮内居中），--tg=26 时正好落在 ~100pt，刚好出模糊带。
+       再减就会把图标和标题送进模糊带，重现「水洇纸」。 */
+    --tg: 26px;
+    /* 顶栏色调浓度：0 = 完全不上色（纯背景），1 = 满色。
+       iOS 27 顶部必须有一层实色/半实色顶栏来承接 Liquid Glass 的模糊采样，
+       但用户反馈原先用满色（primary-500）「饱和度太高」，所以改用更浅的
+       primary-300 色阶 + 半透明叠在页面背景上。要再淡就往下调这个值。 */
+    --tg-tint: 0.5;
 
     /* ============ 🍵 抹茶绿主题（默认）============ */
     /* primary 色阶（RGB 三元组） */
@@ -66,12 +55,6 @@
     --c-border: 230 242 232; /* 极淡边（抹茶下近乎无） */
     --c-muted: 138 150 138; /* 辅助灰 */
     --c-appbg: 246 250 246; /* 全局背景 */
-    /* 页面顶边（状态栏区）实色。默认 = 页面背景色 ⇒ 顶部与背景完全融合，
-       iOS 27 的 Liquid Glass 顶栏拿它去染色，白雾消失。
-       各主题自动跟随 --c-appbg，无需逐个主题声明。
-       ⚠️ 唯一旋钮：真机上若玻璃仍显偏亮（Liquid Glass 自带提亮），
-       可以只给本变量填「比背景略深一档」的 RGB 三元组做补偿（各主题可单独覆盖）。 */
-    --bg-top: var(--c-appbg);
     /* 字体 */
     --font-base: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB',
       'Microsoft YaHei', Inter, system-ui, sans-serif;
@@ -343,13 +326,9 @@
 /* iOS standalone PWA 高度铁律：html/body/#root 统一 100% + svh/dvh 双保险。
  * 只给 #root 设 dvh、html/body 不设高，会导致 body 高度 auto，flex 根容器无法稳定占满。
  * App 内部再用 h-full 取 #root 高度，避免 dvh 在部分 WebKit 上下文解析异常。 */
-/* ⚠️ 这里**故意不包含 #root**：#root 的高度由文件顶部那条 unlayered 规则管
-   （2026-10-10 已改回 position:relative + 显式 100vh/100dvh，不再是「固定色块容器」）。
-   若在这里给 #root 写 100dvh，iOS standalone 下
-   （WebKit 会把视口少算一个状态栏高，dvh 报 894 而真实满屏是 956）整个 App 会
-   矮 62pt、底部 TabBar 上飘露白。 */
 html,
-body {
+body,
+#root {
   height: 100%;
   height: 100svh;
   height: 100dvh;
@@ -358,42 +337,8 @@ body {
   overscroll-behavior: none;
 }
 
-/* ===== #root 关于顶部模糊的注释（历史，全部已否证）=====
-   2026-10-09 曾认为 #root 用 position:fixed 是顶部发糊病根、改 relative 可解；
-   2026-10-10 真机实测「没有一点效果」⇒ fixed⇄relative 对顶部清晰度**零作用**，
-   该假设已彻底否证。#root 现在用 relative + 100vh，目的只是修 WebKit 少算
-   62pt 的视口缺陷（见下方「视口看门狗」段），与顶部模糊无关。
-   顶部发糊真因 = 屏幕固定的一段系统玻璃渐进模糊（见文件顶部 --tg 注释），
-   唯一有效做法是把首行墨迹推到 ≥94pt（出模糊带即可清晰；当前取 --tg:18px
-   ⇒ 首行≈94pt，贴带边、锐度≈1.0，已真机确认；更保守可取 30px⇒106pt 完美清晰）。 */
 #root {
-  position: relative;
-  height: 100vh;
-  height: 100dvh;
-  width: 100%;
   overflow: hidden;
-  background-color: rgb(var(--bg-top));
-}
-
-/* iOS standalone 兜底：WebKit 在这里会把视口少算一个状态栏高
-   （100dvh / innerHeight 报 894，真实满屏是 956）。inset:0 拿到的也会是那个
-   偏小的值 ⇒ 整个 App 矮 62pt、TabBar 上飘。100vh 是 standalone 下唯一没被
-   算错的长度，这里显式钉回去。
-   ⚠️ 必须写在 unlayered 层（本文件顶层）：unlayered 恒胜 layered，写在
-   @layer 里会被上面 html,body 的 100dvh 压掉。 */
-html.ios-pwa #root {
-  height: 100vh;
-}
-
-/* ===== 顶边实色：html / body **都**写（2026-10-09 新增）=====
-   iOS 27 的 Liquid Glass 顶栏（状态栏）会取页面最顶端的颜色来染玻璃。
-   html/body 一起填成 --bg-top（= 页面背景色），页面上沿就再没有「白底」
-   可被采样 ⇒ 状态栏玻璃被染成背景色，与下方内容完全融合，白雾消失。
-   （本 App 的 #app-root 本来就是 bg-appbg 铺满全屏，这里只是把「最外层」
-    也补齐，保证任何渲染时序 / 出屏回弹时露出的都是同一色。） */
-html,
-body {
-  background-color: rgb(var(--bg-top));
 }
 
   html {
@@ -404,7 +349,7 @@ body {
 
   body {
     margin: 0;
-    background-color: rgb(var(--bg-top));
+    background-color: rgb(var(--c-appbg));
     color: rgb(var(--c-ink));
     font-family: var(--font-base);
     -webkit-font-smoothing: antialiased;
@@ -514,19 +459,9 @@ body {
      毫无规律地「上飘 + 底部露出一大片空白」——这正是之前反复修不好的元凶。
      常量换来的是 100% 稳定；真机 62/34 是实测值，与系统真值一致。
 
-      顶部额外让出的 --tg 现在 = **18px**：
-     12px 取样条（.top-tint）负责把状态栏玻璃染成页面背景色 ⇒ 背景无白雾；
-     但那层系统玻璃**渐进模糊**盖不住（它在网页层之上），落在带内（≈94pt 以下）
-     的文字必糊。要清晰须让首行墨迹出带：彼时 --tg:18px ⇒ 首行落点
-     ≈ --sat(62) + --tg(18) + 14.3 ≈ 94pt（贴带边、锐度≈1.0，已真机确认）；
-     若想要绝对稳的完美清晰可取 30px ⇒ 106pt（多约 8pt 空带）。
-     （2026-10-09 一度把 --tg 压到 6px 想「靠同色背景躲模糊」，真机证明无效，
-      现已改为 18px 兼顾贴顶与清晰。）
-
-     ⚠️⚠️ 2026-10-10 撤回：`#root` 由 `fixed` 改回 `relative` **对顶部清晰度毫无作用**（真机实测
-     「没有一点效果」）。「满屏 fixed 层被系统当导航栏降采样」是**未经验证的猜测**，已否证。
-     发糊真因见文件顶部 `--tg` 注释：屏幕固定的一段系统玻璃渐进模糊，只能靠首行 ≥94pt 出带避开（彼时 --tg:18px ⇒ ≈94pt 贴边）。
-     这里的 62px 自补仍然必要（default 模式下 env 仍报 0），与顶部玻璃无关。 */
+     顶部额外让出 --tg(36px) 的原因：iOS 27 的状态栏是 Liquid Glass 材质，
+     会对状态栏下方约 35pt 的网页内容做渐进模糊（清晰度比值 0.14 → 94pt 处 1.00）。
+     该采样无法用 CSS 关闭，只能让文字离开这条带。 */
   html.ios-pwa {
     --sat: 62px;
     --sab: 34px;
@@ -537,28 +472,17 @@ body {
      动态视口那一组取值会永久少算**正好一个 env(safe-area-inset-top)**（本机 62pt）：
        screen.height = 956 ✅   100vh / 100lvh = 956 ✅（standalone 没有地址栏）
        100dvh / 100svh = 894 ❌   window.innerHeight = 894 ❌
-     本 App 壳（#root）高度由视口推导（iOS 下显式 100vh，已非 fixed）、TabBar 是 in-flow → 整条底部
+     本 App 壳是 fixed inset-0、TabBar 是 in-flow，全由视口高度推导 → 整条底部
      少 62pt（就是用户看到的「TabBar 上飘 + 底下一条空白」）。
      所以：主屏模式下把文档高度从 100dvh 换成 100vh —— 它本来就是对的，
      同时多出来的 62px 正好构成该缺陷的自愈触发条件「内容溢出视口」。
      非主屏（桌面 / Safari 标签页）不生效，一行都不变。 */
   html.ios-pwa,
-  html.ios-pwa body {
+  html.ios-pwa body,
+  html.ios-pwa #root,
+  html.ios-pwa #app-root {
     height: 100vh;
   }
-  /* ⚠️ 这里**故意不包含 #root**。#root 的高度由文件顶部那条 unlayered 规则管：
-        · 普通环境：inset:0 + height:auto ⇒ 恰等于视口（恒 100%，稳过 ≤105%）
-        · iOS standalone：显式 height:100vh（956）—— 修 WebKit 少算 62pt 的缺陷
-     如果在这里给 #root 写 100dvh，iOS 下会矮 62pt、TabBar 上飘露白。 */
-
-  /* ===== 「固定色块延伸」这条路：全部实测无效，别再回头 =====
-     `_shouldHideTopScrollPocket` / `fixedContainerEdges` hit-test（在视口顶边下 4px、
-     水平中点向上找第一个 fixed/sticky 盒子，要求 ≥90% 视口宽、≤105% 视口高，
-     命中则用它的 background-color 当「固定色块延伸」、并隐藏顶部玻璃模糊）
-     在本项目真机**从未复现**：取样条让出命中 / `pointer-events` / 挂到静态 `#root` /
-     第五、六版各种形状，累计 7 次真机反馈「跟原来一样」。
-     ⇒ `.top-tint` 唯一确认有效的作用是**给顶栏玻璃取色**（把状态栏区染成页面背景色
-     ⇒ 背景不会出现白雾）；它**不能**去掉那层渐进模糊。 */
 
   /* ===== 视口看门狗用的两个**临时**状态（用完立刻移除，见 lib/viewportGuard.ts）=====
      ① vp-overflow：临时放开 html/body 的 overflow:hidden。
@@ -579,120 +503,29 @@ body {
     height: 100vh !important;
   }
   html.ios-pwa .pt-safe {
-    /* 顶部让位 = 状态栏自补 62px + 额外 --tg（仅控首行高低，清晰度由下方 #app-root 顶部色带负责）。
-       env() 在本设备独立 PWA 下返回 0，故顶部内边距 = 62px + --tg（探针 A 已证 env() 路线无效：
-       回到状态栏底仍糊，因根因是「顶部近白」而非高度）。 */
     padding-top: calc(var(--sat) + var(--tg));
   }
-  /* ===== 顶部与背景融合（2026-10-09 重做，取代旧的「主题色柔光顶栏」）=====
-     旧做法：顶部铺 primary-300 半透明柔光渐隐，想给 Liquid Glass 一个
-     「承接面」。实际效果是玻璃只采样到浅色 ⇒ 顶部永远一层白雾，而且为了躲开渗出带
-     还得多留 26px 让位，用户反馈「白雾去不掉 + 上方空白太多」。
-     新做法（用户提供思路，已确认可行）：
-       ① html / body 都填 var(--bg-top)（= 页面背景色），见上方独立规则；
-       ② 屏幕最顶端再钉一条 12px 高的同色「取样条」（.top-tint 真实元素），
-          给 iOS 一个明确的取样点 ⇒ 顶栏玻璃染成页面背景色，白雾消失；
-              ③ 玻璃同色能消白雾，但**消不掉**那层渐进模糊（它在网页层之上）；
-          为让首行墨迹出模糊带（≥94pt），彼时 --tg:18px ⇒ 首行≈94pt（贴边、
-          锐度≈1.0，已真机确认）；保守可取 30px⇒106pt 完美清晰。
-          首行比 6px 时仅下移约 16px —— 这是避开模糊带的必要代价，不是露空白。
-       ④ header 本身保持透明（见下方 .tg-glow）：顶部露出 html / body 的底色，
-          与背景完全融合，且不留任何会被系统降采样/模糊的合成块。 */
-  /* ⚠️ 顶部**不许铺任何色块、不许做模糊**（2026-10-09 二次修订，保留）。
-     上一版给 .tg-glow 铺了 rgb(var(--bg-top)) 实色，本意「确保状态栏区是纯背景色」，
-     结果真机首行文字发糊。Cogito 的 .appbar 写死 `background:transparent;
-     backdrop-filter:none`（「不铺色块、不做模糊，让主题底色一路铺到状态栏」），
-     这里照抄：状态栏区露出 html/body 底色（已填 --bg-top），与背景融合，
-     且不再有会被系统当成「顶层合成块」去降采样/模糊的图层。
-
-     🔴 关于「是不是高度的问题」——以本 App 自身受控实测为准：
-        · 同一 App、同一设备：首行 83pt（--tg:6）糊，首行 106pt（--tg:30）
-          锐度 = 干净渲染基准、彻底清晰；
-        · 锐度比随高度渐隐：73pt=0.14 → 88pt=0.38 → 94pt=0.79 → ≥94pt≈1.00。
-        早期用 Cogito「80pt 清晰」反推「高度不是原因」并不可靠（与本 App 自身
-        渐隐曲线矛盾），已不作为依据。结论：本 App 避开模糊带的唯一有效杠杆就是
-        首行墨迹 ≥94pt（彼时 --tg:18px ⇒ ≈94pt 贴边、锐度≈1.0，已真机确认；
-        保守取 30px ⇒ 106pt 完美清晰）。「不铺色块」保留：至少不额外加压暗/糊化观感。 */
+  /* 顶部「主题色柔光顶栏」：
+     2026-09-24 调整：原先直接铺 primary-500 满色，用户反馈「饱和度太高」。
+     现改为：更浅的 primary-300 色阶 × --tg-tint(0.5) 半透明，叠在页面背景色上。
+     既保留了「顶部一条有色顶栏」的设计感，又把饱和度和明度压下来。
+     要想再淡 → 把 :root 里的 --tg-tint 调小（如 0.3）；想补回来 → 调大（如 0.8）；
+     想完全去掉 → 设 0。
+     ① 0 ~ --sat(62px)：状态栏区。Liquid Glass 的模糊采样需要纯色/柔色承接，
+        这层必须存在，否则状态栏下会出现"磨砂 + 脏"的杂色。
+     ② --sat ~ --sat+--tg-8px：继续同一层浅色，铺到首行内容上沿（消穴空白）。
+     ③ 最后 8px：渐隐收边，避免和下方背景形成硬切边。 */
   html.ios-pwa .tg-glow {
-    background-color: transparent;
-    background-image: none;
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-  }
-
-  /* ② iOS Liquid Glass「取样条」：**逐字照抄 Cogito 的写法**（用户要求「一模一样地改」）。
-     它是页面上最顶端的固定色块，系统顶部玻璃的取色/取边以它为准。
-     Cogito 的原始规则（styles.css:232）：
-       .top-tint { position: fixed; top:0; left:0; right:0; height:12px;
-                   background-color: var(--bg-top); pointer-events:none; z-index:9999 }
-     ⚠️ 三个字段都不要改：
-       · height 12px —— >10px 时系统取元素**自身**的 background-color；
-         不足 10px 会退而取「顶部 2px」的颜色。12px 是已生效值。
-       · pointer-events:none —— 不拦截触摸。**不要**试图靠它去「让出命中」：
-         已验证的另一份 App 与 Cogito 都是 none，且都能正常取色。
-       · background-color 须为**不透明、且非纯白**的主题色（当前 = --c-primary-300，逐主题跟随）。
-         2026-10-10 探针 B：iOS 状态栏玻璃取此色；近白取样会诱发强毛玻璃模糊，染色则不糊，
-         这正是对齐 Cogito「彩色取样条」的做法（Cogito 默认 --bg-top 也是暖米 #ECE5D9 而非纯白）。 */
-  .top-tint {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 12px;
-    background-color: rgb(var(--c-primary-300));
-    pointer-events: none;
-    z-index: 9999;
-  }
-  /* ===== iOS 主屏顶部「色带」——治糊的真正杠杆（2026-10-10，逐字比对 Cogito 后定）=====
-     iOS 27 状态栏是系统玻璃，它采样页面顶部颜色来着色：
-       采样到「近白/纯白」→ 玻璃做重度毛玻璃模糊（文字糊）；
-       采样到「实心有色彩的主题色」→ 玻璃近乎透明、文字锐利。
-     这正是 Cogito 顶部是米色 #ECE5D9、同高度却完全不糊，而我们之前整个顶部是
-     近白 #F6FAF6、同高度必糊的根因。
-     ⇒ 把 #app-root 顶部铺成实心主题色（各主题自带、非白），玻璃几乎透明，文字即清晰。
-
-     🎨 2026-10-10 二改（用户反馈「有实心色了、不糊，但渐变很不自然」）：
-     真机 IMG_3108 逐像素取顶部竖剖面，发现**颜色深浅反复了三次**
-       （0–8pt 偏深 → 16–46pt 偏浅 → 48–88pt 又变深 → 96–130pt 再化开），
-     四段拼接才显得像「贴了块色块」：
-       ① 16–46pt 的偏浅 = **状态栏玻璃自己提亮**（系统行为，改不了它本身）；
-       ② 最顶 12px 取样条是 primary-300，比下方 primary-200 深一档 ⇒ 多一道「深帽子」；
-       ③ 94→130px 是我们固定 36px 的硬收口 ⇒ 两处硬转折。
-     ⇒ 压成**一条单向渐变**（2026-10-10 三改：用户反馈「颜色太深，弄浅一点自然点」）：
-       · `0–12px` = primary-300，**与 `.top-tint` 逐像素同色且等高** ⇒ 帽子**零接缝**
-         （⚠️ 必须前 12px 持平：若一上来就变浅，取样条底边会露出一道 Δ40 的帽子，实测过）；
-       · `12–44px` 快速过渡到 primary-200；
-       · `44–200px` **一路连续变浅到 appbg，全程不留任何恒定段**（四改：此前 46–104px 是恒定
-         primary-200 平台 ⇒ 合成观感上成了「头尾淡、中间深」的一条深色带，故去掉平台）。
-       ⚠️ 代价：62–94pt 抗模糊关键区不再恒定 primary-200 而是持续变浅 ⇒ **有重新发糊的风险**，
-          需真机确认。一旦发糊就把平台加回来（在 `p-200 44px` 后补一个 `p-200 104px` 色标）。
-       ⚠️ **不能再浅到 primary-100**：本项目各主题 `primary-100 == appbg`（近白），会诱发玻璃模糊。
-       ⚠️ 想让顶部（前 12px）也变浅，只能动 `.top-tint` 的颜色 —— 那是玻璃的**取样色**，
-          是抗模糊的命门，改动等于拿清晰度冒险，需单独真机验证。
-       该渐变挂在 #app-root 上、不随内容滚动（滚动在内部容器），仅 iOS 主屏生效，
-       桌面保持近白干净。此前给 .tg-glow 铺 rgb(var(--bg-top))（=近白 appbg）失败，
-       正因近白诱发模糊；改用实心主题色即对。 */
-  html.ios-pwa #app-root {
-    /* 分开写：background-color 兜底渐变以下（即便中间包裹层带背景也无缝）；
-       background-image = 一条**单向**渐变：顶部深一档 → 90px 回 p-200 → 210px 化开到 appbg。
-       ⚠️ 首个色标必须与 .top-tint 的 background-color 同色（当前同取 primary-300），
-          否则最顶 12px 会露出一道「深帽子」。 */
+    /* 垫一层页面背景色：半透明顶栏混合的基准色，保证结果可预期、各主题一致 */
     background-color: rgb(var(--c-appbg));
-    /* 2026-10-10 四改：用户「头尾都淡淡的，中间一条深色很奇怪」⇒ **去掉平台，全程连续变浅**。
-       成因：顶部 0–62pt 被状态栏玻璃洗淡，尾部化开也淡，中间 46–104px 是**没过玻璃的恒定原色**
-       ⇒ 合成后成一条可辨识的深色带。去掉恒段后中间也在持续变浅，色带感消失。 */
     background-image: linear-gradient(
-      to bottom,
-      rgb(var(--c-primary-300)) 0,
-      rgb(var(--c-primary-300)) 12px,
-      rgb(var(--c-primary-200)) 44px,
-      rgb(var(--c-appbg)) 200px
+      180deg,
+      rgb(var(--c-primary-300) / var(--tg-tint)) 0px,
+      rgb(var(--c-primary-300) / var(--tg-tint)) calc(var(--sat) + var(--tg) - 8px),
+      rgb(var(--c-primary-300) / 0) calc(var(--sat) + var(--tg))
     );
+    background-repeat: no-repeat;
   }
-  /* 2026-10-10：顶部「现场探针」(TopFixProbe / data-topfix 变体) 已整体移除。
-     发糊成因 = 屏幕固定带的系统玻璃渐进模糊（见文件顶部 `--tg` 注释）；
-     避开它的唯一手段是首行墨迹 ≥94pt 出带（彼时 --tg:18px ⇒ ≈94pt 贴边、锐度≈1.0，已真机确认；保守取 30px ⇒ 106pt 完美清晰）。 */
-
   .h-dvh {
     height: 100vh;
     height: 100dvh;
