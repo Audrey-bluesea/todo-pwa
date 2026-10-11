@@ -29,6 +29,8 @@ export default function TodoTab() {
   const view = useUIStore((s) => s.todoView);
   const boardMode = useUIStore((s) => s.boardMode);
   const groupBy = useUIStore((s) => s.groupBy);
+  const sortMode = useUIStore((s) => s.sortMode);
+  const setSortMode = useUIStore((s) => s.setSortMode);
   const completedView = useUIStore((s) => s.completedView);
   const setView = useUIStore((s) => s.setTodoView);
   const setBoardMode = useUIStore((s) => s.setBoardMode);
@@ -140,6 +142,15 @@ export default function TodoTab() {
     ? (boardMode === 'category' ? 'category' : groupBy === 'section' ? 'section' : 'time')
     : groupBy;
 
+  // 是否处于「按分组」模式（列表/看板都要求单清单；只有该模式才有「排序方式」）
+  const isSectionMode = groupBy === 'section' && isSingleCategory;
+  const sortOptions = isSectionMode
+    ? [
+        { key: 'manual' as const, label: '手动' },
+        { key: 'date' as const, label: '按日期' },
+      ]
+    : undefined;
+
   const handleSelectList = () =>
     isCompletedView ? setCompletedView('list') : setView('list');
   const handleSelectBoard = () => {
@@ -247,6 +258,9 @@ export default function TodoTab() {
                 currentGroup={currentGroup}
                 onSelectGroup={handleSelectGroup}
                 hideGroupDropdown={isInbox || isCompletedView}
+                sortOptions={sortOptions}
+                currentSortMode={sortMode}
+                onSelectSortMode={setSortMode}
               />
               <button
                 onClick={() => setSearchActive(true)}

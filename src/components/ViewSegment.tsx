@@ -1,5 +1,6 @@
 import { useRef, useState, useEffect } from 'react';
 import { IconList, IconBoard, IconChevronDown, IconCheck } from './Icons';
+import type { SortMode } from '../store/uiStore';
 
 export type GroupKey = 'time' | 'category' | 'section';
 
@@ -22,6 +23,12 @@ interface Props {
   onSelectGroup: (key: GroupKey) => void;
   /** 是否隐藏分组下拉（如收集箱，只做纯列表/看板切换） */
   hideGroupDropdown?: boolean;
+  /** 排序选项（仅「按分组」模式有效）；不传或为空则不显示「排序方式」段 */
+  sortOptions?: { key: SortMode; label: string }[];
+  /** 当前排序方式 */
+  currentSortMode?: SortMode;
+  /** 选择排序方式 */
+  onSelectSortMode?: (m: SortMode) => void;
 }
 
 /**
@@ -38,6 +45,9 @@ export default function ViewSegment({
   currentGroup,
   onSelectGroup,
   hideGroupDropdown = false,
+  sortOptions,
+  currentSortMode,
+  onSelectSortMode,
 }: Props) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -108,30 +118,61 @@ export default function ViewSegment({
       {open && !hideGroupDropdown && groupOptions.length > 0 && (
         <>
           <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
-          <div
-            className="absolute right-0 top-full z-40 mt-1.5 min-w-[148px] overflow-hidden rounded-2xl bg-white py-1.5 shadow-card anim-pop"
-            style={{ border: '1px solid rgba(168,213,186,0.3)' }}
-          >
-            <div className="px-3.5 pb-1 pt-1 text-[11px] font-medium text-neutral-400">分组方式</div>
-            {groupOptions.map((o) => {
-              const active = o.key === currentGroup;
-              return (
-                <button
-                  key={o.key}
-                  onClick={() => {
-                    onSelectGroup(o.key);
-                    setOpen(false);
-                  }}
-                  className={`flex w-full items-center gap-2 px-3.5 py-2.5 text-left text-[13.5px] transition-colors ${
-                    active ? 'bg-primary-50 font-semibold text-primary-700' : 'text-neutral-600'
-                  }`}
-                  style={{ minHeight: 44 }}
-                >
-                  <span className="flex-1">{o.label}</span>
-                  {active && <IconCheck className="h-[16px] w-[16px] text-primary-500" />}
-                </button>
-              );
-            })}
+          <div className="absolute right-0 top-full z-40 mt-1.5 flex flex-col gap-1.5">
+            <div
+              className="min-w-[148px] overflow-hidden rounded-2xl bg-white py-1.5 shadow-card anim-pop"
+              style={{ border: '1px solid rgba(168,213,186,0.3)' }}
+            >
+              <div className="px-3.5 pb-1 pt-1 text-[11px] font-medium text-neutral-400">分组方式</div>
+              {groupOptions.map((o) => {
+                const active = o.key === currentGroup;
+                return (
+                  <button
+                    key={o.key}
+                    onClick={() => {
+                      onSelectGroup(o.key);
+                      setOpen(false);
+                    }}
+                    className={`flex w-full items-center gap-2 px-3.5 py-2.5 text-left text-[13.5px] transition-colors ${
+                      active ? 'bg-primary-50 font-semibold text-primary-700' : 'text-neutral-600'
+                    }`}
+                    style={{ minHeight: 44 }}
+                  >
+                    <span className="flex-1">{o.label}</span>
+                    {active && <IconCheck className="h-[16px] w-[16px] text-primary-500" />}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* 排序方式（仅按分组模式显示） */}
+            {sortOptions && sortOptions.length > 0 && (
+              <div
+                className="min-w-[148px] overflow-hidden rounded-2xl bg-white py-1.5 shadow-card anim-pop"
+                style={{ border: '1px solid rgba(168,213,186,0.3)' }}
+              >
+                <div className="px-3.5 pb-1 pt-1 text-[11px] font-medium text-neutral-400">排序方式</div>
+                {sortOptions.map((o) => {
+                  const active = o.key === currentSortMode;
+                  return (
+                    <button
+                      key={o.key}
+                      onClick={() => {
+                        onSelectSortMode?.(o.key);
+                        setOpen(false);
+                      }}
+                      className={`flex w-full items-center gap-2 px-3.5 py-2.5 text-left text-[13.5px] transition-colors ${
+                        active ? 'bg-primary-50 font-semibold text-primary-700' : 'text-neutral-600'
+                      }`}
+                      style={{ minHeight: 44 }}
+                    >
+                      <span className="flex-1">{o.label}</span>
+                      {active && <IconCheck className="h-[16px] w-[16px] text-primary-500" />}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </>
       )}

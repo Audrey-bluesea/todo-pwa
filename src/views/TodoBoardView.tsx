@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useDataStore } from '../store/dataStore';
 import { useUIStore } from '../store/uiStore';
 import { useTimerStore } from '../store/timerStore';
 import type { Todo, DrawerFilter, BoardMode, Category } from '../types';
 import { addDays, completedStamp, dayDiff, fmtTime, humanDate, isAllDay, isSameDay, startOfDay } from '../lib/date';
-import { effCompletedAt } from '../lib/sort';
+import { effCompletedAt, splitForSort } from '../lib/sort';
 import { scrollMemory } from '../lib/scrollMemory';
 import EmptyState from '../components/EmptyState';
 import SectionTabBar from '../components/SectionTabBar';
@@ -16,6 +16,10 @@ interface SwipeTab {
   id: string;
   label: string;
   items: Todo[];
+  /** 「按分组 + 按日期」模式下：有日期且锁顶的任务（按时间升序） */
+  dated?: Todo[];
+  /** 「按分组」模式下可手动拖动重排的任务（手动模式=全部；按日期模式=无日期部分） */
+  undated?: Todo[];
   /** 时间模式：预设日期（点添加按钮用） */
   presetDate?: Date | null;
   /** 按清单模式：标识色 + emoji */
@@ -25,6 +29,9 @@ interface SwipeTab {
   isOverdueCol?: boolean;
 }
 
+/**
+ * 「按分组」列内排序拆分（实现见 src/lib/sort.ts 的 splitForSort，两视图共用）。
+ */
 type TimeColKey = 'overdue' | 'today' | 'tomorrow' | 'upcoming' | 'unscheduled';
 
 /* ---------- 时间分桶工具函数 ---------- */
@@ -115,11 +122,13 @@ export default function TodoBoardView({
   const reorderSections = useDataStore((s) => s.reorderSections);
   const updateTodo = useDataStore((s) => s.updateTodo);
   const toggleTodo = useDataStore((s) => s.toggleTodo);
+  const reorderTodos = useDataStore((s) => s.reorderTodos);
   const openEditor = useUIStore((s) => s.openEditor);
   const showToast = useUIStore((s) => s.showToast);
   const setBoardSection = useUIStore((s) => s.setBoardSection);
   const groupBy = useUIStore((s) => s.groupBy);
   const setGroupBy = useUIStore((s) => s.setGroupBy);
+  const sortMode = useUIStore((s) => s.sortMode);
   const catMap = useMemo(() => new Map<string, Category>(categories.map((c) => [c.id, c])), [categories]);
   const today = startOfDay(new Date());
 
@@ -195,19 +204,30 @@ export default function TodoBoardView({
     if (filter.kind === 'category' && groupBy === 'section' && cat) {
       const catTodos = visibleTodos.filter((t) => t.categoryId === cat.id);
       if (hasSections) {
-        const secTabs: SwipeTab[] = sortSections(cat.sections ?? []).map((sec) => ({
-          id: `sec-${sec.id}`,
-          label: sec.name,
-          items: catTodos.filter((t) => t.sectionId === sec.id).sort(sortDefault),
-          accentColor: cat.color ?? '#A8D5BA',
-          accentIcon: cat.icon,
-        }));
-        const unsectioned = catTodos.filter((t) => !t.sectionId).sort(sortDefault);
-        if (unsectioned.length > 0) {
+        const secTabs: SwipeTab[] = sortSections(cat.sections ?? []).map((sec) => {
+          const { dated, undated } = splitForSort(
+            catTodos.filter((t) => t.sectionId === sec.id),
+            sortMode,
+          );
+          return {
+            id: `sec-${sec.id}`,
+            label: sec.name,
+            items: [...dated, ...undated],
+            dated,
+            undated,
+            accentColor: cat.color ?? '#A8D5BA',
+            accentIcon: cat.icon,
+          };
+        });
+        const unsectionedSrc = catTodos.filter((t) => !t.sectionId);
+        if (unsectionedSrc.length > 0) {
+          const { dated, undated } = splitForSort(unsectionedSrc, sortMode);
           secTabs.push({
             id: 'sec-none',
             label: '未分组',
-            items: unsectioned,
+            items: [...dated, ...undated],
+            dated,
+            undated,
             accentColor: cat.color ?? '#A8D5BA',
             accentIcon: cat.icon,
           });
@@ -215,10 +235,13 @@ export default function TodoBoardView({
         return secTabs;
       }
       // 无 sections：全部归入「未分组」单列
+      const { dated, undated } = splitForSort(catTodos, sortMode);
       return [{
         id: 'sec-none',
         label: '未分组',
-        items: catTodos.sort(sortDefault),
+        items: [...dated, ...undated],
+        dated,
+        undated,
         accentColor: cat.color ?? '#A8D5BA',
         accentIcon: cat.icon,
       }];
@@ -262,6 +285,9 @@ export default function TodoBoardView({
       .filter((tab) => tab.items.length > 0);
   }, [mode, categories, todos, visibleTodos, filter, today, groupBy, cat, hasSections]);
   tabsLenRef.current = tabs.length;
+  // 引用最新 tabs，供长按拖拽的 move/up 闭包读取（避免每次重渲染重挂监听打断手势）
+  const tabsRef = useRef(tabs);
+  tabsRef.current = tabs;
 
   // 切到新 tab 并记忆；越界时钳制
   const commitTab = (next: number) => {
@@ -353,16 +379,28 @@ export default function TodoBoardView({
   // —— 长按卡片拖到分组标题 → 切换分组 ——
   const [taskDrag, setTaskDrag] = useState<{ todo: Todo; x: number; y: number } | null>(null);
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
+  /** 组内重排插入线：{ 列 id, 在 undated 列表中的插入索引 }；null=不显示 */
+  const [reorderLine, setReorderLine] = useState<{ colId: string; index: number } | null>(null);
   const taskDragRef = useRef(false);
   const dropTargetRef = useRef<string | null>(null);
   const taskTodoRef = useRef<Todo | null>(null);
+  /** 当前被拖动卡片所属列（tab）id，用于约束「只能同列内重排」 */
+  const dragColRef = useRef<string | null>(null);
+  /** 最近一次 move 判定的落点类型，onUp 据此决定换分组还是组内重排 */
+  const dropKindRef = useRef<'section' | 'reorder' | null>(null);
+  const reorderLineRef = useRef<{ colId: string; index: number } | null>(null);
   const taskDragging = !!taskDrag;
 
   const handleTaskLongPress = useCallback((todo: Todo, x: number, y: number) => {
     taskTodoRef.current = todo;
+    const col = tabsRef.current.find((t) => t.items.some((it) => it.id === todo.id));
+    dragColRef.current = col?.id ?? null;
     setTaskDrag({ todo, x, y });
     setDropTargetId(null);
     dropTargetRef.current = null;
+    dropKindRef.current = null;
+    reorderLineRef.current = null;
+    setReorderLine(null);
     taskDragRef.current = true;
   }, []);
 
@@ -373,21 +411,76 @@ export default function TodoBoardView({
       const y = e.clientY;
       setTaskDrag((d) => (d ? { ...d, x, y } : d));
       const el = document.elementFromPoint(x, y) as HTMLElement | null;
+      // ① 命中分组标题 → 换分组（沿用既有行为）
       const pill = el?.closest('[data-section-id]') as HTMLElement | null;
-      const id = pill ? pill.getAttribute('data-section-id') : null;
-      dropTargetRef.current = id;
-      setDropTargetId(id);
+      if (pill) {
+        const id = pill.getAttribute('data-section-id');
+        dropKindRef.current = 'section';
+        dropTargetRef.current = id;
+        setDropTargetId(id);
+        reorderLineRef.current = null;
+        setReorderLine(null);
+        return;
+      }
+      // ② 命中同列无日期卡片 → 组内重排（显示插入线）
+      const card = el?.closest('[data-todo-id]') as HTMLElement | null;
+      if (card) {
+        const colId = card.getAttribute('data-col-id');
+        const tid = card.getAttribute('data-todo-id');
+        const todo = taskTodoRef.current;
+        if (todo && colId && tid && colId === dragColRef.current && tid !== todo.id) {
+          const rect = card.getBoundingClientRect();
+          const before = y < rect.top + rect.height / 2;
+          const U = tabsRef.current.find((t) => t.id === colId)?.undated ?? [];
+          const targetIdx = U.findIndex((t) => t.id === tid);
+          if (targetIdx >= 0) {
+            const index = before ? targetIdx : targetIdx + 1;
+            const line = { colId, index };
+            dropKindRef.current = 'reorder';
+            reorderLineRef.current = line;
+            setReorderLine(line);
+            dropTargetRef.current = null;
+            setDropTargetId(null);
+            return;
+          }
+        }
+      }
+      // ③ 其它位置：清除所有落点
+      dropKindRef.current = null;
+      dropTargetRef.current = null;
+      setDropTargetId(null);
+      reorderLineRef.current = null;
+      setReorderLine(null);
     };
     const onUp = () => {
-      const target = dropTargetRef.current;
       const todo = taskTodoRef.current;
-      if (todo && target) {
+      const kind = dropKindRef.current;
+      if (todo && kind === 'reorder' && reorderLineRef.current && reorderLineRef.current.colId === dragColRef.current) {
+        // 同列组内重排：移除拖动项后插入到目标索引，并重排该列 undated 的 sortOrder
+        const colId = reorderLineRef.current.colId;
+        const U = tabsRef.current.find((t) => t.id === colId)?.undated ?? [];
+        const curIdx = U.findIndex((t) => t.id === todo.id);
+        if (curIdx >= 0) {
+          let at = reorderLineRef.current.index;
+          if (at > curIdx) at -= 1; // 扣除自身被移除的位移
+          const arr = U.slice();
+          const [moved] = arr.splice(curIdx, 1);
+          arr.splice(at, 0, moved);
+          void reorderTodos(arr.map((t, i) => ({ id: t.id, sortOrder: i })));
+        }
+      } else if (todo && kind === 'section') {
+        // 换分组（既有行为）
+        const target = dropTargetRef.current;
         const sid = target === 'none' ? null : target;
         if (todo.sectionId !== sid) updateTodo(todo.id, { sectionId: sid });
       }
       setTaskDrag(null);
       setDropTargetId(null);
+      setReorderLine(null);
       dropTargetRef.current = null;
+      reorderLineRef.current = null;
+      dropKindRef.current = null;
+      dragColRef.current = null;
       taskDragRef.current = false;
     };
     window.addEventListener('pointermove', onMove);
@@ -399,7 +492,7 @@ export default function TodoBoardView({
       window.removeEventListener('pointercancel', onUp);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [taskDragging, updateTodo]);
+  }, [taskDragging, updateTodo, reorderTodos]);
 
   // ---- 跟手横滑（iOS 可靠版：原生非 passive 监听，横滑时 preventDefault 阻止 Safari 干扰）----
   useEffect(() => {
@@ -582,31 +675,95 @@ export default function TodoBoardView({
               style={{ touchAction: 'pan-y', WebkitUserSelect: taskDragging ? 'none' : undefined }}
               onScroll={(e) => scrollMemory.save(memKey, e.currentTarget.scrollTop, activeTabIdx)}
             >
-              {tab.items.map((t) => {
-                const isCollapse = collapsing.has(t.id);
-                return (
-                  <div
-                    key={t.id}
-                    // max-h 只是给「打卡收起」动画用的：收起时 2000→0 配合 overflow-hidden 裁剪。
-                    // 非收起态不能给小上限（原 max-h-40=160px 会把展开子任务的长卡片直接裁掉）。
-                    className={`overflow-hidden transition-all duration-300 ease-out ${
-                      isCollapse ? 'max-h-0 opacity-0' : 'max-h-[2000px] opacity-100'
-                    }`}
-                  >
-                    <BoardCard
-                      t={t}
-                      cat={t.categoryId ? catMap.get(t.categoryId) : undefined}
-                      isInbox={!t.categoryId || t.categoryId === ''}
-                      isOverdueCol={!!tab.isOverdueCol}
-                      isDragging={taskDrag?.todo.id === t.id}
-                      onOpen={() => openEditor({ todoId: t.id })}
-                      onCheck={handleCheck}
-                      hideCategory={filter.kind === 'category'}
-                      onLongPress={sectionBar ? handleTaskLongPress : undefined}
-                    />
-                  </div>
+              {tab.dated === undefined && tab.undated === undefined
+                ? tab.items.map((t) => (
+                    <div
+                      key={t.id}
+                      className={`overflow-hidden transition-all duration-300 ease-out ${
+                        collapsing.has(t.id) ? 'max-h-0 opacity-0' : 'max-h-[2000px] opacity-100'
+                      }`}
+                    >
+                      <BoardCard
+                        t={t}
+                        cat={t.categoryId ? catMap.get(t.categoryId) : undefined}
+                        isInbox={!t.categoryId || t.categoryId === ''}
+                        isOverdueCol={!!tab.isOverdueCol}
+                        isDragging={taskDrag?.todo.id === t.id}
+                        onOpen={() => openEditor({ todoId: t.id })}
+                        onCheck={handleCheck}
+                        hideCategory={filter.kind === 'category'}
+                        onLongPress={undefined}
+                      />
+                    </div>
+                  ))
+                : (() => {
+                    const dated = tab.dated ?? [];
+                    const undated = tab.undated ?? [];
+                    const lineIdx = reorderLine && reorderLine.colId === tab.id ? reorderLine.index : -1;
+                    // 折叠动画包裹层：用同一个 div 承载每张卡片，并给无日期卡片打 data 属性供拖拽命中
+                    const wrap = (t: Todo, content: React.ReactNode) => (
+                      <div
+                        key={t.id}
+                        data-todo-id={undated.includes(t) ? t.id : undefined}
+                        data-col-id={undated.includes(t) ? tab.id : undefined}
+                        className={`overflow-hidden transition-all duration-300 ease-out ${
+                          collapsing.has(t.id) ? 'max-h-0 opacity-0' : 'max-h-[2000px] opacity-100'
+                        }`}
+                      >
+                        {content}
+                      </div>
+                    );
+                    return (
+                      <>
+                    {/* 有日期：锁顶、按时间升序、不可拖 */}
+                    {dated.map((t) =>
+                      wrap(
+                        t,
+                        <BoardCard
+                          t={t}
+                          cat={t.categoryId ? catMap.get(t.categoryId) : undefined}
+                          isInbox={!t.categoryId || t.categoryId === ''}
+                          isOverdueCol={!!tab.isOverdueCol}
+                          isDragging={taskDrag?.todo.id === t.id}
+                          onOpen={() => openEditor({ todoId: t.id })}
+                          onCheck={handleCheck}
+                          hideCategory={filter.kind === 'category'}
+                          onLongPress={undefined}
+                        />,
+                      ),
+                    )}
+                    {/* 两类都非空时，给一条分隔提示 */}
+                    {dated.length > 0 && undated.length > 0 && (
+                      <div className="my-2 flex items-center gap-2 px-1">
+                        <div className="h-px flex-1 bg-primary-100" />
+                        <span className="text-[11px] text-neutral-400">无日期 · 拖动排序</span>
+                        <div className="h-px flex-1 bg-primary-100" />
+                      </div>
+                    )}
+                    {/* 无日期：沉底成可拖段，长按进入拖拽（组内重排 / 拖到分组标题换组） */}
+                    {undated.map((t, idx) => (
+                      <Fragment key={t.id}>
+                        {lineIdx === idx && <div className="mx-1 my-1 h-[3px] rounded-full bg-primary-400" />}
+                        {wrap(
+                          t,
+                          <BoardCard
+                            t={t}
+                            cat={t.categoryId ? catMap.get(t.categoryId) : undefined}
+                            isInbox={!t.categoryId || t.categoryId === ''}
+                            isOverdueCol={!!tab.isOverdueCol}
+                            isDragging={taskDrag?.todo.id === t.id}
+                            onOpen={() => openEditor({ todoId: t.id })}
+                            onCheck={handleCheck}
+                            hideCategory={filter.kind === 'category'}
+                            onLongPress={sectionBar ? handleTaskLongPress : undefined}
+                          />,
+                        )}
+                      </Fragment>
+                    ))}
+                    {lineIdx === undated.length && <div className="mx-1 my-1 h-[3px] rounded-full bg-primary-400" />}
+                  </>
                 );
-              })}
+              })()}
 
             </div>
           ))}
@@ -626,7 +783,7 @@ export default function TodoBoardView({
             {taskDrag.todo.description && (
               <div className="mt-1 line-clamp-1 text-[12px] text-neutral-400">{taskDrag.todo.description}</div>
             )}
-            <div className="mt-1.5 text-[10px] font-medium text-primary-500">拖到分组标题以移动</div>
+            <div className="mt-1.5 text-[10px] font-medium text-primary-500">拖动排序 · 拖到分组标题可换分组</div>
           </div>
         </div>
       )}

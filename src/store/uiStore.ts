@@ -63,16 +63,20 @@ type PersistedView = Pick<
   | 'todoView'
   | 'boardMode'
   | 'groupBy'
+  | 'sortMode'
   | 'calendarView'
   | 'calendarWeekMode'
   | 'completedView'
   | 'filter'
 >;
 
+export type SortMode = 'manual' | 'date';
+
 const VALID_TABS: TabKey[] = ['todos', 'calendar'];
 const VALID_TODO_VIEW: TodoViewMode[] = ['list', 'board'];
 const VALID_BOARD_MODE: BoardMode[] = ['category', 'time'];
 const VALID_GROUP_BY = ['time', 'section', 'category'] as const;
+const VALID_SORT_MODE: SortMode[] = ['manual', 'date'];
 const VALID_CAL_VIEW: CalendarViewMode[] = ['list', 'day', 'week', 'month'];
 const VALID_CAL_WEEK: CalendarWeekMode[] = ['cards', 'timeline'];
 const VALID_FILTER_KINDS = ['all', 'today', 'next7', 'inbox', 'completed', 'category'];
@@ -97,6 +101,7 @@ function loadView(): Partial<PersistedView> {
     if (VALID_TODO_VIEW.includes(v.completedView)) out.completedView = v.completedView;
     if (VALID_BOARD_MODE.includes(v.boardMode)) out.boardMode = v.boardMode;
     if (VALID_GROUP_BY.includes(v.groupBy)) out.groupBy = v.groupBy;
+    if (VALID_SORT_MODE.includes(v.sortMode)) out.sortMode = v.sortMode;
     if (VALID_CAL_VIEW.includes(v.calendarView)) out.calendarView = v.calendarView;
     if (VALID_CAL_WEEK.includes(v.calendarWeekMode)) out.calendarWeekMode = v.calendarWeekMode;
     if (isValidFilter(v.filter)) out.filter = v.filter;
@@ -122,6 +127,8 @@ interface UIState {
   boardMode: BoardMode;
   /** 分组方式：按时间 / 按 section / 按清单（列表视图用） */
   groupBy: 'time' | 'section' | 'category';
+  /** 排序方式（仅「按分组」生效）：手动 / 按日期。默认手动=现状 */
+  sortMode: SortMode;
   calendarView: CalendarViewMode;
   /** 周视图内部子模式：卡片 / 时间轴 */
   calendarWeekMode: CalendarWeekMode;
@@ -169,6 +176,7 @@ interface UIState {
   setCompletedView: (v: TodoViewMode) => void;
   setBoardMode: (v: BoardMode) => void;
   setGroupBy: (v: 'time' | 'section' | 'category') => void;
+  setSortMode: (v: SortMode) => void;
   setCalendarView: (v: CalendarViewMode) => void;
   setCalendarWeekMode: (v: CalendarWeekMode) => void;
   setDrawerOpen: (b: boolean) => void;
@@ -201,6 +209,7 @@ export const useUIStore = create<UIState>((set) => ({
   todoView: rememberedView.todoView ?? 'list',
   boardMode: rememberedView.boardMode ?? 'category',
   groupBy: rememberedView.groupBy ?? 'time',
+  sortMode: rememberedView.sortMode ?? 'manual',
   calendarView: rememberedView.calendarView ?? 'list',
   calendarWeekMode: rememberedView.calendarWeekMode ?? 'cards',
   drawerOpen: false,
@@ -237,6 +246,7 @@ export const useUIStore = create<UIState>((set) => ({
   setCompletedView: (completedView) => set({ completedView }),
   setBoardMode: (boardMode) => set({ boardMode }),
   setGroupBy: (groupBy) => set({ groupBy }),
+  setSortMode: (sortMode) => set({ sortMode }),
   setCalendarView: (calendarView) => set({ calendarView }),
   setCalendarWeekMode: (calendarWeekMode) => set({ calendarWeekMode }),
   setDrawerOpen: (drawerOpen) => set({ drawerOpen, drawerOffset: 0 }),
@@ -281,6 +291,7 @@ function pickView(s: UIState): PersistedView {
     todoView: s.todoView,
     boardMode: s.boardMode,
     groupBy: s.groupBy,
+    sortMode: s.sortMode,
     calendarView: s.calendarView,
     calendarWeekMode: s.calendarWeekMode,
     completedView: s.completedView,

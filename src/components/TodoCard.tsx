@@ -18,9 +18,11 @@ interface Props {
   query?: string;
   /** 打卡瞬间回调（父视图用于触发退场动画 / 撤销 toast） */
   onCheck?: (id: string) => void;
+  /** 长按卡片：进入「拖动排序」模式（仅列表-按分组模式对无日期任务传入） */
+  onLongPress?: (todo: Todo, clientX: number, clientY: number) => void;
 }
 
-export default function TodoCard({ todo, category, showDate, hideCategory, query = '', onCheck }: Props) {
+export default function TodoCard({ todo, category, showDate, hideCategory, query = '', onCheck, onLongPress }: Props) {
   const toggleTodo = useDataStore((s) => s.toggleTodo);
   const toggleSubTask = useDataStore((s) => s.toggleSubTask);
   const updateSubTaskContent = useDataStore((s) => s.updateSubTaskContent);
@@ -55,6 +57,63 @@ export default function TodoCard({ todo, category, showDate, hideCategory, query
   }, [editingSubId]);
   // 横滑锁：判定为横向手势时掐断纵向滚动（原生 passive:false 监听）
   const { ref: swipeRef, axis, startX } = useAxisLock<HTMLDivElement>();
+
+  // 长按 → 拖拽排序：检测长按（移动/滚动则取消），松手若曾长按则吞掉随后的 click
+  const cardRef = useRef<HTMLDivElement | null>(null);
+  const lp = useRef<{ timer: number | null; startX: number; startY: number; moved: boolean; fired: boolean } | null>(null);
+  const suppressClick = useRef(false);
+  const setSelectLock = (lock: boolean) => {
+    const el = cardRef.current;
+    if (!el) return;
+    const s = el.style as CSSStyleDeclaration & { webkitUserSelect?: string; WebkitUserSelect?: string; webkitTouchCallout?: string; WebkitTouchCallout?: string };
+    if (lock) {
+      s.userSelect = 'none';
+      s.webkitUserSelect = 'none';
+      s.webkitTouchCallout = 'none';
+    } else {
+      s.userSelect = '';
+      s.webkitUserSelect = '';
+      s.webkitTouchCallout = '';
+    }
+  };
+  const clearLp = () => {
+    if (lp.current?.timer) {
+      window.clearTimeout(lp.current.timer);
+      lp.current = null;
+    }
+    setSelectLock(false);
+  };
+  const onCardPointerDown = (e: React.PointerEvent) => {
+    if (!onLongPress) return;
+    setSelectLock(true);
+    lp.current = { timer: null, startX: e.clientX, startY: e.clientY, moved: false, fired: false };
+    const timer = window.setTimeout(() => {
+      if (lp.current && !lp.current.moved && !lp.current.fired) {
+        lp.current.fired = true;
+        try {
+          (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+        } catch {
+          /* ignore */
+        }
+        if (typeof navigator !== 'undefined' && 'vibrate' in navigator) navigator.vibrate(15);
+        onLongPress(todo, e.clientX, e.clientY);
+      }
+    }, 380);
+    lp.current.timer = timer;
+  };
+  const onCardPointerMove = (e: React.PointerEvent) => {
+    if (!lp.current) return;
+    const dx = e.clientX - lp.current.startX;
+    const dy = e.clientY - lp.current.startY;
+    if (Math.abs(dx) > 8 || Math.abs(dy) > 8) {
+      lp.current.moved = true;
+      if (!lp.current.fired) clearLp();
+    }
+  };
+  const onCardPointerUp = () => {
+    if (lp.current?.fired) suppressClick.current = true;
+    clearLp();
+  };
 
   const barColor = category?.color ?? '#A8D5BA'; // 默认主色-300
   const subDone = todo.subTasks.filter((s) => s.isCompleted).length;
@@ -100,9 +159,16 @@ export default function TodoCard({ todo, category, showDate, hideCategory, query
       </button>
 
       <div
-        ref={swipeRef}
+        ref={(el) => {
+          swipeRef.current = el;
+          cardRef.current = el;
+        }}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
+        onPointerDown={onCardPointerDown}
+        onPointerMove={onCardPointerMove}
+        onPointerUp={onCardPointerUp}
+        onPointerCancel={onCardPointerUp}
         className="relative rounded-card bg-white shadow-card-soft"
         style={{
           transform: `translate3d(${offset}px,0,0)`,
@@ -147,6 +213,10 @@ export default function TodoCard({ todo, category, showDate, hideCategory, query
           <div
             className="min-w-0 flex-1 py-3 pr-3"
             onClick={() => {
+              if (suppressClick.current) {
+                suppressClick.current = false;
+                return;
+              }
               if (moved.current) {
                 moved.current = false;
                 return;
