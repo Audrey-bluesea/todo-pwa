@@ -127,8 +127,11 @@ function ensureProbe(): HTMLElement {
   if (probe && probe.isConnected) return probe;
   const el = document.createElement('div');
   el.setAttribute('data-vp-probe', '1');
+  // opacity:0 + visibility:hidden 双保险：该元素仅用于「撑高 body 制造溢出信号」
+  // 逼 iOS 重算视口（自愈），本身绝不应有任何可见像素。visibility:hidden 仍占位、
+  // 仍触发溢出，自愈信号不受影响，但任何引擎都不会渲染它，杜绝偶发露出的可能。
   el.style.cssText =
-    'position:absolute;top:0;left:0;width:1px;height:0;opacity:0;pointer-events:none;';
+    'position:absolute;top:0;left:0;width:1px;height:0;opacity:0;visibility:hidden;pointer-events:none;';
   document.body.appendChild(el);
   probe = el;
   return el;
