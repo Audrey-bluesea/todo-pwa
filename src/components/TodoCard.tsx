@@ -116,7 +116,7 @@ export default function TodoCard({ todo, category, showDate, hideCategory, query
   };
 
   const barColor = category?.color ?? '#A8D5BA'; // 默认主色-300
-  const subDone = todo.subTasks.filter((s) => s.isCompleted).length;
+  const subDone = (todo.subTasks ?? []).filter((s) => s.isCompleted).length;
   const hasTime = todo.dueDate && !isAllDay(todo.dueDate);
 
   // 跨天任务标识
@@ -314,7 +314,7 @@ export default function TodoCard({ todo, category, showDate, hideCategory, query
                   )}
                 </>
               )}
-              {todo.subTasks.length > 0 && (
+              {(todo.subTasks ?? []).length > 0 && (
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -334,7 +334,7 @@ export default function TodoCard({ todo, category, showDate, hideCategory, query
 
             </div>
 
-            {expanded && todo.subTasks.length > 0 && (
+            {expanded && (todo.subTasks ?? []).length > 0 && (
               <div className="mt-2 space-y-1.5 border-t border-primary-100 pt-2 anim-pop">
                 {todo.subTasks.map((s) => (
                   // 复选框 = 打卡（勾选完成）；文字 = 单击就地编辑。

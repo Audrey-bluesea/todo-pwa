@@ -183,6 +183,10 @@ export async function setMeta(key: string, value: unknown) {
 function reviveTodo(t: Todo): Todo {
   return {
     ...t,
+    // 历史数据兜底：老版本写入的 todo 可能缺 subTasks 字段，
+    // 若不解默认为空数组，列表视图 TodoCard 渲染时会因
+    // `todo.subTasks.filter` 抛 TypeError 把整棵 React 树冲成白屏。
+    subTasks: Array.isArray(t.subTasks) ? t.subTasks : [],
     dueDate: t.dueDate ? new Date(t.dueDate) : null,
     endDate: t.endDate ? new Date(t.endDate) : null,
     createdAt: new Date(t.createdAt),

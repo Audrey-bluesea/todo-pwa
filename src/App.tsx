@@ -5,6 +5,7 @@ import { useTimerStore } from './store/timerStore';
 import { ensureSubscription } from './lib/push';
 import TabBar from './components/TabBar';
 import Drawer from './components/Drawer';
+import ErrorBoundary from './components/ErrorBoundary';
 import TodoEditorSheet from './components/TodoEditorSheet';
 import TimerBubble from './components/TimerBubble';
 import TimerStartSheet from './components/TimerStartSheet';
@@ -58,47 +59,49 @@ export default function App() {
     // id="app-root" 供 viewportGuard 使用：它会把本容器高度持续钉回 window.innerHeight，
     // 修掉「iOS 把 fixed 容器高度缩到 894（=956−62）后不恢复」导致的整块底部上飘 62pt。
     <div id="app-root" className="fixed inset-0 flex flex-col overflow-hidden bg-appbg">
-      <main className="flex min-h-0 flex-1 overflow-hidden">
-        {!ready ? (
-          <div className="flex h-full flex-col items-center justify-center gap-3">
-            <div className="flex h-14 w-14 animate-pulse items-center justify-center rounded-2xl bg-primary-100 text-[26px]">
-              🍵
+      <ErrorBoundary>
+        <main className="flex min-h-0 flex-1 overflow-hidden">
+          {!ready ? (
+            <div className="flex h-full flex-col items-center justify-center gap-3">
+              <div className="flex h-14 w-14 animate-pulse items-center justify-center rounded-2xl bg-primary-100 text-[26px]">
+                🍵
+              </div>
+              <div className="text-[13px] text-neutral-400">正在冲泡…</div>
             </div>
-            <div className="text-[13px] text-neutral-400">正在冲泡…</div>
+          ) : tab === 'todos' ? (
+            <TodoTab />
+          ) : (
+            <CalendarTab />
+          )}
+        </main>
+
+        <TabBar />
+        <Drawer />
+        <RecapView />
+        <TodoEditorSheet />
+        <TimerBubble />
+        <TimerStartSheet />
+        <TimerEntryEditSheet />
+
+        {toast && (
+          <div className="pointer-events-none absolute inset-x-0 z-[60] flex justify-center" style={{ bottom: 'calc(var(--sab) + 100px)' }}>
+            <div className="flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-4 py-2 text-[13px] font-medium text-neutral-800 shadow-card anim-pop">
+              <span>{toast}</span>
+              {toastAction && (
+                <button
+                  onClick={() => {
+                    toastAction.onAction();
+                    useUIStore.setState({ toast: null, toastAction: null });
+                  }}
+                  className="pointer-events-auto -my-1 rounded-full bg-primary-600 px-3 py-1 text-[12.5px] font-semibold text-white press"
+                >
+                  {toastAction.label}
+                </button>
+              )}
+            </div>
           </div>
-        ) : tab === 'todos' ? (
-          <TodoTab />
-        ) : (
-          <CalendarTab />
         )}
-      </main>
-
-      <TabBar />
-      <Drawer />
-      <RecapView />
-      <TodoEditorSheet />
-      <TimerBubble />
-      <TimerStartSheet />
-      <TimerEntryEditSheet />
-
-      {toast && (
-        <div className="pointer-events-none absolute inset-x-0 z-[60] flex justify-center" style={{ bottom: 'calc(var(--sab) + 100px)' }}>
-          <div className="flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-4 py-2 text-[13px] font-medium text-neutral-800 shadow-card anim-pop">
-            <span>{toast}</span>
-            {toastAction && (
-              <button
-                onClick={() => {
-                  toastAction.onAction();
-                  useUIStore.setState({ toast: null, toastAction: null });
-                }}
-                className="pointer-events-auto -my-1 rounded-full bg-primary-600 px-3 py-1 text-[12.5px] font-semibold text-white press"
-              >
-                {toastAction.label}
-              </button>
-            )}
-          </div>
-        </div>
-      )}
+      </ErrorBoundary>
     </div>
   );
 }

@@ -336,7 +336,9 @@ export const useDataStore = create<DataState>((set, get) => ({
       isCompleted,
       completedAt: isCompleted ? new Date() : null,
       // 整条完成时，子任务一并勾选
-      subTasks: isCompleted ? cur.subTasks.map((s) => ({ ...s, isCompleted: true })) : cur.subTasks,
+      subTasks: isCompleted
+        ? (cur.subTasks ?? []).map((s) => ({ ...s, isCompleted: true }))
+        : (cur.subTasks ?? []),
     };
     await db.putTodo(next);
     set((s) => ({ todos: s.todos.map((t) => (t.id === id ? next : t)) }));
@@ -345,7 +347,7 @@ export const useDataStore = create<DataState>((set, get) => ({
   async toggleSubTask(todoId, subId) {
     const cur = get().todos.find((t) => t.id === todoId);
     if (!cur) return;
-    const subTasks = cur.subTasks.map((s) =>
+    const subTasks = (cur.subTasks ?? []).map((s) =>
       s.id === subId ? { ...s, isCompleted: !s.isCompleted } : s,
     );
     const next: Todo = { ...cur, subTasks };
@@ -359,7 +361,7 @@ export const useDataStore = create<DataState>((set, get) => ({
     if (!text) return;
     const cur = get().todos.find((t) => t.id === todoId);
     if (!cur) return;
-    const subTasks = cur.subTasks.map((s) => (s.id === subId ? { ...s, content: text } : s));
+    const subTasks = (cur.subTasks ?? []).map((s) => (s.id === subId ? { ...s, content: text } : s));
     const next: Todo = { ...cur, subTasks };
     await db.putTodo(next);
     set((s) => ({ todos: s.todos.map((t) => (t.id === todoId ? next : t)) }));
