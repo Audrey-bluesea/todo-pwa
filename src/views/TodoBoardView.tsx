@@ -288,6 +288,9 @@ export default function TodoBoardView({
   // 引用最新 tabs，供长按拖拽的 move/up 闭包读取（避免每次重渲染重挂监听打断手势）
   const tabsRef = useRef(tabs);
   tabsRef.current = tabs;
+  /** 是否有列可渲染。空看板时下方会提前 return，viewportRef 从未挂载，
+   *  横滑 effect 必须依赖它，才能在「空 → 有任务」后重新绑定监听（否则横滑失效）。 */
+  const hasTabs = tabs.length > 0;
 
   // 切到新 tab 并记忆；越界时钳制
   const commitTab = (next: number) => {
@@ -342,39 +345,6 @@ export default function TodoBoardView({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [memKey]);
-
-  // 空状态
-  if (tabs.length === 0) {
-    return (
-      <EmptyState
-        title="这里空空如也"
-        desc={mode === 'category' && categories.length === 0 ? '在左上角菜单里新建一个清单吧' : '换个筛选条件，或添加一些任务吧'}
-        emoji="📅"
-      />
-    );
-  }
-
-  // 内联创建分组
-  const handleAddSec = async () => {
-    if (!newSecName.trim() || !cat) return;
-    await addSection(cat.id, newSecName.trim());
-    setNewSecName('');
-    setAddingSec(false);
-    setGroupBy('section');
-  };
-
-  // 分组标签栏交互（仅看板-按分组模式）
-  const handleSectionSelect = (fullId: string) => {
-    const idx = tabs.findIndex((t) => t.id === fullId);
-    if (idx >= 0) commitTab(idx);
-  };
-  const handleSectionReorder = (orderedIds: string[]) => {
-    if (!cat) return;
-    reorderSections(
-      cat.id,
-      orderedIds.map((id, i) => ({ id, sortOrder: i })),
-    );
-  };
 
   // —— 长按卡片拖到分组标题 → 切换分组 ——
   const [taskDrag, setTaskDrag] = useState<{ todo: Todo; x: number; y: number } | null>(null);
@@ -568,7 +538,40 @@ export default function TodoBoardView({
       vp.removeEventListener('touchcancel', onEnd);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [hasTabs]);
+
+  // 空状态
+  if (tabs.length === 0) {
+    return (
+      <EmptyState
+        title="这里空空如也"
+        desc={mode === 'category' && categories.length === 0 ? '在左上角菜单里新建一个清单吧' : '换个筛选条件，或添加一些任务吧'}
+        emoji="📅"
+      />
+    );
+  }
+
+  // 内联创建分组
+  const handleAddSec = async () => {
+    if (!newSecName.trim() || !cat) return;
+    await addSection(cat.id, newSecName.trim());
+    setNewSecName('');
+    setAddingSec(false);
+    setGroupBy('section');
+  };
+
+  // 分组标签栏交互（仅看板-按分组模式）
+  const handleSectionSelect = (fullId: string) => {
+    const idx = tabs.findIndex((t) => t.id === fullId);
+    if (idx >= 0) commitTab(idx);
+  };
+  const handleSectionReorder = (orderedIds: string[]) => {
+    if (!cat) return;
+    reorderSections(
+      cat.id,
+      orderedIds.map((id, i) => ({ id, sortOrder: i })),
+    );
+  };
 
   return (
     // ⚠️ 用 flex-1（不是 h-full）：父级是 flex 容器（TodoTab 的视图区），
