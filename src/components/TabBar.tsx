@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useUIStore } from '../store/uiStore';
+import { startOfDay } from '../lib/date';
 import { IconCalendar, IconChecklist, IconPlus } from './Icons';
 
 /** 长按判定阈值（毫秒） */
@@ -127,10 +128,22 @@ export default function TabBar() {
     } catch {
       /* 忽略存储失败 */
     }
+    // 默认日期：
+    // · 日历页 → 当前选中日期
+    // · 「今天」智能清单 → 今天（否则日期空白；且该视图只显示带日期的任务，
+    //   不给默认日期的话新建完会立刻被过滤掉、看上去像"没保存"）
+    // · 「未来 7 天」同理，默认今天才能立刻出现在列表里
+    const presetDate =
+      tab === 'calendar'
+        ? selectedDate
+        : filter.kind === 'today' || filter.kind === 'next7'
+          ? startOfDay(new Date())
+          : undefined;
+
     openEditor({
       categoryId: filter.kind === 'category' ? filter.categoryId : undefined,
       sectionId: inBoardSection ? boardSectionId! : undefined,
-      date: tab === 'calendar' ? selectedDate : undefined,
+      date: presetDate,
     });
   };
 
