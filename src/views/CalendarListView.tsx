@@ -269,12 +269,8 @@ export default function CalendarListView() {
                             </div>
                           )}
                           <div className="mt-0.5 flex items-center gap-1 text-[11.5px] text-neutral-400">
-                            {catMap.get(t.categoryId) && (
-                              <>
-                                <span className="text-[12px] leading-none">{catMap.get(t.categoryId)!.icon}</span>
-                                <span>{catMap.get(t.categoryId)!.name}</span>
-                              </>
-                            )}
+                            {/* 时长/跨天等元信息留在左侧；清单分类名统一推到本行最右（卡片右下角），
+                                与最后一行信息保持同一水平线，不额外占一行、不增加卡片高度。 */}
                             {(() => {
                               if (!t.endDate) return null;
                               const isCross = !isSameDay(t.dueDate as Date, t.endDate as Date);
@@ -293,6 +289,12 @@ export default function CalendarListView() {
                               }
                               return null;
                             })()}
+                            {catMap.get(t.categoryId) && (
+                              <span className="ml-auto flex min-w-0 shrink-0 items-center gap-1 pl-2">
+                                <span className="text-[12px] leading-none">{catMap.get(t.categoryId)!.icon}</span>
+                                <span className="truncate">{catMap.get(t.categoryId)!.name}</span>
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>

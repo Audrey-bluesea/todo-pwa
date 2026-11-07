@@ -15,7 +15,6 @@ import { solarToLunar } from '../lib/lunar';
 import { holidayMark } from '../lib/holidays';
 import HolidayBadge from '../components/HolidayBadge';
 import { activeTodosOn, makeCatMap } from '../lib/todoIndex';
-import { IconPlus } from '../components/Icons';
 
 const MAX_ROWS = 5;
 
@@ -84,18 +83,10 @@ export default function CalendarWeekCards() {
                 <span className="truncate text-[9px] text-neutral-400">{solarToLunar(d).label}</span>
               </div>
 
+              {/* 空日子不显示「+ 空闲」等任何占位标志，保持纯净留白。
+                  新建入口统一走 FAB：点击本格子会把 selectedDate 设为这一天，
+                  FAB 在日历 tab 下即以 selectedDate 作为默认日期。 */}
               <div className="min-h-0 flex-1 space-y-1">
-                {shown.length === 0 && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      openEditor({ date: d });
-                    }}
-                    className="flex w-full items-center justify-center gap-1 rounded-lg border border-dashed border-primary-200 py-2 text-[10.5px] text-primary-400"
-                  >
-                    <IconPlus size={11} /> 空闲
-                  </button>
-                )}
                 {shown.map((t) => {
                   const color = catMap.get(t.categoryId)?.color ?? '#A8D5BA';
                   const hasEnd = !!t.endDate && !isAllDay(t.endDate);
