@@ -215,6 +215,34 @@ export default function CalendarListView() {
                 const color = catMap.get(t.categoryId)?.color ?? '#A8D5BA';
                 const dur = durationHours(t.dueDate, t.endDate);
                 const rowH = allDay ? 72 : Math.min(120, Math.max(44, Math.round(48 + (dur > 0 ? dur * 5 : 0))));
+
+                // 时长/跨天标签（原来独占一行，现并入最后一行信息，避免为分类名再起一行）
+                let metaLabel = '';
+                if (t.endDate) {
+                  const isCross = !isSameDay(t.dueDate as Date, t.endDate as Date);
+                  if (allDay && isCross) {
+                    const daySpan = Math.ceil(
+                      ((t.endDate as Date).getTime() - (t.dueDate as Date).getTime()) / 86400000,
+                    ) + 1;
+                    metaLabel = `· ${daySpan}天`;
+                  } else if (dur > 0 && !allDay) {
+                    metaLabel = `· ${dur >= 1 ? `${Math.round(dur)}h` : `${Math.round(dur * 60)}m`}`;
+                  }
+                }
+                const cat = catMap.get(t.categoryId);
+                // 分类名与「最后一行信息」并排、贴在行尾；字号比正文小一档给长地址让位，
+                // 不再单独占一行（否则视觉上就是"另起一行"）。
+                const catBadge = cat ? (
+                  <span className="flex shrink-0 items-center gap-0.5 pl-1 text-[10.5px] leading-none text-neutral-400">
+                    <span className="text-[11px] leading-none">{cat.icon}</span>
+                    <span className="max-w-[60px] truncate">{cat.name}</span>
+                  </span>
+                ) : null;
+                const metaChip = metaLabel ? (
+                  <span className="shrink-0 whitespace-nowrap text-[10.5px] leading-none tabular-nums text-neutral-350">
+                    {metaLabel}
+                  </span>
+                ) : null;
                 return (
                   <div key={t.id} className="relative flex items-center gap-3" style={{ minHeight: rowH }}>
                     <div className="w-[50px] shrink-0 pr-1 text-right leading-none flex items-center justify-end" style={{ height: rowH }}>
@@ -256,46 +284,29 @@ export default function CalendarListView() {
                         </span>
 
                         <div className="min-w-0 flex-1">
-                          <div
-                            className={`text-[15px] leading-snug ${
-                              t.isCompleted ? 'text-neutral-700 line-through' : 'text-neutral-600'
-                            }`}
-                          >
-                            {t.title}
+                          {/* 无描述：分类名挂在标题行右端；有描述：挂在地址/说明行右端。
+                              两种情况都与「最后一行信息」同一水平线，不再另起一行。 */}
+                          <div className="flex items-center gap-1">
+                            <div
+                              className={`min-w-0 flex-1 text-[15px] leading-snug ${
+                                t.isCompleted ? 'text-neutral-700 line-through' : 'text-neutral-600'
+                              }`}
+                            >
+                              {t.title}
+                            </div>
+                            {!t.description && <>{metaChip}{catBadge}</>}
                           </div>
                           {t.description && (
-                            <div className="mt-0.5 line-clamp-2 text-[12px] leading-snug text-neutral-400">
-                              {t.description}
+                            <div className="mt-0.5 flex items-end gap-1">
+                              <div className="min-w-0 flex-1">
+                                <div className="line-clamp-2 text-[12px] leading-snug text-neutral-400">
+                                  {t.description}
+                                </div>
+                              </div>
+                              {metaChip}
+                              {catBadge}
                             </div>
                           )}
-                          <div className="mt-0.5 flex items-center gap-1 text-[11.5px] text-neutral-400">
-                            {/* 时长/跨天等元信息留在左侧；清单分类名统一推到本行最右（卡片右下角），
-                                与最后一行信息保持同一水平线，不额外占一行、不增加卡片高度。 */}
-                            {(() => {
-                              if (!t.endDate) return null;
-                              const isCross = !isSameDay(t.dueDate as Date, t.endDate as Date);
-                              if (allDay && isCross) {
-                                const daySpan = Math.ceil(
-                                  ((t.endDate as Date).getTime() - (t.dueDate as Date).getTime()) / 86400000,
-                                ) + 1;
-                                return <span className="tabular-nums text-neutral-350">· {daySpan}天</span>;
-                              }
-                              if (dur > 0 && !allDay) {
-                                return (
-                                  <span className="tabular-nums text-neutral-350">
-                                    · {dur >= 1 ? `${Math.round(dur)}h` : `${Math.round(dur * 60)}m`}
-                                  </span>
-                                );
-                              }
-                              return null;
-                            })()}
-                            {catMap.get(t.categoryId) && (
-                              <span className="ml-auto flex min-w-0 shrink-0 items-center gap-1 pl-2">
-                                <span className="text-[12px] leading-none">{catMap.get(t.categoryId)!.icon}</span>
-                                <span className="truncate">{catMap.get(t.categoryId)!.name}</span>
-                              </span>
-                            )}
-                          </div>
                         </div>
                       </div>
                     </button>
