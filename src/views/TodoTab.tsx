@@ -58,6 +58,16 @@ export default function TodoTab() {
     }
   }, [filter, categories]);
 
+  /** 具体清单视图：顶部大标题左边补上该清单自己的 emoji（与抽屉「我的清单」同一个 icon）。
+      智能清单（全部待办/今天/未来7天/Inbox/已完成）保持纯文字；没设 icon 的清单不显示、不留空位。 */
+  const titleIcon = useMemo(
+    () =>
+      filter.kind === 'category'
+        ? categories.find((c) => c.id === filter.categoryId)?.icon || null
+        : null,
+    [filter, categories],
+  );
+
   const filtered = useMemo(() => {
     const today = startOfDay(new Date());
     switch (filter.kind) {
@@ -292,8 +302,11 @@ export default function TodoTab() {
             </div>
           </div>
         ) : (
-          <h1 className="px-4 pb-2 pt-1.5 text-[26px] font-bold leading-tight text-primary-700">
-            {title}
+          <h1 className="flex items-center gap-2 px-4 pb-2 pt-1.5 text-[26px] font-bold leading-tight text-primary-700">
+            {titleIcon && (
+              <span className="shrink-0 text-[22px] leading-none">{titleIcon}</span>
+            )}
+            <span className="min-w-0 flex-1 truncate">{title}</span>
           </h1>
         )}
       </header>
