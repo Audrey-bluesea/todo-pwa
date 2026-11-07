@@ -193,15 +193,17 @@ function DayPane({ date }: { date: Date }) {
       </div>
 
       {/* 全天任务区 */}
-      <div className="all-day-section shrink-0 border-b border-primary-100 px-3 py-2">
-        <div className="mb-1 flex items-center gap-2">
+      <div className="all-day-section shrink-0 border-b border-primary-100 py-2">
+        <div className="mb-1 flex items-center gap-2 px-3">
           <span className="text-[11px] font-medium tracking-wide text-neutral-400">全天</span>
           <div className="flex-1" />
         </div>
+        {/* 横向铺满一长条、左边缘与下方时间轴横线(marginLeft: GUTTER)对齐；
+            上下收窄，色块高度只比文字多一点点背景。 */}
         {allDayItems.length === 0 ? (
-          <div className="text-[12px] text-neutral-400">没有全天任务</div>
+          <div className="text-[12px] text-neutral-400" style={{ paddingLeft: GUTTER }}>没有全天任务</div>
         ) : (
-          <div className="space-y-1.5">
+          <div className="space-y-1.5" style={{ paddingLeft: GUTTER }}>
             {crossAllDay.map((t) => {
               const color = catMap.get(t.categoryId)?.color ?? '#A8D5BA';
               const sd = t.dueDate as Date;
@@ -210,8 +212,8 @@ function DayPane({ date }: { date: Date }) {
                 <button
                   key={t.id}
                   onClick={() => openEditor({ todoId: t.id })}
-                  className={`flex w-full items-center gap-2 rounded-[4px] px-3 py-2 text-left press`}
-                  style={{ backgroundColor: color + '2E', borderLeft: `4px solid ${color}`, minHeight: 42 }}
+                  className="flex w-full items-center gap-2 rounded-[4px] px-2.5 py-1 text-left press"
+                  style={{ backgroundColor: color + '2E', borderLeft: `4px solid ${color}` }}
                 >
                   <span className="shrink-0 text-[11px] font-semibold tabular-nums text-neutral-500">
                     {sd.getMonth() + 1}/{sd.getDate()}
@@ -229,8 +231,7 @@ function DayPane({ date }: { date: Date }) {
                 </button>
               );
             })}
-            {/* 单日全天任务：与上方跨天全天任务同款「整行长条」，一条占满一行，
-                不再是按标题长短并排的短胶囊。 */}
+            {/* 单日全天任务：与上方跨天全天任务同款，横向铺满、上下薄、每条独占一行。 */}
             {singleAllDay.length > 0 &&
               singleAllDay.map((t) => {
                 const color = catMap.get(t.categoryId)?.color ?? '#A8D5BA';
@@ -238,8 +239,8 @@ function DayPane({ date }: { date: Date }) {
                   <button
                     key={t.id}
                     onClick={() => openEditor({ todoId: t.id })}
-                    className="flex w-full items-center gap-2 rounded-[4px] px-3 py-2 text-left press"
-                    style={{ backgroundColor: color + '2E', borderLeft: `4px solid ${color}`, minHeight: 42 }}
+                    className="flex w-full items-center gap-2 rounded-[4px] px-2.5 py-1 text-left press"
+                    style={{ backgroundColor: color + '2E', borderLeft: `4px solid ${color}` }}
                   >
                     <span
                       className={`min-w-0 flex-1 truncate text-[13px] font-medium ${
