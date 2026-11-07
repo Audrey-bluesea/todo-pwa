@@ -229,25 +229,28 @@ function DayPane({ date }: { date: Date }) {
                 </button>
               );
             })}
-            {singleAllDay.length > 0 && (
-              <div className="flex flex-wrap gap-1.5">
-                {singleAllDay.map((t) => {
-                  const color = catMap.get(t.categoryId)?.color ?? '#A8D5BA';
-                  return (
-                    <button
-                      key={t.id}
-                      onClick={() => openEditor({ todoId: t.id })}
-                      className={`max-w-full truncate rounded-full px-2.5 py-1.5 text-[12px] press ${
-                        t.isCompleted ? 'line-through text-neutral-600' : 'text-neutral-700'
+            {/* 单日全天任务：与上方跨天全天任务同款「整行长条」，一条占满一行，
+                不再是按标题长短并排的短胶囊。 */}
+            {singleAllDay.length > 0 &&
+              singleAllDay.map((t) => {
+                const color = catMap.get(t.categoryId)?.color ?? '#A8D5BA';
+                return (
+                  <button
+                    key={t.id}
+                    onClick={() => openEditor({ todoId: t.id })}
+                    className="flex w-full items-center gap-2 rounded-[4px] px-3 py-2 text-left press"
+                    style={{ backgroundColor: color + '2E', borderLeft: `4px solid ${color}`, minHeight: 42 }}
+                  >
+                    <span
+                      className={`min-w-0 flex-1 truncate text-[13px] font-medium ${
+                        t.isCompleted ? 'line-through text-neutral-700' : 'text-neutral-700'
                       }`}
-                      style={{ backgroundColor: color + '2E', minHeight: 36 }}
                     >
                       {t.title}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
+                    </span>
+                  </button>
+                );
+              })}
           </div>
         )}
       </div>

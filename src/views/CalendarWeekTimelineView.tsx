@@ -508,10 +508,9 @@ function AllDayCell({
                 </button>
               );
             }
-            // 单日全天
+            // 单日全天：标题直接顶到左侧色条后，不再在前面加分类色小圆点
             return (
               <button key={t.id} onClick={() => openEditor({ todoId: t.id })} className={baseBtn} style={baseStyle}>
-                <span className="mr-0.5 inline-block h-[6px] w-[6px] shrink-0 rounded-full" style={{ backgroundColor: color }} />
                 <span
                   className={`min-w-0 flex-1 overflow-hidden break-words text-[10px] ${
                     t.isCompleted ? 'text-neutral-700 line-through' : 'font-medium text-neutral-700'
