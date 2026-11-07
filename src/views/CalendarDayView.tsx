@@ -25,6 +25,9 @@ import { assignLanes, hexToRgba, darkenHex } from '../lib/calendarLanes';
 
 const HOUR_H = 60;
 const GUTTER = 52;
+/** 时间轴 lane 容器右留白、色块左右内缩。全天任务条复用同一组值，保证两类色块完全对齐。 */
+const LANE_RIGHT = 8;
+const LANE_INSET = 2;
 
 export default function CalendarDayView() {
   const selected = useUIStore((s) => s.viewDate);
@@ -192,49 +195,26 @@ function DayPane({ date }: { date: Date }) {
         </div>
       </div>
 
-      {/* 全天任务区 */}
-      <div className="all-day-section shrink-0 border-b border-primary-100 py-2">
-        <div className="mb-1 flex items-center gap-2 px-3">
-          <span className="text-[11px] font-medium tracking-wide text-neutral-400">全天</span>
-          <div className="flex-1" />
-        </div>
-        {/* 横向铺满一长条、左边缘与下方时间轴横线(marginLeft: GUTTER)对齐；
-            上下收窄，色块高度只比文字多一点点背景。 */}
-        {allDayItems.length === 0 ? (
-          <div className="text-[12px] text-neutral-400" style={{ paddingLeft: GUTTER }}>没有全天任务</div>
-        ) : (
-          <div className="space-y-1.5" style={{ paddingLeft: GUTTER }}>
-            {crossAllDay.map((t) => {
-              const color = catMap.get(t.categoryId)?.color ?? '#A8D5BA';
-              const sd = t.dueDate as Date;
-              const ed = t.endDate as Date;
-              return (
-                <button
-                  key={t.id}
-                  onClick={() => openEditor({ todoId: t.id })}
-                  className="flex w-full items-center gap-2 rounded-[4px] px-2.5 py-1 text-left press"
-                  style={{ backgroundColor: color + '2E', borderLeft: `4px solid ${color}` }}
-                >
-                  <span className="shrink-0 text-[11px] font-semibold tabular-nums text-neutral-500">
-                    {sd.getMonth() + 1}/{sd.getDate()}
-                  </span>
-                  <span
-                      className={`min-w-0 flex-1 truncate text-[13px] font-medium ${
-                      t.isCompleted ? 'line-through text-neutral-700' : 'text-neutral-700'
-                    }`}
-                  >
-                    {t.title}
-                  </span>
-                  <span className="shrink-0 text-[11px] font-semibold tabular-nums text-neutral-500">
-                    {ed.getMonth() + 1}/{ed.getDate()}
-                  </span>
-                </button>
-              );
-            })}
-            {/* 单日全天任务：与上方跨天全天任务同款，横向铺满、上下薄、每条独占一行。 */}
-            {singleAllDay.length > 0 &&
-              singleAllDay.map((t) => {
+      {/* 全天任务区：与下方时间轴共用左右边界，色块左右边缘完全对齐；
+          「全天」标签在左侧刻度列、与第一条色块同一水平线；
+          无任务时整块高度 0、不显示任何文字。 */}
+      <div className={`all-day-section flex shrink-0 items-start ${allDayItems.length > 0 ? 'border-b border-primary-100 pb-1' : ''}`}>
+        {allDayItems.length > 0 && (
+          <>
+            <div
+              className="flex shrink-0 items-center justify-end pr-2 text-[11px] font-medium tracking-wide text-neutral-400"
+              style={{ width: GUTTER, height: 28 }}
+            >
+              全天
+            </div>
+            <div
+              className="min-w-0 flex-1 space-y-1.5"
+              style={{ marginLeft: LANE_INSET, marginRight: LANE_RIGHT + LANE_INSET }}
+            >
+              {crossAllDay.map((t) => {
                 const color = catMap.get(t.categoryId)?.color ?? '#A8D5BA';
+                const sd = t.dueDate as Date;
+                const ed = t.endDate as Date;
                 return (
                   <button
                     key={t.id}
@@ -242,6 +222,9 @@ function DayPane({ date }: { date: Date }) {
                     className="flex w-full items-center gap-2 rounded-[4px] px-2.5 py-1 text-left press"
                     style={{ backgroundColor: color + '2E', borderLeft: `4px solid ${color}` }}
                   >
+                    <span className="shrink-0 text-[11px] font-semibold tabular-nums text-neutral-500">
+                      {sd.getMonth() + 1}/{sd.getDate()}
+                    </span>
                     <span
                       className={`min-w-0 flex-1 truncate text-[13px] font-medium ${
                         t.isCompleted ? 'line-through text-neutral-700' : 'text-neutral-700'
@@ -249,10 +232,35 @@ function DayPane({ date }: { date: Date }) {
                     >
                       {t.title}
                     </span>
+                    <span className="shrink-0 text-[11px] font-semibold tabular-nums text-neutral-500">
+                      {ed.getMonth() + 1}/{ed.getDate()}
+                    </span>
                   </button>
                 );
               })}
-          </div>
+              {/* 单日全天任务：同款，横向铺满、上下薄、每条独占一行。 */}
+              {singleAllDay.length > 0 &&
+                singleAllDay.map((t) => {
+                  const color = catMap.get(t.categoryId)?.color ?? '#A8D5BA';
+                  return (
+                    <button
+                      key={t.id}
+                      onClick={() => openEditor({ todoId: t.id })}
+                      className="flex w-full items-center gap-2 rounded-[4px] px-2.5 py-1 text-left press"
+                      style={{ backgroundColor: color + '2E', borderLeft: `4px solid ${color}` }}
+                    >
+                      <span
+                        className={`min-w-0 flex-1 truncate text-[13px] font-medium ${
+                          t.isCompleted ? 'line-through text-neutral-700' : 'text-neutral-700'
+                        }`}
+                      >
+                        {t.title}
+                      </span>
+                    </button>
+                  );
+                })}
+            </div>
+          </>
         )}
       </div>
 
@@ -284,7 +292,7 @@ function DayPane({ date }: { date: Date }) {
             </span>
           </div>
 
-          <div className="absolute inset-y-0" style={{ left: GUTTER, right: 8 }}>
+          <div className="absolute inset-y-0" style={{ left: GUTTER, right: LANE_RIGHT }}>
             {timed.map((t) => {
               const d = t.dueDate as Date;
               const end = t.endDate as Date | undefined;
