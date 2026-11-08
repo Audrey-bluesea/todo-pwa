@@ -476,9 +476,10 @@ function AllDayCell({
           {visible.map(({ kind, t, showFull }) => {
             const color = catMap.get(t.categoryId)?.color ?? '#A8D5BA';
             const title = stripEmoji(t.title);
-            const baseBtn = 'flex w-full items-center gap-1 overflow-hidden rounded-[4px] px-1.5 py-1 text-left';
+            // 全天任务跟「普通任务」同款：白底 + 3px 左侧分类色条；
+            // 彩色底(backgroundColor: bgLight)是计时块专属，别混用。
+            const baseBtn = 'flex w-full items-center gap-1 overflow-hidden rounded-[4px] px-1.5 py-1 text-left bg-white';
             const baseStyle = {
-              backgroundColor: color + '2E',
               borderLeft: `3px solid ${color}`,
               minHeight: 24,
             };

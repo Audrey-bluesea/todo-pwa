@@ -28,6 +28,8 @@ const GUTTER = 52;
 /** 时间轴 lane 容器右留白、色块左右内缩。全天任务条复用同一组值，保证两类色块完全对齐。 */
 const LANE_RIGHT = 8;
 const LANE_INSET = 2;
+/** 全天条高度：刚好包住 13px 文字（上下各留 ~2px），不要多余背景 */
+const ALLDAY_BAR_H = 18;
 
 export default function CalendarDayView() {
   const selected = useUIStore((s) => s.viewDate);
@@ -197,13 +199,15 @@ function DayPane({ date }: { date: Date }) {
 
       {/* 全天任务区：与下方时间轴共用左右边界，色块左右边缘完全对齐；
           「全天」标签在左侧刻度列、与第一条色块同一水平线；
-          无任务时整块高度 0、不显示任何文字。 */}
+          无任务时整块高度 0、不显示任何文字。
+          视觉体系跟「普通任务」走：白底 + 3px 左侧分类色条 + 高度刚好包住文字；
+          不要用计时块那套彩色底（计时块才用 backgroundColor: bgLight）。 */}
       <div className={`all-day-section flex shrink-0 items-start ${allDayItems.length > 0 ? 'border-b border-primary-100 pb-1' : ''}`}>
         {allDayItems.length > 0 && (
           <>
             <div
               className="flex shrink-0 items-center justify-end pr-2 text-[11px] font-medium tracking-wide text-neutral-400"
-              style={{ width: GUTTER, height: 28 }}
+              style={{ width: GUTTER, height: ALLDAY_BAR_H }}
             >
               全天
             </div>
@@ -219,8 +223,8 @@ function DayPane({ date }: { date: Date }) {
                   <button
                     key={t.id}
                     onClick={() => openEditor({ todoId: t.id })}
-                    className="flex w-full items-center gap-2 rounded-[4px] px-2.5 py-1 text-left press"
-                    style={{ backgroundColor: color + '2E', borderLeft: `4px solid ${color}` }}
+                    className="flex w-full items-center gap-2 rounded-[4px] bg-white px-2.5 text-left press"
+                    style={{ height: ALLDAY_BAR_H, borderLeft: `3px solid ${color}` }}
                   >
                     <span className="shrink-0 text-[11px] font-semibold tabular-nums text-neutral-500">
                       {sd.getMonth() + 1}/{sd.getDate()}
@@ -246,8 +250,8 @@ function DayPane({ date }: { date: Date }) {
                     <button
                       key={t.id}
                       onClick={() => openEditor({ todoId: t.id })}
-                      className="flex w-full items-center gap-2 rounded-[4px] px-2.5 py-1 text-left press"
-                      style={{ backgroundColor: color + '2E', borderLeft: `4px solid ${color}` }}
+                      className="flex w-full items-center gap-2 rounded-[4px] bg-white px-2.5 text-left press"
+                      style={{ height: ALLDAY_BAR_H, borderLeft: `3px solid ${color}` }}
                     >
                       <span
                         className={`min-w-0 flex-1 truncate text-[13px] font-medium ${
