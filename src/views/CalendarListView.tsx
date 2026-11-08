@@ -418,7 +418,7 @@ function DayCell({
   date: Date;
   selected: boolean;
   inMonth: boolean;
-  dots: string[];
+  dots: DayDot[];
   compact?: boolean;
   onClick: () => void;
 }) {
@@ -454,23 +454,35 @@ function DayCell({
         </span>
       </span>
       <span className="mt-[2px] flex h-[4px] items-center gap-[2px]">
-        {dots.slice(0, 3).map((c, i) => (
-          <span key={i} className="h-[4px] w-[4px] rounded-full" style={{ backgroundColor: today ? '#85C09A' : c }} />
+        {dots.slice(0, 3).map((d, i) => (
+          <span
+            key={i}
+            className="h-[4px] w-[4px] rounded-full"
+            style={{ backgroundColor: d.completed ? DOT_DONE : today ? '#85C09A' : d.color }}
+          />
         ))}
       </span>
     </button>
   );
 }
 
-function dotColors(items: Todo[] | undefined, catMap: Map<string, Category>): string[] {
+/** 月历格子下的提示点：未完成任务用分类色，已完成任务用中性灰（完成那天不再看起来空白） */
+type DayDot = { color: string; completed: boolean };
+const DOT_DONE = '#C4C4C4';
+
+function dotColors(items: Todo[] | undefined, catMap: Map<string, Category>): DayDot[] {
   if (!items) return [];
-  const out: string[] = [];
+  const pending: DayDot[] = [];
+  const done: DayDot[] = [];
   for (const t of items) {
-    if (t.isCompleted) continue;
-    out.push(catMap.get(t.categoryId)?.color ?? '#A8D5BA');
-    if (out.length >= 3) break;
+    const dot: DayDot = {
+      color: catMap.get(t.categoryId)?.color ?? '#A8D5BA',
+      completed: !!t.isCompleted,
+    };
+    (t.isCompleted ? done : pending).push(dot);
   }
-  return out;
+  // 未完成优先展示，最多 3 个点；剩余名额给已完成
+  return [...pending, ...done].slice(0, 3);
 }
 
 /** 生成当月周行（周一起始），只渲染覆盖当月的行 */
