@@ -1021,7 +1021,8 @@ function BoardCard({
             ))}
           </div>
         )}
-        <div className="mt-1 flex items-center justify-between gap-2">
+        {/* 清单名固定在本行最右：不管日期标签是否渲染，都不会滑到左边。 */}
+        <div className="mt-1 flex items-center gap-2">
           {/* 时间标签：与 TodoCard 逻辑保持一致 */}
           {t.dueDate && t.endDate ? (
             isSameDay(t.dueDate, t.endDate) && !hasTime && isAllDay(t.endDate) ? (
@@ -1050,11 +1051,11 @@ function BoardCard({
             )
           )}
 
-          {/* 清单标签 */}
+          {/* 清单标签：ml-auto 保证永久右下角；本行无日期标签时也不回落到左边 */}
           {!hideCategory && (isInbox ? (
-            <span className="shrink-0 rounded-full bg-primary-50 px-2 py-[2px] text-[11.5px] font-medium text-primary-600">Inbox</span>
+            <span className="ml-auto shrink-0 rounded-full bg-primary-50 px-2 py-[2px] text-[11.5px] font-medium text-primary-600">Inbox</span>
           ) : cat ? (
-            <span className="shrink-0 flex items-center gap-1 rounded-full bg-neutral-50 px-2 py-[2px] text-[11.5px] text-neutral-400">
+            <span className="ml-auto flex shrink-0 items-center gap-1 rounded-full bg-neutral-50 px-2 py-[2px] text-[11.5px] text-neutral-400">
               <span>{cat.icon}</span>
               <span>{cat.name}</span>
             </span>

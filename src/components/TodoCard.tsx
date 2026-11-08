@@ -277,12 +277,6 @@ export default function TodoCard({ todo, category, showDate, hideCategory, query
             )}
 
             <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
-              {!hideCategory && category && (
-                <span className="flex items-center gap-1 text-[11.5px] text-neutral-400">
-                  <span className="text-[12px] leading-none">{category.icon}</span>
-                  {category.name}
-                </span>
-              )}
               {/* 有 End 的任务：显示起止范围；但同天+全天只显示单日期，不画箭头 */}
               {todo.dueDate && todo.endDate ? (
                 isSameDay(todo.dueDate, todo.endDate) && !hasTime && isAllDay(todo.endDate) ? (
@@ -332,6 +326,15 @@ export default function TodoCard({ todo, category, showDate, hideCategory, query
                 </button>
               )}
 
+              {/* 清单名固定在本行最右（卡片右下角），与日期/子任务等最后一行信息同一水平线；
+                  本行没有其它信息时，自然成为标题下方那一行的右下角，
+                  不与标题行右上角的计时按钮抢位置。 */}
+              {!hideCategory && category && (
+                <span className="ml-auto flex items-center gap-1 text-[11.5px] text-neutral-400">
+                  <span className="text-[12px] leading-none">{category.icon}</span>
+                  {category.name}
+                </span>
+              )}
             </div>
 
             {expanded && (todo.subTasks ?? []).length > 0 && (
