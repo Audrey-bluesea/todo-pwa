@@ -837,6 +837,26 @@ function BoardCard({
   const subCount = t.subTasks?.length ?? 0;
   const subDone = t.subTasks?.filter((s) => s.isCompleted).length ?? 0;
 
+  // 清单名并入「卡片最后一行信息」的右端，不另起一行；
+  // 只有任务名时（标题行右上角被计时按钮占着）才单独占第二行右下角。
+  const hasMeta = !!t.dueDate || subCount > 0;
+  const hasTags = !!(t.tags && t.tags.length > 0);
+  const hasDesc = !!t.description;
+  const catBadge = !hideCategory ? (
+    isInbox ? (
+      <span className="ml-auto shrink-0 rounded-full bg-primary-50 px-2 py-[2px] text-[11.5px] font-medium text-primary-600">Inbox</span>
+    ) : cat ? (
+      <span className="ml-auto flex shrink-0 items-center gap-1 rounded-full bg-neutral-50 px-2 py-[2px] text-[11.5px] text-neutral-400">
+        <span>{cat.icon}</span>
+        <span>{cat.name}</span>
+      </span>
+    ) : null
+  ) : null;
+  const catInMeta = hasMeta;
+  const catInTags = !hasMeta && hasTags;
+  const catInDesc = !hasMeta && !hasTags && hasDesc;
+  const catAlone = !hasMeta && !hasTags && !hasDesc;
+
   const commitSubEdit = () => {
     const id = editingSubId;
     setEditingSubId(null);
@@ -1001,14 +1021,17 @@ function BoardCard({
           )}
         </div>
         {t.description ? (
-          <div
-            className={`mt-1 line-clamp-2 text-[12.5px] leading-snug ${t.isCompleted ? 'text-neutral-300 line-through' : 'text-neutral-400'}`}
-          >
-            {t.description}
+          <div className="mt-1 flex items-end gap-2">
+            <div className="min-w-0 flex-1">
+              <div className={`line-clamp-2 text-[12.5px] leading-snug ${t.isCompleted ? 'text-neutral-300 line-through' : 'text-neutral-400'}`}>
+                {t.description}
+              </div>
+            </div>
+            {catInDesc && catBadge}
           </div>
         ) : null}
         {t.tags && t.tags.length > 0 && (
-          <div className="mt-1 flex flex-wrap gap-1">
+          <div className="mt-1 flex flex-wrap items-center gap-1">
             {t.tags.map((tag) => (
               <span
                 key={tag}
@@ -1019,10 +1042,12 @@ function BoardCard({
                 #{tag}
               </span>
             ))}
+            {catInTags && catBadge}
           </div>
         )}
-        {/* 清单名固定在本行最右：不管日期标签是否渲染，都不会滑到左边。 */}
-        <div className="mt-1 flex items-center gap-2">
+        {/* 最后一行信息：日期 + 子任务按钮 + 清单名(右端) */}
+        {hasMeta && (
+        <div className="mt-1 flex flex-wrap items-center gap-2">
           {/* 时间标签：与 TodoCard 逻辑保持一致 */}
           {t.dueDate && t.endDate ? (
             isSameDay(t.dueDate, t.endDate) && !hasTime && isAllDay(t.endDate) ? (
@@ -1051,41 +1076,38 @@ function BoardCard({
             )
           )}
 
-          {/* 清单标签：ml-auto 保证永久右下角；本行无日期标签时也不回落到左边 */}
-          {!hideCategory && (isInbox ? (
-            <span className="ml-auto shrink-0 rounded-full bg-primary-50 px-2 py-[2px] text-[11.5px] font-medium text-primary-600">Inbox</span>
-          ) : cat ? (
-            <span className="ml-auto flex shrink-0 items-center gap-1 rounded-full bg-neutral-50 px-2 py-[2px] text-[11.5px] text-neutral-400">
-              <span>{cat.icon}</span>
-              <span>{cat.name}</span>
-            </span>
-          ) : null)}
+          {/* 子任务按钮并入同一行，清单名才能与最后一行信息对齐 */}
+          {subCount > 0 && (
+            <button
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+                setSubExpanded((v) => !v);
+              }}
+              className="-ml-1.5 flex shrink-0 items-center gap-0.5 rounded-full px-1.5 py-1 text-[11.5px] text-primary-600 press"
+              style={{ minHeight: 32 }}
+              aria-label="展开子任务"
+            >
+              子任务 {subDone}/{subCount}
+              <IconChevronDown
+                size={13}
+                className={`transition-transform duration-200 ${subExpanded ? 'rotate-180' : ''}`}
+              />
+            </button>
+          )}
+          {catInMeta && catBadge}
         </div>
+        )}
 
-        {/* 子任务：与列表视图一致（点标题展开/收起，可直接勾选）。
+        {/* 只有任务名：单独占第二行右下角，避开标题行右上角的计时按钮 */}
+        {catAlone && catBadge && (
+          <div className="mt-1 flex justify-end">{catBadge}</div>
+        )}
+
+        {/* 子任务展开列表（点标题展开/收起，可直接勾选）。
             注意都要 stopPropagation：① 避免冒泡到卡片触发打开编辑器；
             ② pointerdown 也要拦，否则分组模式下会触发长按拖拽换分组。 */}
-        {subCount > 0 && (
-          <>
-            <div className="mt-1 flex">
-              <button
-                onPointerDown={(e) => e.stopPropagation()}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setSubExpanded((v) => !v);
-                }}
-                className="-ml-1.5 flex items-center gap-0.5 rounded-full px-1.5 py-1 text-[11.5px] text-primary-600 press"
-                style={{ minHeight: 32 }}
-                aria-label="展开子任务"
-              >
-                子任务 {subDone}/{subCount}
-                <IconChevronDown
-                  size={13}
-                  className={`transition-transform duration-200 ${subExpanded ? 'rotate-180' : ''}`}
-                />
-              </button>
-            </div>
-            {subExpanded && (
+        {subExpanded && (
               <div
                 onPointerDown={(e) => e.stopPropagation()}
                 className="mt-1 space-y-1.5 border-t border-primary-100 pt-2 anim-pop"
@@ -1161,8 +1183,6 @@ function BoardCard({
                 ))}
               </div>
             )}
-          </>
-        )}
       </div>
     </div>
   );

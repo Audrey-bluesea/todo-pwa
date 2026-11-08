@@ -131,6 +131,22 @@ export default function TodoCard({ todo, category, showDate, hideCategory, query
     ? 'bg-neutral-100 text-neutral-400'
     : 'bg-primary-100 text-primary-700';
 
+  // 清单名并入「卡片最后一行信息」的右端，不另起一行；
+  // 只有任务名时（标题行右上角被计时按钮占着）才允许单独占第二行右下角。
+  const hasMeta = !!todo.dueDate || (todo.subTasks ?? []).length > 0;
+  const hasTags = !!(todo.tags && todo.tags.length > 0);
+  const hasDesc = !!todo.description;
+  const catBadge = !hideCategory && category ? (
+    <span className="ml-auto flex shrink-0 items-center gap-1 text-[11.5px] text-neutral-400">
+      <span className="text-[12px] leading-none">{category.icon}</span>
+      {category.name}
+    </span>
+  ) : null;
+  const catInMeta = hasMeta;
+  const catInTags = !hasMeta && hasTags;
+  const catInDesc = !hasMeta && !hasTags && hasDesc;
+  const catAlone = !hasMeta && !hasTags && !hasDesc;
+
   const onTouchMove = (e: React.TouchEvent) => {
     // 主轴判定与「掐断纵向滚动」由 useAxisLock 的原生监听完成，这里只负责跟手位移
     if (axis.current !== 'x') return;
@@ -258,13 +274,16 @@ export default function TodoCard({ todo, category, showDate, hideCategory, query
             </div>
 
             {todo.description && (
-              <div className="mt-1 text-[12.5px] leading-snug text-neutral-400">
-                <Highlight text={todo.description} query={query} />
+              <div className="mt-1 flex items-end gap-2">
+                <div className="min-w-0 flex-1 text-[12.5px] leading-snug text-neutral-400">
+                  <Highlight text={todo.description} query={query} />
+                </div>
+                {catInDesc && catBadge}
               </div>
             )}
 
             {todo.tags && todo.tags.length > 0 && (
-              <div className="mt-1 flex flex-wrap gap-1">
+              <div className="mt-1 flex flex-wrap items-center gap-1">
                 {todo.tags.map((tag) => (
                   <span
                     key={tag}
@@ -273,9 +292,11 @@ export default function TodoCard({ todo, category, showDate, hideCategory, query
                     #{tag}
                   </span>
                 ))}
+                {catInTags && catBadge}
               </div>
             )}
 
+            {hasMeta && (
             <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
               {/* 有 End 的任务：显示起止范围；但同天+全天只显示单日期，不画箭头 */}
               {todo.dueDate && todo.endDate ? (
@@ -326,16 +347,14 @@ export default function TodoCard({ todo, category, showDate, hideCategory, query
                 </button>
               )}
 
-              {/* 清单名固定在本行最右（卡片右下角），与日期/子任务等最后一行信息同一水平线；
-                  本行没有其它信息时，自然成为标题下方那一行的右下角，
-                  不与标题行右上角的计时按钮抢位置。 */}
-              {!hideCategory && category && (
-                <span className="ml-auto flex items-center gap-1 text-[11.5px] text-neutral-400">
-                  <span className="text-[12px] leading-none">{category.icon}</span>
-                  {category.name}
-                </span>
-              )}
+              {catInMeta && catBadge}
             </div>
+            )}
+
+            {/* 只有任务名：单独占第二行右下角，避开标题行右上角的计时按钮 */}
+            {catAlone && catBadge && (
+              <div className="mt-1.5 flex justify-end">{catBadge}</div>
+            )}
 
             {expanded && (todo.subTasks ?? []).length > 0 && (
               <div className="mt-2 space-y-1.5 border-t border-primary-100 pt-2 anim-pop">
