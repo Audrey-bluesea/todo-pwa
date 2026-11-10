@@ -968,6 +968,8 @@ function BoardCard({
       <span
         role="button"
         tabIndex={0}
+        data-role="todo-check"
+        data-done={t.isCompleted ? '1' : undefined}
         aria-label={t.isCompleted ? '标记为未完成' : '标记为已完成'}
         onClick={(e) => {
           e.stopPropagation();
@@ -1132,6 +1134,8 @@ function BoardCard({
                       aria-label={s.isCompleted ? `取消完成子任务 ${s.content}` : `完成子任务 ${s.content}`}
                     >
                       <span
+                        data-role="todo-check"
+                        data-done={s.isCompleted ? '1' : undefined}
                         className={`flex h-[15px] w-[15px] items-center justify-center rounded-[2px] border-[1.4px] ${
                           s.isCompleted ? 'border-primary-400 bg-primary-400' : 'border-primary-300'
                         }`}

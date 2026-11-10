@@ -356,6 +356,7 @@
     --c-border: 228 227 240; /* #E4E3F0 极淡灰紫边 */
     --c-muted: 138 137 163; /* #8A89A3 辅助灰紫 */
     --c-appbg: 245 244 251; /* #F5F4FB 全局背景·灰紫月雾白 */
+    --c-dot-done: #3E9B6C; /* 月历「已完成」提示点用翠绿林（其余主题未定义 → 中性灰） */
     /* 阴影：靛蓝调 */
     --shadow-card: 0 4px 12px rgba(74, 100, 166, 0.12);
     --shadow-card-soft: 0 2px 8px rgba(110, 130, 186, 0.15);
@@ -716,6 +717,21 @@ html.kb-open .anim-sheet {
 .px-wave__block:nth-child(5) {
   animation-delay: 0.6s;
   background: rgb(var(--c-primary-500));
+}
+
+/* ============ 🌕 月照林海：让月光金 / 翠绿林真正出现在日常界面 ============ */
+/* 仅此主题生效。--c-accent / --c-success 在全项目几乎没接线：accent 原本只用于
+   外观面板标题的第 3 个小方块，success 只用于日历日期头 3px 小点，待办首页看不到。
+   这里补两处不占布局的点缀，其他 8 套主题零影响。
+   ⚠️ 必须放在 @layer 之外：无层规则优先级高于 Tailwind utilities，
+   否则压不过勾选框上的 bg-primary-500 / border-primary-500。 */
+[data-theme='moonlit'] .fab {
+  border-radius: 9999px;
+  box-shadow: 0 0 0 2px rgb(var(--c-accent) / 0.35), 0 4px 16px rgb(var(--c-accent) / 0.5);
+}
+[data-theme='moonlit'] [data-role='todo-check'][data-done='1'] {
+  border-color: rgb(var(--c-success));
+  background-color: rgb(var(--c-success));
 }
 
 /* ============ 🪸 珊瑚浅滩 (pixel)：组件级视觉覆盖（温馨柔风） ============ */

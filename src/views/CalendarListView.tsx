@@ -268,6 +268,8 @@ export default function CalendarListView() {
                     >
                       <div className="flex items-start gap-2">
                         <span
+                          data-role="todo-check"
+                          data-done={t.isCompleted ? '1' : undefined}
                           className={`mt-[3px] flex h-[16px] w-[16px] shrink-0 items-center justify-center rounded-[2px] border-[1.4px] ${
                             t.isCompleted ? 'border-primary-500 bg-primary-500' : 'border-primary-300 bg-white'
                           }`}
@@ -468,7 +470,8 @@ function DayCell({
 
 /** 月历格子下的提示点：未完成任务用分类色，已完成任务用中性灰（完成那天不再看起来空白） */
 type DayDot = { color: string; completed: boolean };
-const DOT_DONE = '#C4C4C4';
+/** 已完成点：默认中性灰；主题可覆写 --c-dot-done（🌕 月照林海用翠绿林） */
+const DOT_DONE = 'var(--c-dot-done, #C4C4C4)';
 
 function dotColors(items: Todo[] | undefined, catMap: Map<string, Category>): DayDot[] {
   if (!items) return [];
