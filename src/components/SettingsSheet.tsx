@@ -1,71 +1,7 @@
 import { createPortal } from 'react-dom';
-import { useUIStore, type ThemeKey } from '../store/uiStore';
+import { useUIStore } from '../store/uiStore';
+import { THEME_META } from '../lib/themeMeta';
 import { IconClose } from './Icons';
-
-const THEMES: {
-  key: ThemeKey;
-  name: string;
-  desc: string;
-  emoji: string;
-  swatch: string[];
-}[] = [
-  {
-    key: 'matcha',
-    name: '抹茶绿',
-    desc: '清新淡雅 · 默认',
-    emoji: '🍵',
-    swatch: ['#6BAA7A', '#A8D5BA', '#E6F2E8'],
-  },
-  {
-    key: 'pixel',
-    name: '海边像素',
-    desc: '8-bit 游戏机 · 夏日海滩',
-    emoji: '🌊',
-    swatch: ['#4A9EFF', '#FFD166', '#06D6A0'],
-  },
-  {
-    key: 'spring',
-    name: '花见',
-    desc: '樱花 · 温柔少女感',
-    emoji: '🍃',
-    swatch: ['#F28B9C', '#F8B4C2', '#FFD93D', '#A8E6CF'],
-  },
-  {
-    key: 'summer',
-    name: '盛夏光年',
-    desc: '克莱因蓝 · 清澈热烈',
-    emoji: '☀️',
-    swatch: ['#2D9CDB', '#7BC8F7', '#F2994A', '#27AE60'],
-  },
-  {
-    key: 'autumn',
-    name: '拾秋',
-    desc: '陶土橙 · 温暖侘寂',
-    emoji: '🍂',
-    swatch: ['#D97A48', '#EBAF8B', '#C0392B', '#8E6E53'],
-  },
-  {
-    key: 'winter',
-    name: '初雪',
-    desc: '冰川蓝灰 · 清冷极简',
-    emoji: '❄️',
-    swatch: ['#5B7B9A', '#9BB1C7', '#E26A7A', '#8D9CB0'],
-  },
-  {
-    key: 'blossom',
-    name: '春信',
-    desc: '薄荷青绿 · 柔和清新',
-    emoji: '🌸',
-    swatch: ['#4EA09E', '#B9E2DF', '#D2646C', '#488C74'],
-  },
-  {
-    key: 'unicorn',
-    name: '独角兽',
-    desc: '梦幻紫白 · 温柔奇幻',
-    emoji: '🦄',
-    swatch: ['#9070DB', '#E9E0FF', '#E8609B', '#5CBFA6'],
-  },
-];
 
 export default function SettingsSheet({
   open,
@@ -108,7 +44,7 @@ export default function SettingsSheet({
         </div>
 
         <div className="space-y-2.5">
-          {THEMES.map((t) => {
+          {THEME_META.map((t) => {
             const active = theme === t.key;
             return (
               <button

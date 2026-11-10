@@ -157,7 +157,7 @@ interface UIState {
   toast: string | null;
   /** 全局 toast 的可选动作（如「撤销」），存在时渲染按钮 */
   toastAction: { label: string; onAction: () => void } | null;
-  /** 主题：抹茶绿（默认）/ 海边像素 */
+  /** 主题 key；展示名 / 图标 / 色卡统一见 lib/themeMeta.ts */
   theme: ThemeKey;
   /** 已完成视图模式：列表 / 看板 */
   completedView: TodoViewMode;

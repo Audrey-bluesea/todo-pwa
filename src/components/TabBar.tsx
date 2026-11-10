@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useUIStore } from '../store/uiStore';
 import { startOfDay } from '../lib/date';
+import { THEME_EMOJI } from '../lib/themeMeta';
 import { IconCalendar, IconChecklist, IconPlus } from './Icons';
 
 /** 长按判定阈值（毫秒） */
@@ -9,17 +10,6 @@ const LONG_PRESS_MS = 400;
 const MOVE_TOLERANCE = 8;
 /** 已提示过「长按可计时」的标记（只提示一次，避免打扰） */
 const FAB_HINT_KEY = 'xingshilu.fabTimerHinted';
-
-const FAB_EMOJI: Partial<Record<string, string>> = {
-  matcha: '🥑',
-  pixel: '🪸',
-  spring: '🌸',
-  summer: '🎐',
-  autumn: '🍁',
-  winter: '❄️',
-  blossom: '🍀',
-  unicorn: '🦄',
-};
 
 export default function TabBar() {
   const tab = useUIStore((s) => s.tab);
@@ -34,7 +24,7 @@ export default function TabBar() {
   const setTimerSheetOpen = useUIStore((s) => s.setTimerSheetOpen);
   const showToast = useUIStore((s) => s.showToast);
 
-  const fabEmoji = FAB_EMOJI[theme];
+  const fabEmoji = THEME_EMOJI[theme];
 
   /* ---------- FAB 长按 → 计时 ----------
      轻点行为完全不变（新建任务）；长按 0.4s 打开计时面板。
