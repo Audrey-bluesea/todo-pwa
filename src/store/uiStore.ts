@@ -17,7 +17,8 @@ export type ThemeKey =
   | 'autumn'
   | 'winter'
   | 'blossom'
-  | 'unicorn';
+  | 'unicorn'
+  | 'moonlit';
 
 const THEME_KEY = 'xingshilu.theme';
 
@@ -30,6 +31,7 @@ const VALID_THEMES: ThemeKey[] = [
   'winter',
   'blossom',
   'unicorn',
+  'moonlit',
 ];
 
 function loadTheme(): ThemeKey {

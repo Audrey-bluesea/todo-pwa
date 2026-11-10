@@ -4,8 +4,9 @@ export default {
   theme: {
     extend: {
       colors: {
-        // 🍵 抹茶绿 / 🌊 海边像素 双主题色板 —— 全部走 CSS 变量（RGB 三元组），
-        // 实际色值在 src/index.css 的 :root（抹茶）与 [data-theme="pixel"]（海边）中定义。
+        // 全部走 CSS 变量（RGB 三元组），实际色值见 src/index.css 的 :root（默认抹茶）
+        // 与各 [data-theme] 块。新增主题 = index.css 加色板块 + uiStore.ts 登记 ThemeKey
+        // + lib/themeMeta.ts 加一条展示元数据（名字/图标/色卡），此处无需改动。
         primary: {
           50: 'rgb(var(--c-primary-50) / <alpha-value>)',
           100: 'rgb(var(--c-primary-100) / <alpha-value>)',

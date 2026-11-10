@@ -75,6 +75,14 @@ export const THEME_META: ThemeMeta[] = [
     emoji: '🦄',
     swatch: ['#9070DB', '#E9E0FF', '#E8609B', '#5CBFA6'],
   },
+  {
+    key: 'moonlit',
+    name: '月照林海',
+    desc: '靛蓝 · 灰紫月雾',
+    emoji: '🌕',
+    // 蓝调天空 / 灰紫天边 / 暮蓝远海 / 翠绿树林 / 满月金，均取自 [data-theme='moonlit']
+    swatch: ['#4A64A6', '#9E9ECA', '#6E82BA', '#3E9B6C', '#E8BE6A'],
+  },
 ];
 
 /** FAB 按钮的 emoji：直接派生自 THEME_META，保证与外观面板永远一致。 */

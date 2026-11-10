@@ -322,6 +322,48 @@
     --shadow-drawer: 8px 0 32px rgba(101, 68, 172, 0.16);
   }
 
+  /* ============ 🌕 月照林海 (moonlit) · 蓝调时刻 / 灰紫月雾 ============ */
+  /* 意象：灰紫天边 → 靛蓝夜空 → 满月星光 → 湛蓝远海 → 翠绿树林。
+     保持「浅底 + 中深主色」结构，白卡片与深色正文可读；
+     不覆盖 --font-base / --px-radius（沿用 :root 默认），不碰顶部玻璃色带。 */
+  [data-theme='moonlit'] {
+    /* primary 色阶：本身就是从地平线往天顶看的那条天空渐变 */
+    --c-primary-50: 247 246 251; /* #F7F6FB 月雾白 */
+    --c-primary-100: 233 231 244; /* #E9E7F4 浅灰紫 */
+    --c-primary-200: 205 203 231;
+    --c-primary-300: 158 158 202; /* #9E9ECA 灰紫天边 */
+    --c-primary-400: 110 130 186; /* #6E82BA 暮蓝 / 远海 */
+    --c-primary-500: 74 100 166; /* #4A64A6 锚点·蓝调天空（白字可辨） */
+    --c-primary-600: 58 82 143;
+    --c-primary-700: 45 63 115; /* #2D3F73 标题·夜空 */
+    --c-primary-800: 33 46 86;
+    --c-primary-900: 23 33 62; /* #17213E 深夜 */
+    /* neutral 色阶：灰紫中性，避免发灰发脏 */
+    --c-neutral-50: 250 249 253;
+    --c-neutral-100: 241 240 248;
+    --c-neutral-200: 227 226 238;
+    --c-neutral-300: 204 203 220;
+    --c-neutral-400: 170 169 192;
+    --c-neutral-500: 132 131 156;
+    --c-neutral-600: 80 79 108;
+    --c-neutral-700: 60 59 84;
+    --c-neutral-800: 43 42 62;
+    /* 语义令牌 */
+    --c-accent: 232 190 106; /* #E8BE6A 月光金（逾期/紧急） */
+    --c-success: 62 155 108; /* #3E9B6C 翠绿树林（已完成） */
+    --c-star: 232 190 106; /* 星光点缀（备用，暂无星标 UI） */
+    --c-ink: 43 51 85; /* #2B3355 深墨蓝（正文） */
+    --c-border: 228 227 240; /* #E4E3F0 极淡灰紫边 */
+    --c-muted: 138 137 163; /* #8A89A3 辅助灰紫 */
+    --c-appbg: 245 244 251; /* #F5F4FB 全局背景·灰紫月雾白 */
+    /* 阴影：靛蓝调 */
+    --shadow-card: 0 4px 12px rgba(74, 100, 166, 0.12);
+    --shadow-card-soft: 0 2px 8px rgba(110, 130, 186, 0.15);
+    --shadow-fab: 0 8px 20px rgba(58, 82, 143, 0.42);
+    --shadow-sheet: 0 -8px 32px rgba(33, 46, 86, 0.16);
+    --shadow-drawer: 8px 0 32px rgba(33, 46, 86, 0.14);
+  }
+
 
 /* iOS standalone PWA 高度铁律：html/body/#root 统一 100% + svh/dvh 双保险。
  * 只给 #root 设 dvh、html/body 不设高，会导致 body 高度 auto，flex 根容器无法稳定占满。
