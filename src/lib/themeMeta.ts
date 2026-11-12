@@ -59,7 +59,9 @@ export const THEME_META: ThemeMeta[] = [
     name: '初雪',
     desc: '冷银灰 · 雾紫',
     emoji: '❄️',
-    swatch: ['#5B7B9A', '#9BB1C7', '#E26A7A', '#8D9CB0'],
+    // 旧色卡 4 个值全是过时配色（与 [data-theme='winter'] 无一相符），
+    // 现对齐真实 CSS：primary-500 / primary-300 / accent / appbg
+    swatch: ['#7884A4', '#B7BFD1', '#C8748C', '#ECEFF5'],
   },
   {
     key: 'blossom',

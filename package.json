@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "check:hooks": "node scripts/check-hooks.cjs",
-    "build": "node scripts/check-hooks.cjs && tsc -b && vite build",
+    "check:theme": "node scripts/check-theme-swatch.cjs",
+    "build": "node scripts/check-hooks.cjs && node scripts/check-theme-swatch.cjs && tsc -b && vite build",
     "preview": "vite preview"
   },
   "dependencies": {

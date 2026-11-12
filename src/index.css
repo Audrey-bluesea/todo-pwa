@@ -719,6 +719,16 @@ html.kb-open .anim-sheet {
   background: rgb(var(--c-primary-500));
 }
 
+/* ============ 各主题 accent 点缀色：FAB 柔光晕 ============ */
+/* 色卡里的第 3 个点（accent）过去只在外观面板标题那颗 10px 小方块出现，
+   日常界面完全看不到。这里给所有主题的 FAB 加一圈极淡的 accent 柔光，
+   让每个主题的强调色真的出现在界面上；不改尺寸/位置/点击区域。
+   ⚠️ 同样必须放在 @layer 之外。🌕 月照林海下方有更亮的满月光晕覆盖。 */
+.fab {
+  border-radius: 9999px;
+  box-shadow: 0 0 0 1.5px rgb(var(--c-accent) / 0.22), 0 3px 12px rgb(var(--c-accent) / 0.26);
+}
+
 /* ============ 🌕 月照林海：让月光金 / 翠绿林真正出现在日常界面 ============ */
 /* 仅此主题生效。--c-accent / --c-success 在全项目几乎没接线：accent 原本只用于
    外观面板标题的第 3 个小方块，success 只用于日历日期头 3px 小点，待办首页看不到。
