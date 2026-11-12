@@ -719,12 +719,12 @@ html.kb-open .anim-sheet {
   background: rgb(var(--c-primary-500));
 }
 
-/* ============ 各主题 accent 点缀色：FAB 柔光晕 ============ */
-/* 色卡里的第 3 个点（accent）过去只在外观面板标题那颗 10px 小方块出现，
-   日常界面完全看不到。这里给所有主题的 FAB 加一圈极淡的 accent 柔光，
-   让每个主题的强调色真的出现在界面上；不改尺寸/位置/点击区域。
-   ⚠️ 同样必须放在 @layer 之外。🌕 月照林海下方有更亮的满月光晕覆盖。 */
-.fab {
+/* ============ FAB 柔光晕：仅 🪸 珊瑚浅滩 / 🌕 月照林海 ============ */
+/* 曾给全部 9 套都加过 accent 柔光，用户实测后判定除这两套外「太不和谐」，
+   故收回为两套专属：珊瑚浅滩的暖沙黄与海青暖沙底相融，月照林海的月光金呼应满月。
+   其余 7 套完全没有 box-shadow，FAB 保持原本的透明 emoji。
+   ⚠️ 必须放在 @layer 之外；🌕 月照林海下方有更亮的专属光晕覆盖。 */
+[data-theme='pixel'] .fab {
   border-radius: 9999px;
   box-shadow: 0 0 0 1.5px rgb(var(--c-accent) / 0.22), 0 3px 12px rgb(var(--c-accent) / 0.26);
 }
@@ -781,10 +781,7 @@ html.kb-open .anim-sheet {
 [data-theme='pixel'] .tabbar button[aria-current='page'] svg {
   filter: none;
 }
-/* FAB 加号：圆润 + 柔阴影（不强制方块） */
-[data-theme='pixel'] .fab {
-  border-radius: 9999px !important;
-}
+/* FAB 的圆角与柔光已统一移到上方「FAB 柔光晕」段，此处不再重复定义。 */
 
 /* 5. 列表 / 看板 分段控制器：无边框 + 浅底 + 圆润 */
 [data-theme='pixel'] .seg-track {
