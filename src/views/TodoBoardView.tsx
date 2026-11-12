@@ -998,7 +998,7 @@ function BoardCard({
         {/* 标题 + 右上角：打卡时间戳（已完成）/ 计时图标（未完成）二者互斥，长标题自动让位不重叠 */}
         <div className="flex items-start gap-2">
           <div
-            className={`min-w-0 flex-1 text-[14.5px] leading-snug ${t.isCompleted ? 'text-neutral-400 line-through' : 'text-neutral-700'}`}
+            className={`min-w-0 flex-1 text-[14.5px] leading-snug ${t.isCompleted ? 'text-neutral-400' : 'text-neutral-700'}`}
           >
             {t.title || 'No Title'}
           </div>
@@ -1025,7 +1025,7 @@ function BoardCard({
         {t.description ? (
           <div className="mt-1 flex items-end gap-2">
             <div className="min-w-0 flex-1">
-              <div className={`line-clamp-2 text-[12.5px] leading-snug ${t.isCompleted ? 'text-neutral-300 line-through' : 'text-neutral-400'}`}>
+              <div className={`line-clamp-2 text-[12.5px] leading-snug ${t.isCompleted ? 'text-neutral-300' : 'text-neutral-400'}`}>
                 {t.description}
               </div>
             </div>
@@ -1177,7 +1177,7 @@ function BoardCard({
                           setEditingSubText(s.content);
                         }}
                         className={`min-w-0 flex-1 break-words text-left text-[13px] leading-snug ${
-                          s.isCompleted ? 'text-neutral-400 line-through' : 'text-neutral-600'
+                          s.isCompleted ? 'text-neutral-400' : 'text-neutral-600'
                         }`}
                       >
                         {s.content}

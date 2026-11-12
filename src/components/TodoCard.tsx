@@ -250,7 +250,7 @@ export default function TodoCard({ todo, category, showDate, hideCategory, query
             <div className="flex items-start gap-2">
               <div
                 className={`min-w-0 flex-1 text-[15px] leading-snug ${
-                  todo.isCompleted ? 'text-neutral-700 line-through' : 'text-neutral-600'
+                  todo.isCompleted ? 'text-neutral-400' : 'text-neutral-600'
                 }`}
               >
                 <Highlight text={todo.title} query={query} />
@@ -421,7 +421,7 @@ export default function TodoCard({ todo, category, showDate, hideCategory, query
                           setEditingSubText(s.content);
                         }}
                         className={`min-w-0 flex-1 break-words text-left text-[13px] leading-snug ${
-                          s.isCompleted ? 'text-neutral-400 line-through' : 'text-neutral-600'
+                          s.isCompleted ? 'text-neutral-400' : 'text-neutral-600'
                         }`}
                       >
                         {s.content}

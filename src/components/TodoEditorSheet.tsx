@@ -1033,7 +1033,7 @@ export default function TodoEditorSheet() {
                       }}
                       placeholder="子任务内容"
                       className={`min-w-0 flex-1 rounded-xl border border-primary-200 bg-white px-3 py-2 text-[14px] outline-none placeholder:text-neutral-400 focus:border-primary-400 ${
-                        s.isCompleted ? 'text-neutral-400 line-through' : 'text-neutral-600'
+                        s.isCompleted ? 'text-neutral-400' : 'text-neutral-600'
                       }`}
                     />
                     <button onClick={() => setSubTasks((list) => list.filter((x) => x.id !== s.id))}

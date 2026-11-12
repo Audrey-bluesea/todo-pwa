@@ -291,7 +291,7 @@ export default function CalendarListView() {
                           <div className="flex items-center gap-1">
                             <div
                               className={`min-w-0 flex-1 text-[15px] leading-snug ${
-                                t.isCompleted ? 'text-neutral-700 line-through' : 'text-neutral-600'
+                                t.isCompleted ? 'text-neutral-400' : 'text-neutral-600'
                               }`}
                             >
                               {t.title}
