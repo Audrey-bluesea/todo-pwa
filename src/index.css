@@ -737,7 +737,10 @@ html.kb-open .anim-sheet {
    否则压不过勾选框上的 bg-primary-500 / border-primary-500。 */
 [data-theme='moonlit'] .fab {
   border-radius: 9999px;
-  box-shadow: 0 0 0 2px rgb(var(--c-accent) / 0.35), 0 4px 16px rgb(var(--c-accent) / 0.5);
+  /* 只留向外散开的柔光，不要 0 0 0 Npx 那种实心描边环
+     （用户反馈「一个圈围住月亮」别扭；要的是 🌕 本身在发光）。
+     两层纯 blur、无偏移无 spread，圆角让光晕沿圆形扩散。 */
+  box-shadow: 0 0 14px rgb(var(--c-accent) / 0.5), 0 0 30px rgb(var(--c-accent) / 0.28);
 }
 [data-theme='moonlit'] [data-role='todo-check'][data-done='1'] {
   border-color: rgb(var(--c-success));
