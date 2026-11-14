@@ -33,6 +33,9 @@ interface SleepAgg {
 
 const pad2 = (n: number) => (n < 10 ? `0${n}` : String(n));
 
+/** 睡眠柱状图日期下方的周几标签（getDay(): 0=周日） */
+const WEEKDAY_CN = ['日', '一', '二', '三', '四', '五', '六'];
+
 /** 睡眠柱上的紧凑时长：如 7h32m / 6h / 45m */
 const fmtShort = (ms: number): string => {
   const totalMin = Math.round(ms / 60000);
@@ -165,8 +168,9 @@ export default function RecapView() {
         : [];
 
     // 计时按分类汇总
-    const catMap = new Map<string, { name: string; color: string }>();
-    for (const c of categories) catMap.set(c.id, { name: c.name, color: c.color ?? '#6BAA7A' });
+    const catMap = new Map<string, { name: string; color: string; icon?: string }>();
+    for (const c of categories)
+      catMap.set(c.id, { name: c.name, color: c.color ?? '#6BAA7A', icon: c.icon });
     const UNCAT = { name: '未分类', color: '#C8D5CA' };
 
     const dist = new Map<string, { name: string; color: string; ms: number }>();
@@ -251,7 +255,7 @@ export default function RecapView() {
       };
     }
 
-    return { completed, pending, distArr, maxMs, totalMs, sleep };
+    return { completed, pending, distArr, maxMs, totalMs, sleep, catMap };
   }, [todos, categories, timeEntries, mode]);
 
   if (!open) return null;
@@ -304,24 +308,31 @@ export default function RecapView() {
             <Empty text="还没有勾掉任何事" />
           ) : (
             <div className="space-y-1">
-              {data.completed.map((t) => (
-                <div
-                  key={t.id}
-                  className="flex items-center gap-3 rounded-xl border border-primary-100 bg-white px-3 py-2.5"
-                >
-                  <span className="text-primary-500 shrink-0">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M5 12.5l4 4 10-10" />
-                    </svg>
-                  </span>
-                  <span className="flex-1 truncate text-[14px] text-neutral-700">{t.title}</span>
-                  {t.completedAt && (
-                    <span className="shrink-0 text-[12px] tabular-nums text-neutral-400">
-                      {fmtTime(t.completedAt)}
+              {data.completed.map((t) => {
+                // 任务名前缀所属清单的 emoji；无分类(Inbox)时不渲染、不留空位
+                const catIcon = t.categoryId ? data.catMap.get(t.categoryId)?.icon : undefined;
+                return (
+                  <div
+                    key={t.id}
+                    className="flex items-center gap-3 rounded-xl border border-primary-100 bg-white px-3 py-2.5"
+                  >
+                    <span className="text-primary-500 shrink-0">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M5 12.5l4 4 10-10" />
+                      </svg>
                     </span>
-                  )}
-                </div>
-              ))}
+                    <span className="min-w-0 flex-1 truncate text-[14px] text-neutral-700">
+                      {catIcon && <span className="mr-1">{catIcon}</span>}
+                      {t.title}
+                    </span>
+                    {t.completedAt && (
+                      <span className="shrink-0 text-[12px] tabular-nums text-neutral-400">
+                        {fmtTime(t.completedAt)}
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </Section>
@@ -419,6 +430,11 @@ export default function RecapView() {
                     </div>
                     <span className="mt-1 whitespace-nowrap text-[8.5px] leading-none tabular-nums text-neutral-400">
                       {`${t.date.getMonth() + 1}/${pad2(t.date.getDate())}`}
+                    </span>
+                    {/* 周几：作为列的最后一行追加，柱区仍是上方定高 78px 的独立容器，
+                        所以柱高、柱内标注、占比完全不受这一行影响 */}
+                    <span className="mt-0.5 whitespace-nowrap text-[8px] leading-none text-neutral-400">
+                      {`周${WEEKDAY_CN[t.date.getDay()]}`}
                     </span>
                   </div>
                 );
