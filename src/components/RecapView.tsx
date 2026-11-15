@@ -87,11 +87,12 @@ const agoText = (ms: number): string => {
   return `${Math.floor(h / 24)} 天前`;
 };
 
-/** 睡眠归属日：凌晨 5 点前入睡算前一天（兜住夜猫子跨零点） */
-const sleepAttrDay = (start: Date): Date => {
-  const h = start.getHours();
-  return h < 5 ? addDays(startOfDay(start), -1) : startOfDay(start);
-};
+/** 睡眠归属日：按「起床那天」算（睡醒算新的一天）。
+    周六 23:41 睡到周日 07:39 → 归周日，今天早上醒来就能在今天的柱子上看到昨夜睡眠；
+    若按入睡日会归到周六，导致今天看起来「还没开始」、柱子空着。
+    原来「凌晨 5 点前入睡算前一天」的特判不再需要：跨零点由 end 的日期自然处理。
+    sleepInWin 已过滤掉 end 为空的记录，?? e.start 只是类型兜底。 */
+const sleepAttrDay = (e: TimeEntry): Date => startOfDay(e.end ?? e.start);
 
 /* ---------- 小部件 ---------- */
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -171,9 +172,10 @@ export default function RecapView() {
     const catMap = new Map<string, { name: string; color: string; icon?: string }>();
     for (const c of categories)
       catMap.set(c.id, { name: c.name, color: c.color ?? '#6BAA7A', icon: c.icon });
-    const UNCAT = { name: '未分类', color: '#C8D5CA' };
+    const UNCAT: { name: string; color: string; icon?: string } = { name: '未分类', color: '#C8D5CA' };
 
-    const dist = new Map<string, { name: string; color: string; ms: number }>();
+    // 汇总时带上分类 emoji，供「时间都花在哪」在清单名前显示（小点与长条的配色不变）
+    const dist = new Map<string, { name: string; color: string; ms: number; icon?: string }>();
     let totalMs = 0;
     for (const e of timeEntries) {
       if (!e.end) continue;
@@ -183,7 +185,7 @@ export default function RecapView() {
       totalMs += ms;
       const key = e.categoryId ?? '';
       const meta = key ? catMap.get(key) ?? UNCAT : UNCAT;
-      const cur = dist.get(key) ?? { ...meta, ms: 0 };
+      const cur = dist.get(key) ?? { name: meta.name, color: meta.color, icon: meta.icon, ms: 0 };
       cur.ms += ms;
       dist.set(key, cur);
     }
@@ -204,7 +206,7 @@ export default function RecapView() {
     };
     const sleepAll = timeEntries.filter(isSleep);
     const sleepInWin = sleepAll.filter((e) => {
-      const a = sleepAttrDay(e.start);
+      const a = sleepAttrDay(e);
       return a >= sleepWinStart && a <= sleepWinEnd;
     });
 
@@ -219,7 +221,7 @@ export default function RecapView() {
         const ms = e.end!.getTime() - e.start.getTime();
         if (ms <= 0) continue;
         totalMs += ms;
-        const a = sleepAttrDay(e.start);
+        const a = sleepAttrDay(e);
         const key = fmtDate(a);
         daySet.add(key);
         dayMs.set(key, (dayMs.get(key) ?? 0) + ms);
@@ -346,9 +348,13 @@ export default function RecapView() {
               {data.distArr.map((d) => (
                 <div key={d.name}>
                   <div className="flex items-center justify-between text-[13px]">
-                    <span className="flex items-center gap-1.5 text-neutral-600">
-                      <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: d.color }} />
-                      {d.name}
+                    <span className="flex min-w-0 items-center gap-1.5 text-neutral-600">
+                      <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: d.color }} />
+                      {/* emoji 不另设字号，继承本行 13px，与清单名一致；未分类不渲染、不留空位 */}
+                      <span className="truncate">
+                        {d.icon && <span className="mr-1">{d.icon}</span>}
+                        {d.name}
+                      </span>
                     </span>
                     <span className="tabular-nums text-neutral-400">{fmtDuration(d.ms)}</span>
                   </div>
